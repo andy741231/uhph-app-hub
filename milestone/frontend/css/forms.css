@@ -1,0 +1,181 @@
+/* Form and input styles */
+
+/* Form Controls */
+.panel-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.panel-controls {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: start;
+}
+
+.panel-controls .input-with-icon {
+  position: relative;
+  flex: 1 1 240px;
+  max-width: 340px;
+  min-width: 200px;
+}
+
+.panel-controls .control-group {
+  flex: 0 0 auto;
+  min-width: 12rem;
+}
+
+.panel-controls .control-group input,
+.panel-controls .control-group select {
+  width: 100%;
+}
+
+.input-with-icon i {
+  position: absolute;
+  top: 50%;
+  left: 0.85rem;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.input-with-icon input[type="search"] {
+  padding-left: 2.4rem;
+}
+
+/* Labels */
+label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--secondary);
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.field-header label {
+  margin-bottom: 0;
+}
+
+/* Form Inputs */
+/* frontend/css/forms.css */
+textarea,
+input,
+select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--surface-alt);
+  font-size: 0.95rem;
+  font-family: inherit; /* or specify "Inter", system-ui, ... */
+  color: var(--text);
+  transition: var(--transition);
+}
+
+textarea:focus,
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Buttons */
+button {
+  padding: 0.85rem 1.6rem;
+  border-radius: var(--radius-button);
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: var(--transition);
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+button.primary {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+}
+
+button.secondary {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--secondary);
+}
+
+button.secondary:hover:not(:disabled) {
+  border-color: var(--secondary-hover);
+  color: var(--secondary-hover);
+  box-shadow: var(--surface-shadow);
+}
+
+button.icon-button {
+  width: auto;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-button);
+  font-size: 1rem;
+  line-height: 1;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--secondary);
+  transition: var(--transition);
+}
+
+button.icon-button:hover:not(:disabled) {
+  border-color: var(--secondary-hover);
+  color: var(--secondary-hover);
+  box-shadow: var(--surface-shadow);
+}
+
+button:disabled,
+button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  color: var(--text-disabled);
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+/* Rows */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.row > * {
+  flex: 1 1 14rem;
+}

@@ -1,0 +1,90 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - link "" [ref=e5] [cursor=pointer]:
+        - /url: index.php
+      - generic [ref=e7]: 2026 CTPH Annual Report
+    - generic [ref=e8]:
+      - button "" [ref=e9] [cursor=pointer]
+      - button "" [ref=e12] [cursor=pointer]
+      - generic "Click to jump to page" [ref=e14]: "-- / --"
+      - button "" [ref=e15] [cursor=pointer]
+      - button "" [ref=e18] [cursor=pointer]
+    - generic [ref=e20]:
+      - button "" [ref=e21] [cursor=pointer]
+      - button "" [ref=e24] [cursor=pointer]
+      - generic "Click to reset zoom" [ref=e26]: 100%
+      - button "+" [ref=e27] [cursor=pointer]
+      - button "" [ref=e30] [cursor=pointer]
+      - button "" [ref=e33] [cursor=pointer]
+      - button "" [ref=e35] [cursor=pointer]
+      - button "" [ref=e37] [cursor=pointer]
+      - text:    
+  - text:    
+  - generic [ref=e39]:
+    - generic:
+      - generic:
+        - generic: Table of Contents
+        - generic:
+          - button ""
+          - button ""
+      - generic:
+        - paragraph: No table of contents available.
+    - generic [ref=e41]:
+      - generic [ref=e42]:
+        - generic [ref=e43]:
+          - generic [ref=e44]: 
+          - generic [ref=e45]: Edit Mode
+        - button "" [ref=e46] [cursor=pointer]
+      - generic [ref=e48]:
+        - button " Add Video to This Page" [ref=e49] [cursor=pointer]:
+          - generic [ref=e50]: 
+          - text: Add Video to This Page
+        - button " Add Link to This Page" [ref=e51] [cursor=pointer]:
+          - generic [ref=e52]: 
+          - text: Add Link to This Page
+        - generic [ref=e53]:
+          - generic [ref=e54] [cursor=pointer]:
+            - checkbox "Show page number" [ref=e55]
+            - generic [ref=e56]: Show page number
+          - generic [ref=e57] [cursor=pointer]:
+            - checkbox "Exclude first page (cover) from counting" [ref=e58]
+            - generic [ref=e59]: Exclude first page (cover) from counting
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - generic [ref=e62]: 
+            - generic [ref=e63]: Drag videos to reposition
+          - generic [ref=e64]:
+            - generic [ref=e65]: 
+            - generic [ref=e66]: Drag corner handles to resize
+          - generic [ref=e67]:
+            - generic [ref=e68]: 
+            - generic [ref=e69]:
+              - text: Click
+              - strong [ref=e70]: ×
+              - text: to delete a video
+          - generic [ref=e71]:
+            - generic [ref=e72]: 
+            - generic [ref=e73]: Page flipping is disabled
+      - generic [ref=e74]:
+        - button " Save" [ref=e75] [cursor=pointer]:
+          - generic [ref=e76]: 
+          - text: Save
+        - button " Cancel" [ref=e77] [cursor=pointer]:
+          - generic [ref=e78]: 
+          - text: Cancel
+    - button "" [ref=e79] [cursor=pointer]
+    - button "" [ref=e81] [cursor=pointer]
+    - text: 
+    - generic:
+      - generic:
+        - textbox "Search in document..."
+        - button ""
+      - generic:
+        - paragraph: Type to search...
+    - generic [ref=e83]:
+      - generic [ref=e84]: 
+      - paragraph [ref=e86]: Loading PDF...
+    - generic:
+      - generic: 
+      - generic: Swipe or click to open

@@ -1,0 +1,3 @@
+- generic [active] [ref=e1]:
+  - button "Log Orientation" [ref=e2]
+  - button "Shrink Container" [ref=e3]

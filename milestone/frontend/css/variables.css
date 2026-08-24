@@ -1,0 +1,23 @@
+/* CSS Custom Properties / Variables */
+:root {
+  color-scheme: light;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --secondary: #64748b;
+  --secondary-hover: #475569;
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --surface-alt: #f1f5f9;
+  --surface-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  --border: #e2e8f0;
+  --border-strong: rgba(100, 116, 139, 0.35);
+  --text: #0f172a;
+  --text-muted: #475569;
+  --text-disabled: #94a3b8;
+  --success: #16a34a;
+  --error: #dc2626;
+  --radius-card: 1rem;
+  --radius-button: 0.75rem;
+  --transition: all 0.2s ease-in-out;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}

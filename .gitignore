@@ -1,0 +1,33 @@
+# ===== Secrets (never commit) =====
+.env
+.env.*
+!.env.example
+
+# ===== Dependencies =====
+vendor/
+node_modules/
+
+# ===== Laravel runtime =====
+storage/logs/
+storage/framework/cache/
+storage/framework/sessions/
+storage/framework/views/
+storage/app/public/
+bootstrap/cache/*.php
+!bootstrap/cache/.gitkeep
+
+# ===== Logs & temp =====
+*.log
+*.tmp
+*.cache
+.DS_Store
+Thumbs.db
+
+# ===== IDE / editor =====
+.idea/
+.vscode/
+.devin/.cache/
+.windsurf/.cache/
+
+# ===== OS / misc =====
+-old/

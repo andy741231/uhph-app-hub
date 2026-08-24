@@ -1,0 +1,12 @@
+<?php
+// Copy this file to config.php and fill in your Airtable Personal Access Token.
+// Do NOT commit your real token to version control.
+
+// Your Airtable Personal Access Token (starts with "pat").
+// You can also set it via environment variable AIRTABLE_TOKEN instead of editing this file.
+// Example token format: patXXXXXXXXXXXX...
+const AIRTABLE_TOKEN = '';
+
+// Optionally restrict CORS to a specific origin during development/deployment.
+// Set to '*' to allow all, or 'http://localhost:5173' (or your domain).
+const CORS_ALLOW_ORIGIN = '*';

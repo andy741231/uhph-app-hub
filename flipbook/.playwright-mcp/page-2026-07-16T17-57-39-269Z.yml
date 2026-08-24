@@ -1,0 +1,5 @@
+- generic [active] [ref=e1]:
+  - button "turnNext" [ref=e2]
+  - button "flipNext" [ref=e3]
+  - button "show" [ref=e4]
+  - generic [ref=e5]: Page 1

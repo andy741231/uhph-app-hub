@@ -1,0 +1,1163 @@
+/* ========================================
+   Flipbook Viewer Specific Styles
+   ======================================== */
+
+.viewer-wrapper {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, #1e2240 0%, #0f1120 100%);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.flipbook-stage {
+    flex: 1;
+    min-height: 0;
+    min-width: 0; /* allow shrinking when edit panel opens as flex sibling */
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    padding: 1rem;
+    touch-action: pan-y; /* Allow vertical scroll, capture horizontal swipe */
+    --scale-factor: 1; /* Fix pdf.js warning */
+}
+
+/* Book container with 3D perspective + drop shadow */
+.flipbook-container {
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.1s ease;
+    filter: drop-shadow(0 24px 48px rgba(0, 0, 0, 0.6));
+    /* Keep the explicit page-spread width instead of being squeezed by the
+       flex stage. Without this, the container shrinks on narrower screens
+       and StPageFlip falls into single-page portrait mode on desktop. */
+    flex-shrink: 0;
+}
+
+/* Individual pages */
+.stf__parent {
+    margin: 0 auto;
+}
+
+/* Page styling within StPageFlip */
+.page-wrapper {
+    background: white;
+    position: relative;
+    overflow: hidden;
+}
+
+.page-wrapper canvas {
+    display: block;
+}
+
+/* Placeholder for pages not yet rendered (lazy rendering) */
+img.page-placeholder {
+    background: #f0f0f0;
+}
+
+/* Text layer for search/selection */
+.page-text-layer {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    opacity: 0.25;
+    line-height: 1;
+    pointer-events: none;
+}
+.page-text-layer span {
+    position: absolute;
+    white-space: pre;
+    color: transparent;
+    pointer-events: all;
+    cursor: text;
+}
+.page-text-layer span::selection {
+    background: rgba(0, 100, 200, 0.3);
+}
+
+/* PDF.js text layer — container is click-through on blank areas,
+   only individual text spans capture pointer events for selection */
+.textLayer {
+    --scale-factor: 1;
+    pointer-events: none !important;
+    user-select: none; /* spans override this below */
+}
+.textLayer span,
+.textLayer br {
+    pointer-events: auto !important;
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    color: transparent !important;
+    cursor: text;
+}
+.textLayer span::selection,
+.textLayer br::selection {
+    background: rgba(0, 100, 200, 0.3) !important;
+    color: transparent !important;
+}
+
+/* Annotation (link) layer — z-index above text layer (5) so link
+   rectangles receive clicks instead of transparent text spans. The
+   container itself stays pointer-events:none so non-link areas pass
+   through to the text layer for selection. */
+.page-annotation-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+}
+.page-annotation-layer a,
+.page-annotation-layer .internal-link {
+    position: absolute;
+    pointer-events: all;
+    cursor: pointer;
+}
+.page-annotation-layer a {
+    border-bottom: 1px dashed rgba(0, 100, 200, 0.3);
+}
+.page-annotation-layer a:hover,
+.page-annotation-layer .internal-link:hover {
+    background: rgba(0, 100, 200, 0.1);
+    border-radius: 2px;
+}
+
+/* Video overlay on pages */
+.page-video-overlay {
+    position: absolute;
+    z-index: 15;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    transition: box-shadow 0.2s ease;
+}
+.page-video-overlay:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+.page-video-overlay iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+.page-video-overlay .video-play-trigger {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: rgba(0,0,0,0.65);
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.page-video-overlay .video-play-trigger:hover {
+    background: rgba(0,0,0,0.45);
+}
+.page-video-overlay .video-play-trigger i {
+    font-size: 2.5rem;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.page-video-overlay .video-play-trigger span {
+    font-size: 0.75rem;
+    font-weight: 500;
+    opacity: 0.8;
+}
+.page-video-overlay .video-thumb-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+}
+
+/* On-page number badge (shown in edit mode when "Show page number" is on) */
+.page-number-badge {
+    position: absolute;
+    bottom: 8px;
+    right: 10px;
+    z-index: 12;
+    padding: 2px 10px;
+    background: rgba(0, 0, 0, 0.55);
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 12px;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Page shadow effect */
+.stf__item {
+    box-shadow: 0 0 20px rgba(0,0,0,0.15);
+}
+
+/* Soft page edge gradient */
+.page-edge-shadow {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 20px;
+    pointer-events: none;
+    z-index: 5;
+}
+.page-edge-shadow.left {
+    right: 0;
+    background: linear-gradient(to left, rgba(0,0,0,0.08), transparent);
+}
+.page-edge-shadow.right {
+    left: 0;
+    background: linear-gradient(to right, rgba(0,0,0,0.08), transparent);
+}
+
+/* Search highlight */
+.search-highlight {
+    background: rgba(255, 235, 59, 0.5);
+    border-radius: 2px;
+    position: absolute;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* Loading overlay dark-context styles */
+.loading-overlay {
+    background: rgba(10, 12, 28, 0.92) !important;
+    color: white;
+}
+
+.loading-overlay p {
+    color: rgba(255, 255, 255, 0.7) !important;
+    font-size: 0.8125rem;
+    letter-spacing: 0.02em;
+}
+
+.loading-book-icon {
+    font-size: 2.5rem;
+    color: var(--primary);
+    margin-bottom: 0.75rem;
+    animation: bookPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes bookPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.92); }
+}
+
+.loading-bar-wrap {
+    width: 200px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 0.75rem;
+}
+
+.loading-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--primary);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+/* Cover page hint */
+.cover-hint {
+    position: absolute;
+    bottom: 2.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.8125rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+    white-space: nowrap;
+}
+
+.cover-hint.visible {
+    opacity: 1;
+}
+
+.cover-hint i {
+    animation: nudgeRight 1.5s ease-in-out infinite;
+}
+
+@keyframes nudgeRight {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(5px); }
+}
+
+/* Keyboard shortcuts hint */
+.keyboard-hint {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    white-space: nowrap;
+}
+.keyboard-hint.visible { opacity: 1; }
+.keyboard-hint kbd {
+    background: rgba(255,255,255,0.2);
+    padding: 1px 6px;
+    border-radius: 3px;
+    margin: 0 2px;
+    font-family: inherit;
+}
+
+/* Thumbnail strip (bottom) */
+.thumbnail-strip {
+    height: 80px;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 1rem;
+    overflow-x: auto;
+    flex-shrink: 0;
+}
+.thumbnail-strip::-webkit-scrollbar { height: 4px; }
+.thumbnail-strip::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 2px; }
+
+.thumbnail-item {
+    flex-shrink: 0;
+    width: 50px;
+    height: 64px;
+    background: white;
+    border-radius: 3px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    overflow: hidden;
+    opacity: 0.6;
+}
+.thumbnail-item:hover { opacity: 0.9; }
+.thumbnail-item.active {
+    border-color: var(--primary);
+    opacity: 1;
+    transform: scale(1.05);
+}
+.thumbnail-item canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* ========================================
+   Mobile bottom reading bar
+   Hidden on desktop; revealed on mobile.
+   ======================================== */
+.mobile-bottom-bar {
+    display: none;
+}
+
+/* ========================================
+   More Menu (mobile overflow dropdown)
+   Hidden on desktop; revealed on mobile.
+   ======================================== */
+.btn-more {
+    display: none;
+}
+
+.more-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0.5rem;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+    padding: 0.375rem;
+    min-width: 200px;
+    z-index: 220;
+    flex-direction: column;
+    gap: 0.125rem;
+    border: 1px solid var(--gray-200);
+}
+
+.more-menu.open {
+    display: flex;
+    animation: moreMenuIn 0.16s ease-out;
+}
+
+@keyframes moreMenuIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.more-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.75rem 0.875rem;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    color: var(--gray-700);
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    transition: background 0.15s, color 0.15s;
+    min-height: 44px;
+}
+
+.more-menu-item:hover,
+.more-menu-item:focus-visible {
+    background: var(--gray-100);
+    color: var(--gray-900);
+    outline: none;
+}
+
+.more-menu-item i {
+    width: 18px;
+    text-align: center;
+    color: var(--gray-500);
+    font-size: 0.9375rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .viewer-toolbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 210;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: auto;
+        min-height: 52px;
+        padding: 0.5rem 0.75rem;
+        padding-top: max(0.5rem, env(safe-area-inset-top));
+        gap: 0.75rem;
+        background: rgba(15, 17, 32, 0.82);
+        backdrop-filter: blur(12px) saturate(1.2);
+        -webkit-backdrop-filter: blur(12px) saturate(1.2);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Single-row top bar: left (back + title) | right (sound, fullscreen, more) */
+    .viewer-toolbar .toolbar-left {
+        flex: 1 1 0;
+        min-width: 0;
+        order: 1;
+        gap: 0.625rem;
+        align-items: center;
+    }
+
+    .viewer-toolbar .toolbar-center {
+        display: none !important;
+    }
+
+    .viewer-toolbar .toolbar-right {
+        flex: 0 0 auto;
+        order: 2;
+        gap: 0.25rem;
+        position: relative; /* anchor for .more-menu */
+        align-items: center;
+    }
+
+    .viewer-toolbar .title {
+        max-width: none;
+        font-size: 0.9375rem;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        color: rgba(255, 255, 255, 0.95);
+    }
+
+    /* Hide separators and zoom controls on mobile */
+    .viewer-toolbar-sep { display: none; }
+    #btnZoomIn, #btnZoomOut, #zoomLevel { display: none; }
+
+    /* Move secondary actions into the more menu */
+    #btnDownload, #btnEditMode, #btnEmbed { display: none !important; }
+    .btn-more { display: inline-flex !important; }
+
+    /* Top bar buttons — glassy circular/rounded pill style */
+    .viewer-toolbar .btn-sm {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        min-height: 40px;
+        padding: 0;
+        font-size: 1rem;
+        justify-content: center;
+        align-items: center;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.92);
+        transition: background 0.15s ease, transform 0.12s ease, border-color 0.15s ease;
+    }
+
+    .viewer-toolbar .btn-sm:hover,
+    .viewer-toolbar .btn-sm:active {
+        background: rgba(255, 255, 255, 0.18);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .viewer-toolbar .btn-sm:active {
+        transform: scale(0.95);
+    }
+
+    .viewer-toolbar .btn.active {
+        background: var(--primary);
+        border-color: var(--primary);
+    }
+
+    /* Mobile bottom reading bar — floating pill */
+    .mobile-bottom-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: fixed;
+        left: 50%;
+        bottom: max(0.75rem, env(safe-area-inset-bottom));
+        transform: translateX(-50%);
+        z-index: 200;
+        gap: 0.375rem;
+        padding: 0.375rem;
+        min-height: 52px;
+        background: rgba(15, 17, 32, 0.88);
+        backdrop-filter: blur(12px) saturate(1.2);
+        -webkit-backdrop-filter: blur(12px) saturate(1.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 999px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .mobile-bottom-bar.hidden {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+        pointer-events: none;
+    }
+
+    .mobile-bottom-bar .btn-sm {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0;
+        font-size: 1.0625rem;
+        justify-content: center;
+        align-items: center;
+        border-radius: 50%;
+        background: transparent;
+        border: 1px solid transparent;
+        color: rgba(255, 255, 255, 0.88);
+        transition: background 0.15s ease, transform 0.12s ease;
+    }
+
+    .mobile-bottom-bar .btn-sm:hover,
+    .mobile-bottom-bar .btn-sm:active,
+    .mobile-bottom-bar .btn-sm.active {
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    .mobile-bottom-bar .btn-sm:active {
+        transform: scale(0.95);
+    }
+
+    .mobile-bottom-nav {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0 0.25rem;
+    }
+
+    .mobile-bottom-bar .page-info {
+        min-height: 44px;
+        min-width: 72px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 0.75rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.95);
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        user-select: none;
+        white-space: nowrap;
+    }
+
+    .mobile-bottom-bar .page-info:hover,
+    .mobile-bottom-bar .page-info:active {
+        background: rgba(255, 255, 255, 0.16);
+    }
+
+    .mobile-bottom-bar .page-info:active {
+        transform: scale(0.97);
+    }
+
+    /* Maximize book area on mobile */
+    .flipbook-stage {
+        padding: 0.5rem;
+        padding-top: calc(0.5rem + 52px + env(safe-area-inset-top));
+        padding-bottom: calc(0.5rem + 68px + env(safe-area-inset-bottom));
+    }
+
+    /* Nav arrows — hide on mobile, use bottom bar instead */
+    .nav-arrow { display: none !important; }
+
+    /* Thumbnail strip */
+    .thumbnail-strip { height: 60px; }
+    .thumbnail-item { width: 36px; height: 48px; }
+
+    /* TOC / Search panels — full width, respect safe area, above bottom bar */
+    .search-panel,
+    .toc-panel {
+        width: 100%;
+        top: 0;
+        padding-top: env(safe-area-inset-top);
+        z-index: 230;
+    }
+
+    /* Cover hint — lift above bottom bar */
+    .cover-hint {
+        bottom: calc(5.5rem + env(safe-area-inset-bottom));
+    }
+
+    /* More menu on mobile — anchored to top-right, dark glass styling */
+    .more-menu {
+        top: calc(100% + 8px);
+        right: 0;
+        background: rgba(22, 25, 45, 0.96);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+        border-radius: 14px;
+    }
+
+    .more-menu-item {
+        color: rgba(255, 255, 255, 0.9);
+        min-height: 48px;
+    }
+
+    .more-menu-item:hover,
+    .more-menu-item:focus-visible {
+        background: rgba(255, 255, 255, 0.12);
+        color: white;
+    }
+
+    .more-menu-item i {
+        color: rgba(255, 255, 255, 0.55);
+    }
+
+    .more-menu::before {
+        content: '';
+        position: absolute;
+        top: -5px;
+        right: 16px;
+        width: 10px;
+        height: 10px;
+        background: rgba(22, 25, 45, 0.96);
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        transform: rotate(45deg);
+    }
+}
+
+/* Print styles - hide viewer UI */
+@media print {
+    .viewer-toolbar, .nav-arrow, .search-panel, .toc-panel, .thumbnail-strip { display: none !important; }
+    .viewer-wrapper { position: static; background: white; }
+}
+
+/* ---- Edit Mode Panel ---- */
+.edit-panel {
+    flex: 0 0 auto;
+    width: 0;
+    overflow: hidden;
+    background: white;
+    border-left: 0 solid var(--gray-200);
+    box-shadow: none;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                border-left-width 0s 0.3s,
+                box-shadow 0.3s;
+    z-index: 110;
+    align-self: stretch;
+}
+
+.edit-panel.open {
+    width: 300px;
+    border-left-width: 1px;
+    box-shadow: -6px 0 24px rgba(0, 0, 0, 0.18);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                border-left-width 0s,
+                box-shadow 0.3s;
+}
+
+.edit-panel-inner {
+    min-width: 300px;
+    width: 300px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.edit-panel-header {
+    padding: 0.875rem 1rem;
+    background: var(--gray-900);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.edit-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: white;
+}
+
+.edit-panel-title i {
+    color: #fbbf24;
+}
+
+.edit-panel-close {
+    color: rgba(255, 255, 255, 0.6);
+    background: transparent;
+    border: none;
+}
+
+.edit-panel-close:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.edit-panel-body {
+    padding: 1rem;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+}
+
+.edit-tips {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--gray-50);
+    border-radius: 8px;
+    border: 1px solid var(--gray-200);
+}
+
+.edit-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: var(--gray-50);
+    border-radius: 8px;
+    border: 1px solid var(--gray-200);
+}
+
+.edit-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--gray-700);
+    cursor: pointer;
+}
+
+.edit-option input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--primary);
+    flex-shrink: 0;
+}
+
+.edit-tip {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 0.8125rem;
+    color: var(--gray-600);
+}
+
+.edit-tip i {
+    width: 14px;
+    color: var(--gray-400);
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.edit-tip.warning {
+    color: #92400e;
+    background: #fef3c7;
+    padding: 0.375rem 0.5rem;
+    border-radius: 4px;
+    margin-top: 0.25rem;
+}
+
+.edit-tip.warning i {
+    color: #d97706;
+}
+
+.edit-panel-footer {
+    padding: 0.875rem 1rem;
+    border-top: 1px solid var(--gray-200);
+    background: var(--gray-50);
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.edit-panel-footer .btn {
+    flex: 1;
+}
+
+/* ---- Edit Mode Stage Indicators ---- */
+.viewer-wrapper.edit-mode .flipbook-stage {
+    box-shadow: inset 0 0 0 3px rgba(251, 191, 36, 0.55);
+}
+
+.edit-mode-banner {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(217, 119, 6, 0.92);
+    backdrop-filter: blur(4px);
+    color: white;
+    padding: 0.25rem 1.25rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-radius: 0 0 10px 10px;
+    pointer-events: none;
+    z-index: 60;
+    display: none;
+    align-items: center;
+    gap: 0.375rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.viewer-wrapper.edit-mode .edit-mode-banner {
+    display: flex;
+}
+
+/* ---- Video Resize Handles ---- */
+.video-resize-handle {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: var(--primary);
+    border: 2px solid white;
+    border-radius: 2px;
+    z-index: 100;
+    display: none;
+}
+
+.viewer-wrapper.edit-mode .video-overlay .video-resize-handle {
+    display: block;
+}
+
+/* In edit mode, hide the play trigger so controls are clearly visible */
+.viewer-wrapper.edit-mode .video-overlay .video-play-trigger {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.video-resize-handle.se { bottom: 2px; right: 2px; cursor: se-resize; }
+.video-resize-handle.sw { bottom: 2px; left: 2px; cursor: sw-resize; }
+.video-resize-handle.ne { top: 2px; right: 2px; cursor: ne-resize; }
+.video-resize-handle.nw { top: 2px; left: 2px; cursor: nw-resize; }
+
+.viewer-wrapper.edit-mode .video-overlay {
+    cursor: move;
+    border: 2px dashed var(--primary);
+}
+
+.viewer-wrapper.edit-mode .video-overlay:hover {
+    border-color: var(--primary-dark);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.viewer-wrapper.edit-mode .video-overlay::after {
+    content: 'Drag to reposition';
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--primary);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.viewer-wrapper.edit-mode .video-overlay:hover::after {
+    opacity: 1;
+}
+
+.video-overlay.dragging {
+    opacity: 0.7;
+    z-index: 1000;
+}
+
+.video-delete-btn {
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--danger);
+    color: white;
+    border: 3px solid white;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1rem;
+    z-index: 100;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.45);
+    transition: transform 0.15s, background 0.15s;
+}
+
+.viewer-wrapper.edit-mode .video-overlay .video-delete-btn {
+    display: flex;
+}
+
+.video-delete-btn:hover {
+    background: #dc2626;
+    transform: scale(1.15);
+}
+
+/* ---- Link Overlays ---- */
+.link-overlay {
+    position: absolute;
+    z-index: 15;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0 0.6rem;
+    background: rgba(59, 130, 246, 0.88);
+    color: white;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border-radius: 20px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+    user-select: none;
+}
+
+/* Inner label span carries the ellipsis so the overlay itself can overflow
+   visibly in edit mode (delete button + resize handles sit outside the box). */
+.link-overlay .link-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
+.link-overlay:hover {
+    background: rgba(37, 99, 235, 0.95);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    transform: scale(1.03);
+}
+
+.link-overlay i {
+    font-size: 0.65rem;
+    flex-shrink: 0;
+}
+
+/* Edit mode — link overlays get same dashed border + drag cursor */
+.viewer-wrapper.edit-mode .link-overlay {
+    cursor: move;
+    border: 2px dashed rgba(255,255,255,0.7);
+    background: rgba(59, 130, 246, 0.75);
+}
+
+.viewer-wrapper.edit-mode .link-overlay .video-resize-handle {
+    display: block;
+}
+
+.viewer-wrapper.edit-mode .link-overlay .video-delete-btn {
+    display: flex;
+}
+
+/* In edit mode, allow overlays (and their parent page) to overflow visibly
+   so the delete button (-8px) and resize handles (-6px) are not clipped.
+   Video play is disabled in edit mode, so relaxing .page-video-overlay
+   overflow is safe. The link label keeps its ellipsis via .link-label. */
+.viewer-wrapper.edit-mode .page-wrapper {
+    overflow: visible;
+}
+.viewer-wrapper.edit-mode #viewerBody,
+.viewer-wrapper.edit-mode .flipbook-stage {
+    overflow: visible;
+}
+.viewer-wrapper.edit-mode .page-video-overlay {
+    overflow: visible;
+}
+.viewer-wrapper.edit-mode .link-overlay {
+    overflow: visible;
+    text-overflow: clip;
+}
+
+/* ---- Search Highlight Overlay ---- */
+.search-highlight-overlay {
+    position: absolute;
+    pointer-events: none;
+    z-index: 20;
+    background: rgba(253, 224, 71, 0.55);
+    border-radius: 3px;
+    box-shadow: 0 0 0 2px rgba(234, 179, 8, 0.5);
+}
+
+/* ---- TOC Edit Modal Rows ---- */
+.toc-edit-modal {
+    max-width: 520px;
+    width: 95vw;
+}
+
+.toc-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.toc-edit-row:last-child { border-bottom: none; }
+
+.toc-edit-input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+    font-family: inherit;
+    background: white;
+    color: var(--gray-800);
+    transition: border-color 0.15s;
+}
+
+.toc-edit-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+}
+
+.toc-edit-page {
+    width: 58px;
+    flex-shrink: 0;
+    padding: 0.35rem 0.4rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+    font-family: inherit;
+    text-align: center;
+    background: white;
+    color: var(--gray-800);
+}
+
+.toc-edit-page:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+}
+
+.toc-edit-actions {
+    display: flex;
+    gap: 0.15rem;
+    flex-shrink: 0;
+}
+
+/* ---- TOC panel header tweaks ---- */
+.toc-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Add Link / TOC edit modals reuse .add-video-modal width */
+.add-link-modal {
+    max-width: 400px;
+    width: 95vw;
+}
+
+/* ========================================
+   Mobile overrides for Edit Panel
+   Placed AFTER the base .edit-panel rules so
+   they win the cascade. On mobile the panel
+   becomes a full-width overlay instead of a
+   flex sibling that shrinks the book.
+   ======================================== */
+@media (max-width: 768px) {
+    .edit-panel {
+        display: none;
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        width: 100% !important;
+        border-left: none;
+        z-index: 180;
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .edit-panel.open {
+        display: flex;
+        width: 100% !important;
+        border-left: none;
+        box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.25);
+        animation: slideInRight 0.25s ease-out;
+    }
+
+    .edit-panel-inner {
+        min-width: 100%;
+        width: 100%;
+    }
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
+}

@@ -1,0 +1,119 @@
+- generic [ref=f4e2]:
+  - complementary [ref=f4e3]:
+    - generic [ref=f4e9]:
+      - generic [ref=f4e10]: Grants Portal
+      - generic [ref=f4e11]: University of Houston
+    - navigation "Main navigation" [ref=f4e12]:
+      - link "Dashboard" [ref=f4e13] [cursor=pointer]:
+        - /url: http://localhost:8000/admin
+      - link "Rounds" [ref=f4e16] [cursor=pointer]:
+        - /url: http://localhost:8000/admin/rounds
+      - link "Users" [ref=f4e19] [cursor=pointer]:
+        - /url: http://localhost:8000/admin/users
+      - link "Assign reviewers" [ref=f4e22] [cursor=pointer]:
+        - /url: http://localhost:8000/admin/review-assignments
+      - link "Review results" [ref=f4e25] [cursor=pointer]:
+        - /url: http://localhost:8000/admin/review-results
+    - generic [ref=f4e28]:
+      - link "A Andy Admin andy@uh.edu" [ref=f4e29] [cursor=pointer]:
+        - /url: http://localhost:8000/profile
+        - generic [ref=f4e30]: A
+        - generic [ref=f4e31]:
+          - generic [ref=f4e32]: Andy Admin
+          - generic [ref=f4e33]: andy@uh.edu
+      - button "Sign out" [ref=f4e35] [cursor=pointer]
+  - main [ref=f4e39]:
+    - generic [ref=f4e44]:
+      - navigation "Breadcrumb" [ref=f4e45]:
+        - link "Dashboard" [ref=f4e46] [cursor=pointer]:
+          - /url: http://localhost:8000/admin
+        - link "Users" [ref=f4e49] [cursor=pointer]:
+          - /url: http://localhost:8000/admin/users
+        - generic [ref=f4e52]: andy chan
+      - generic [ref=f4e53]:
+        - generic [ref=f4e54]:
+          - generic [ref=f4e55]: A
+          - generic [ref=f4e56]:
+            - heading "andy chan" [level=1] [ref=f4e57]
+            - paragraph [ref=f4e58]: mchan2@uh.edu
+            - generic [ref=f4e59]:
+              - generic [ref=f4e60]: Reviewer
+              - generic [ref=f4e61]: Active
+        - link "Edit User" [ref=f4e62] [cursor=pointer]:
+          - /url: http://localhost:8000/admin/users/24/edit
+    - generic [ref=f4e65]:
+      - generic [ref=f4e71]:
+        - paragraph [ref=f4e72]: "1"
+        - paragraph [ref=f4e73]: Reviews
+      - generic [ref=f4e79]:
+        - paragraph [ref=f4e80]: "1"
+        - paragraph [ref=f4e81]: Round Invitations
+      - generic [ref=f4e87]:
+        - paragraph [ref=f4e88]: Active
+        - paragraph [ref=f4e89]: Account Status
+      - generic [ref=f4e95]:
+        - paragraph [ref=f4e96]: ESI
+        - paragraph [ref=f4e97]: Investigator Type
+    - generic [ref=f4e98]:
+      - generic [ref=f4e99]:
+        - heading "Profile Information" [level=2] [ref=f4e100]
+        - generic [ref=f4e103]:
+          - generic [ref=f4e108]:
+            - term [ref=f4e109]: First Name
+            - definition [ref=f4e110]: andy
+          - generic [ref=f4e115]:
+            - term [ref=f4e116]: Last Name
+            - definition [ref=f4e117]: chan
+          - generic [ref=f4e122]:
+            - term [ref=f4e123]: Email
+            - definition [ref=f4e124]: mchan2@uh.edu
+          - generic [ref=f4e129]:
+            - term [ref=f4e130]: Phone
+            - definition [ref=f4e131]: —
+          - generic [ref=f4e136]:
+            - term [ref=f4e137]: Department
+            - definition [ref=f4e138]: —
+          - generic [ref=f4e143]:
+            - term [ref=f4e144]: Title
+            - definition [ref=f4e145]: abc
+          - generic [ref=f4e150]:
+            - term [ref=f4e151]: PeopleSoft ID
+            - definition [ref=f4e152]: "123456"
+          - generic [ref=f4e157]:
+            - term [ref=f4e158]: Investigator Type
+            - definition [ref=f4e159]: Early-Stage Investigator
+      - generic [ref=f4e160]:
+        - generic [ref=f4e161]:
+          - heading "Account" [level=2] [ref=f4e162]
+          - generic [ref=f4e166]:
+            - generic [ref=f4e167]:
+              - paragraph [ref=f4e168]: Role
+              - generic [ref=f4e169]: Reviewer
+            - generic [ref=f4e170]:
+              - paragraph [ref=f4e171]: Status
+              - generic [ref=f4e172]: Active
+            - generic [ref=f4e173]:
+              - paragraph [ref=f4e174]: User Name
+              - paragraph [ref=f4e175]: mchan2
+        - generic [ref=f4e176]:
+          - heading "Round Invitations" [level=2] [ref=f4e177]
+          - generic [ref=f4e180]:
+            - generic [ref=f4e181]: Fall 2026
+            - generic [ref=f4e182]: Open
+    - generic [ref=f4e183]:
+      - heading "Review Assignments 1 total" [level=2] [ref=f4e184]:
+        - text: Review Assignments
+        - generic [ref=f4e187]: 1 total
+      - table [ref=f4e189]:
+        - rowgroup [ref=f4e190]:
+          - row [ref=f4e191]:
+            - columnheader "Round" [ref=f4e192]
+            - columnheader "Submission" [ref=f4e193]
+            - columnheader "Status" [ref=f4e194]
+            - columnheader "Assigned" [ref=f4e195]
+        - rowgroup [ref=f4e196]:
+          - row [ref=f4e197]:
+            - cell "Fall 2026" [ref=f4e198]
+            - cell "abcd" [ref=f4e199]
+            - cell "Pending" [ref=f4e200]
+            - cell "Aug 18, 2026" [ref=f4e202]

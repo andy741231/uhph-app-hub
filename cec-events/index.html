@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CEC Events Manager</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-content">
+                <div class="navbar-brand">
+                    <svg class="navbar-logo" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <span class="navbar-title">CEC Events Manager</span>
+                </div>
+                <div class="navbar-nav">
+                    <a href="dashboard.html" class="nav-link">Dashboard</a>
+                    <a href="index.html" class="nav-link nav-link-active">View Events</a>
+                </div>
+                <div class="navbar-actions">
+                   <button class="btn btn-primary" onclick="app.openAddModal()">
+                    <i data-lucide="plus" class="icon-small"></i>
+                    New Event
+                </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <div class="container">
+        
+        <div class="controls">
+            <div class="controls-header">
+                <div class="search-wrapper">
+                    <input type="text" id="searchInput" placeholder="Search events..." class="form-input search-input">
+                    <i data-lucide="search" class="search-icon"></i>
+                </div>
+                <div class="controls-actions">
+                    <button id="viewToggleBtn" class="btn btn-light" onclick="app.toggleView()" title="Toggle view">
+                        <span id="viewToggleText">Table View</span>
+                    </button>
+                    <button class="btn btn-light" onclick="app.toggleFilters()" title="Toggle Filters">
+                        <i data-lucide="filter" class="icon-small"></i>
+                        <span id="filterToggleText">Show Filters</span>
+                    </button>
+                </div>
+            </div>
+
+             <div class="filter-group" id="filterGroup" style="display: none;">
+                <select id="yearSelect">
+                    <option value="">Loading years...</option>
+                </select>
+                <select id="itemsPerPage">
+                    <option value="9" selected>9 per page</option>
+                    <option value="25">25 per page</option>
+                    <option value="50">50 per page</option>
+                    <option value="100">100 per page</option>
+                    <option value="250">250 per page</option>
+                    <option value="500">500 per page</option>
+                    <option value="all">All items</option>
+                </select>
+                <select id="sortBy">
+                    <option value="date-desc">Sort by Date (Newest)</option>
+                    <option value="date-asc">Sort by Date (Oldest)</option>
+                    <option value="name-asc">Sort by Name (A-Z)</option>
+                    <option value="name-desc">Sort by Name (Z-A)</option>
+                </select>
+                
+                <select id="statusFilter">
+                    <option value="">All Statuses</option>
+                    <option value="Tentative">Tentative</option>
+                    <option value="Ready">Ready</option>
+                    <option value="Completed">Completed</option>
+                </select>
+                <div class="date-range">
+                    <label for="dateFrom">From Date</label>
+                    <input type="date" id="dateFrom" class="form-input" placeholder="From Date">
+                    <label for="dateTo">To Date</label>
+                    <input type="date" id="dateTo" class="form-input" placeholder="To Date">
+                </div>
+            </div>
+        </div>
+        
+        <div class="events-count">
+            <span id="eventsCount">0</span> results found
+        </div>
+        
+        <div id="eventsGrid" class="events-grid">
+            <div class="loading">Loading events...</div>
+        </div>
+
+        <div id="eventsTable" class="table-view" style="display: none;">
+            <div class="table-card">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Event Name</th>
+                                <th>Type</th>
+                                <th>Location</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="eventsTableBody">
+                            <tr>
+                                <td colspan="6" class="loading">Loading events...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="pagination-container" id="paginationControls">
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Edit Event</h2>
+                <button class="close-btn" onclick="app.closeModal()">×</button>
+            </div>
+             <div id="outlookButtonsContainer" style="display: flex; justify-content: flex-end; gap: 8px; margin-right: auto;">
+                    <button class="btn btn-light" onclick="app.addToOutlookWeb()" title="Open in Outlook Web">
+                        <i data-lucide="calendar-plus" class="icon-small"></i>
+                        Add to Outlook
+                    </button>
+                    <button class="btn btn-light" onclick="app.addToOutlookCalendar()" title="Download .ics file">
+                        <i data-lucide="download" class="icon-small"></i>
+                    </button>
+                </div>
+            <div class="modal-body">
+                <form id="editForm">
+                    <input type="hidden" id="eventId">
+                    
+                    <div class="form-group">
+                        <label class="form-label">Event Name</label>
+                        <input type="text" id="eventName" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Date</label>
+                        <input type="date" id="eventDate" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">From Time</label>
+                        <input type="text" id="eventTimeFrom" class="form-input" placeholder="e.g., 12:00 PM">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">To Time</label>
+                        <input type="text" id="eventTimeTo" class="form-input" placeholder="e.g., 1:00 PM">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Type</label>
+                        <select id="eventType" class="form-select">
+                            <option value="">Select type...</option>
+                            <option value="Community Event">Community Event</option>
+                            <option value="Neighborhood Association Meeting">Neighborhood Association Meeting</option>
+                            <option value="Health Fair">Health Fair</option>
+                            <option value="Workshop">Workshop</option>
+                            <option value="custom">+ Add new type...</option>
+                        </select>
+                        <input type="text" id="eventTypeCustom" class="form-input" style="display: none; margin-top: 8px;" placeholder="Enter new event type">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Neighborhood</label>
+                        <select id="eventNeighborhood" class="form-select">
+                            <option value="">Select neighborhood...</option>
+                            <option value="custom">+ Add new neighborhood...</option>
+                        </select>
+                        <input type="text" id="eventNeighborhoodCustom" class="form-input" style="display: none; margin-top: 8px;" placeholder="Enter new neighborhood">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Address</label>
+                        <input type="text" id="eventAddress" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select id="eventStatus" class="form-select">
+                            <option value="Tentative">Tentative</option>
+                            <option value="Ready">Ready</option>
+                            <option value="Completed">Completed</option>
+                            <option value="custom">+ Add new status...</option>
+                        </select>
+                        <input type="text" id="eventStatusCustom" class="form-input" style="display: none; margin-top: 8px;" placeholder="Enter new status">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Demographic Served</label>
+                        <select id="eventDemographic" class="form-select">
+                            <option value="">Select demographic...</option>
+                            <option value="Seniors">Seniors</option>
+                            <option value="Families">Families</option>
+                            <option value="Youth">Youth</option>
+                            <option value="Adults">Adults</option>
+                            <option value="Children">Children</option>
+                            <option value="Veterans">Veterans</option>
+                            <option value="custom">+ Add new demographic...</option>
+                        </select>
+                        <input type="text" id="eventDemographicCustom" class="form-input" style="display: none; margin-top: 8px;" placeholder="Enter new demographic">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Attendees</label>
+                        <select id="eventAttendees" class="form-select">
+                            <option value="">Select attendees...</option>
+                            <option value="Nallely Cheung">Nallely Cheung</option>
+                            <option value="Maria Rodriguez">Maria Rodriguez</option>
+                            <option value="John Smith">John Smith</option>
+                            <option value="Sarah Johnson">Sarah Johnson</option>
+                            <option value="custom">+ Add new attendee...</option>
+                        </select>
+                        <input type="text" id="eventAttendeesCustom" class="form-input" style="display: none; margin-top: 8px;" placeholder="Enter new attendee name">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label"># of Interactions</label>
+                        <input type="number" id="eventInteractions" class="form-input" placeholder="e.g. 50" min="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Equipment Needed</label>
+                        <input type="text" id="eventEquipment" class="form-input" placeholder="e.g. Table, Chairs, Projector">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Notes</label>
+                        <textarea id="eventNotes" class="form-textarea"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Focus Challenges/Highlights</label>
+                        <textarea id="eventFocusChallengesHighlights" class="form-textarea"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">New Contacts Made</label>
+                        <textarea id="eventNewContactsMade" class="form-textarea"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Existing contacts engaged</label>
+                        <textarea id="eventExistingContactsEngaged" class="form-textarea"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Potential Future CEC engagement opportunities</label>
+                        <textarea id="eventPotentialFutureCEC" class="form-textarea"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Possible Alignment with researcher</label>
+                        <textarea id="eventPossibleAlignmentResearcher" class="form-textarea"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeModal()">Cancel</button>
+               
+                <button class="btn btn-primary" onclick="app.saveEvent()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Year Input Modal -->
+    <div id="yearModal" class="modal-overlay" style="display: none;">
+        <div class="modal modal-small">
+            <div class="modal-header">
+                <h2 class="modal-title">Add New Year</h2>
+                <button class="close-btn" onclick="app.closeYearModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Enter Year</label>
+                    <input type="text" id="yearInput" class="form-input" placeholder="e.g., 2027" maxlength="4">
+                    <small class="form-hint">Please enter a 4-digit year</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="app.closeYearModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="app.submitNewYear()">Create Table</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Modal -->
+    <div id="notificationModal" class="modal-overlay" style="display: none;">
+        <div class="modal modal-small">
+            <div class="modal-header">
+                <h2 class="modal-title" id="notificationTitle">Notification</h2>
+                <button class="close-btn" onclick="app.closeNotificationModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p id="notificationMessage" class="notification-message"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="app.closeNotificationModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/js/app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

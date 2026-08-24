@@ -1,0 +1,1941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Record Detail</title>
+  <script src="https://unpkg.com/vue@3.4.29/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios@1.7.2/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --secondary: #64748b;
+      --secondary-hover: #475569;
+      --background: #f8fafc;
+      --surface: #ffffff;
+      --surface-alt: #f1f5f9;
+      --surface-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #475569;
+      --text-disabled: #94a3b8;
+      --success: #16a34a;
+      --error: #dc2626;
+      --radius-card: 1rem;
+      --radius-button: 0.75rem;
+      --transition: all 0.2s ease-in-out;
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+
+    .export-error {
+      margin: 0.5rem 0 0;
+      color: var(--error);
+      font-size: 0.9rem;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--background);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .page {
+      max-width: 72rem;
+      margin: 2.5rem auto;
+      padding: 0 1.5rem 3rem;
+    }
+
+    header {
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 1.25rem;
+      padding: 2.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      box-shadow: var(--surface-shadow);
+    }
+
+    .page.pdf-exporting {
+      margin: 0;
+      padding: 0;
+    }
+
+    .page.pdf-exporting header {
+      min-height: calc(10in - 5rem);
+      display: flex !important;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .page.pdf-exporting header .banner-header {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .page.pdf-exporting header .banner-header .flex {
+      flex-direction: column;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .page.pdf-exporting header .banner-text {
+      padding-left: 0;
+    }
+
+    .page.pdf-exporting header .record-default {
+      width: 100%;
+      align-items: center;
+      text-align: center;
+    }
+
+    .page.pdf-exporting header .meta-grid {
+      justify-content: center;
+    }
+
+    .page.pdf-exporting header .meta-item {
+      align-items: center;
+    }
+
+    .page.pdf-exporting.pdf-has-content header {
+      page-break-after: always;
+    }
+
+    .page.pdf-exporting.pdf-cover-only header {
+      page-break-after: auto;
+    }
+
+    .page.pdf-exporting .no-pdf {
+      display: none !important;
+    }
+
+    header .actions {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    header {
+      margin-bottom: 1.5rem;
+    }
+
+    .banner-header {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .flex {
+      display: flex;
+    }
+
+    .justify-between {
+      justify-content: space-between;
+      width: 100%;
+    }
+
+    .banner-logo {
+      flex-shrink: 0;
+      width: 7.5rem;
+      height: 7.5rem;
+      border-radius: 1.25rem;
+      overflow: hidden;
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.75rem;
+    }
+
+    .banner-logo img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .banner-text {
+      padding-left: 2rem;
+    }
+    
+    .banner-text h2 {
+      margin: 0;
+      font-size: 2rem;
+      font-weight: 600;
+      line-height: 1.2;
+      color: var(--text);
+    }
+
+    .banner-subtitle {
+      margin: 0.75rem 0 0;
+      font-size: 1.25rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .banner-description {
+      margin: 1rem 0 0;
+      font-size: 1rem;
+      color: var(--text-muted);
+      max-width: 48rem;
+      white-space: pre-wrap;
+    }
+
+    .banner-error {
+      margin: 0;
+      padding: 1rem 1.25rem;
+      border-radius: 0.75rem;
+      background: rgba(220, 38, 38, 0.1);
+      border: 1px solid rgba(220, 38, 38, 0.2);
+      color: var(--error);
+      font-size: 0.95rem;
+    }
+
+    .record-default {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .record-default h1 {
+      margin: 0;
+      font-size: 2.25rem;
+      font-weight: 600;
+      line-height: 1.25;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+      gap: 1rem;
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+
+    .meta-label {
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--secondary);
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      z-index: 1000;
+    }
+
+    .modal {
+      background: var(--surface);
+      color: var(--text);
+      border-radius: 1rem;
+      width: min(50rem, 100%);
+      max-height: calc(100vh - 3rem);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.35);
+    }
+
+    .modal-header {
+      padding: 1.5rem 2rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .modal-title {
+      margin: 0;
+      font-size: 1.35rem;
+      font-weight: 600;
+    }
+
+    .modal-body {
+      padding: 1.5rem 2rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .modal-footer {
+      padding: 1rem 2rem 1.5rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .field-group label {
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .field-group input,
+    .field-group textarea,
+    .field-group select {
+      width: 100%;
+      border-radius: 0.75rem;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      padding: 0.7rem 0.9rem;
+      font-size: 0.95rem;
+      font-family: inherit;
+      color: inherit;
+      background: var(--surface-alt);
+      transition: var(--transition);
+    }
+
+    .field-group input:focus,
+    .field-group textarea:focus,
+    .field-group select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .field-help {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .modal-close:hover {
+      color: var(--primary);
+    }
+
+    .multi-select {
+      min-height: 6rem;
+    }
+
+    .modal-alert {
+      border-radius: 0.75rem;
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+    }
+
+    .modal-alert.error {
+      background: rgba(220, 38, 38, 0.12);
+      border: 1px solid rgba(220, 38, 38, 0.35);
+      color: var(--error);
+    }
+
+    .modal-alert.success {
+      background: rgba(22, 163, 74, 0.12);
+      border: 1px solid rgba(22, 163, 74, 0.35);
+      color: var(--success);
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .field-readonly {
+      background: var(--surface-alt);
+      border-radius: 0.75rem;
+      border: 1px dashed rgba(148, 163, 184, 0.6);
+      padding: 0.75rem 1rem;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.12);
+      color: var(--primary);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    button {
+      appearance: none;
+      border-radius: var(--radius-button);
+      padding: 0.8rem 1.6rem;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: var(--transition);
+      border: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    button.primary {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 1px 2px rgba(37, 99, 235, 0.2);
+    }
+
+    button.primary:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25);
+    }
+
+    button.secondary {
+      background: var(--surface);
+      border: 1px solid rgba(100, 116, 139, 0.35);
+      color: var(--secondary);
+    }
+
+    button.secondary:hover {
+      border-color: var(--secondary-hover);
+      color: var(--secondary-hover);
+      box-shadow: var(--surface-shadow);
+    }
+
+    button:disabled,
+    button[disabled] {
+      opacity: 0.6;
+      cursor: not-allowed;
+      color: var(--text-disabled);
+    }
+
+    section {
+      background: var(--surface);
+      margin-top: 2rem;
+      border-radius: var(--radius-card);
+      padding: 1.75rem 2rem;
+      box-shadow: var(--surface-shadow);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+    }
+
+    section h2 {
+      margin: 0 0 1.25rem;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+      gap: 1.5rem;
+    }
+
+    .field-card {
+      background: var(--surface-alt);
+      border-radius: 0.9rem;
+      padding: 1.2rem;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .field-card h3 {
+      margin: 0;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--secondary);
+    }
+
+    .field-card p {
+      margin: 0;
+      font-size: 1rem;
+      word-break: break-word;
+      white-space: pre-wrap;
+      color: var(--text);
+    }
+
+    .field-card p.empty {
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .table-list {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .table-list th,
+    .table-list td {
+      border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+      padding: 0.9rem 0;
+      text-align: left;
+      vertical-align: top;
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+
+    .attachment-links {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .attachment-link {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 500;
+      word-break: break-word;
+    }
+
+    .attachment-link:hover {
+      color: var(--primary-hover);
+      text-decoration: underline;
+    }
+
+    .table-list th {
+      width: 14rem;
+      padding-right: 1.5rem;
+      font-weight: 600;
+      color: var(--secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.75rem;
+    }
+
+    .muted {
+      color: var(--text-muted);
+    }
+
+    .loader {
+      margin: 4.5rem auto;
+      max-width: 26rem;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .loader .spinner {
+      width: 3rem;
+      height: 3rem;
+      border-radius: 50%;
+      border: 0.35rem solid rgba(37, 99, 235, 0.12);
+      border-top-color: var(--primary);
+      margin: 0 auto 1rem;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media print {
+      @page {
+        margin: 0.5in;
+      }
+      *,
+      *::before,
+      *::after {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      body {
+        background: #fff;
+      }
+      .page,
+      header,
+      section,
+      .field-card,
+      button {
+        box-shadow: none !important;
+      }
+      header .actions,
+      button {
+        display: none !important;
+      }
+      header,
+      section {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .page {
+        margin: 0;
+        padding: 0;
+      }
+      header {
+        min-height: calc(10in - 5rem);
+        display: flex !important;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        page-break-before: avoid;
+        page-break-after: always;
+      }
+      header .banner-header {
+        width: 100%;
+        justify-content: center;
+      }
+      header .banner-header .flex {
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5rem;
+      }
+      header .banner-text {
+        padding-left: 0;
+      }
+      header .record-default {
+        width: 100%;
+        align-items: center;
+        text-align: center;
+      }
+      header .meta-grid {
+        justify-content: center;
+      }
+      header .meta-item {
+        align-items: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app" class="page">
+    <header v-if="record">
+    
+      <div v-if="hasBannerContent" class="banner-header">
+        <div class="flex justify-between">
+          <div v-if="bannerDetails.logoUrl" class="banner-logo">
+            <img :src="bannerDetails.logoUrl" :alt="bannerDetails.title || 'Banner logo'" />
+          </div>
+          <div class="banner-text">
+            <h2>{{ bannerDetails.title || primaryTitle }}</h2>
+            <p v-if="bannerDetails.subtitle" class="banner-subtitle">{{ bannerDetails.subtitle }}</p>
+            <p v-if="bannerDetails.description" class="banner-description">{{ bannerDetails.description }}</p>
+          </div>
+        </div>
+      </div>
+      <p v-else-if="bannerError" class="banner-error">{{ bannerError }}</p>
+      <template v-else>
+        <div class="record-default">
+          <div class="badge">Record Detail</div>
+          <h1>{{ primaryTitle }}</h1>
+          <div class="meta-grid">
+            <div class="meta-item">
+              <span class="meta-label">ID</span>
+              <span>{{ record.id }}</span>
+            </div>
+            <div class="meta-item" v-if="deliveredOn">
+              <span class="meta-label">Deliverable Date</span>
+              <span>{{ deliveredOn }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Table</span>
+              <span>{{ table }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Base</span>
+              <span>{{ baseId }}</span>
+            </div>
+            <div class="meta-item" v-if="record.createdTime">
+              <span class="meta-label">Created</span>
+              <span>{{ formatDate(record.createdTime) }}</span>
+            </div>
+          </div>
+        </div>
+      </template>
+      <div class="actions no-pdf">
+       
+        <button
+          class="secondary"
+          type="button"
+          @click="openBannerEditor"
+          :disabled="!bannerRecordId || bannerEditor.saving || bannerEditor.loading"
+        >
+          Edit Banner
+        </button>
+        <button class="primary" @click="exportPdf" :disabled="isExportingPdf">
+          <span v-if="isExportingPdf">Preparing PDF…</span>
+          <span v-else>Download PDF</span>
+        </button>
+        <button class="secondary" @click="exportWord">Export as Word Doc</button>
+        <button class="secondary" @click="backToList">Back to Dashboard</button>
+      </div>
+      <p v-if="pdfError" class="export-error no-pdf">{{ pdfError }}</p>
+    </header>
+
+    <div v-if="loading" class="loader">
+      <div class="spinner"></div>
+      <div>Preparing record details...</div>
+    </div>
+    
+    <div class="actions no-pdf" style="display:flex; justify-content: flex-end;">
+      <button
+        v-if="isMilestoneActivities"
+        class="secondary"
+        type="button"
+        @click="openRecordEditor"
+        :disabled="recordEditor.loading || recordEditor.saving"
+      >
+        Edit Milestone Record
+      </button>
+    </div>
+    <section v-if="record && primaryFields.length">
+      <h2>Quick Overview</h2>
+      <div class="grid">
+        <article class="field-card" v-for="field in primaryFields" :key="field.key">
+          <h3>{{ field.key }}</h3>
+          <p :class="{ empty: !field.value }">{{ field.value || 'Not provided' }}</p>
+        </article>
+      </div>
+    </section>
+
+    <section v-if="record && additionalFields.length">
+      <h2>Additional Details</h2>
+      <table class="table-list">
+        <tbody>
+          <tr v-for="field in additionalFields" :key="field.key">
+            <th>{{ field.key }}</th>
+            <td>
+              <template v-if="field.attachments && field.attachments.length">
+                <div class="attachment-links">
+                  <a
+                    v-for="attachment in field.attachments"
+                    :key="attachment.url"
+                    class="attachment-link"
+                    :href="attachment.url"
+                    target="_blank"
+                    rel="noopener"
+                  >
+                    {{ attachment.name }}
+                  </a>
+                </div>
+              </template>
+              <template v-else>
+                {{ field.value }}
+              </template>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section v-if="error">
+      <h2>Unable to load record</h2>
+      <p class="muted">{{ error }}</p>
+    </section>
+
+    <div
+      v-if="recordEditor.visible"
+      class="modal-backdrop no-pdf"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="record-editor-title"
+      @click.self="closeRecordEditor"
+    >
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title" id="record-editor-title">Edit Milestone Record</h2>
+          <button type="button" class="modal-close" @click="closeRecordEditor" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div v-if="recordEditor.loading" class="field-readonly">Loading record fields…</div>
+          <template v-else>
+            <div v-if="recordEditor.error" class="modal-alert error">{{ recordEditor.error }}</div>
+            <div v-if="recordEditor.success" class="modal-alert success">{{ recordEditor.success }}</div>
+            <div v-if="!recordEditor.fields.length" class="field-readonly">
+              No editable fields were found for this table.
+            </div>
+            <template v-else>
+              <div
+                v-for="field in recordEditor.fields"
+                :key="field.id"
+                class="field-group"
+              >
+                <label :for="'record-field-' + field.id">
+                  {{ field.name }}
+                  <span v-if="field.required" class="field-help">(required)</span>
+                </label>
+                <div v-if="field.typeLabel" class="field-help">{{ field.typeLabel }}</div>
+                <div v-if="field.description" class="field-help">{{ field.description }}</div>
+
+                <template v-if="field.editable">
+                  <input
+                    v-if="field.input === 'text'"
+                    :id="'record-field-' + field.id"
+                    v-model="recordEditor.formValues[field.name]"
+                    v-bind="field.inputAttrs"
+                  />
+                  <textarea
+                    v-else-if="field.input === 'textarea'"
+                    :id="'record-field-' + field.id"
+                    v-model="recordEditor.formValues[field.name]"
+                    rows="4"
+                  ></textarea>
+                  <input
+                    v-else-if="field.input === 'number'"
+                    :id="'record-field-' + field.id"
+                    type="number"
+                    v-model="recordEditor.formValues[field.name]"
+                    v-bind="field.inputAttrs"
+                  />
+                  <div v-else-if="field.input === 'checkbox'" class="checkbox-group">
+                    <input
+                      :id="'record-field-' + field.id"
+                      type="checkbox"
+                      v-model="recordEditor.formValues[field.name]"
+                    />
+                    <span>Checked</span>
+                  </div>
+                  <select
+                    v-else-if="field.input === 'single-select'"
+                    :id="'record-field-' + field.id"
+                    v-model="recordEditor.formValues[field.name]"
+                  >
+                    <option value=""></option>
+                    <option v-for="choice in field.choices" :key="choice" :value="choice">{{ choice }}</option>
+                  </select>
+                  <select
+                    v-else-if="field.input === 'multi-select'"
+                    :id="'record-field-' + field.id"
+                    v-model="recordEditor.formValues[field.name]"
+                    multiple
+                    class="multi-select"
+                  >
+                    <option v-for="choice in field.choices" :key="choice" :value="choice">{{ choice }}</option>
+                  </select>
+                  <input
+                    v-else-if="field.input === 'date'"
+                    :id="'record-field-' + field.id"
+                    type="date"
+                    v-model="recordEditor.formValues[field.name]"
+                  />
+                  <input
+                    v-else-if="field.input === 'datetime'"
+                    :id="'record-field-' + field.id"
+                    type="datetime-local"
+                    v-model="recordEditor.formValues[field.name]"
+                  />
+                  <input
+                    v-else
+                    :id="'record-field-' + field.id"
+                    v-model="recordEditor.formValues[field.name]"
+                  />
+                </template>
+
+                <template v-else>
+                  <div class="field-readonly">{{ displayFieldValue(field) }}</div>
+                  <div v-if="field.readOnlyReason" class="field-help" v-html="field.readOnlyReason"></div>
+                </template>
+              </div>
+            </template>
+          </template>
+        </div>
+        <div class="modal-footer">
+          <button class="secondary" type="button" @click="closeRecordEditor" :disabled="recordEditor.saving">Cancel</button>
+          <button class="primary" type="button" @click="submitRecordEditor" :disabled="recordEditor.saving">
+            <span v-if="recordEditor.saving">Saving…</span>
+            <span v-else>Save Changes</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      v-if="bannerEditor.visible"
+      class="modal-backdrop no-pdf"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="banner-editor-title"
+      @click.self="closeBannerEditor"
+    >
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title" id="banner-editor-title">Edit Banner</h2>
+          <button type="button" class="modal-close" @click="closeBannerEditor" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div v-if="bannerEditor.loading" class="field-readonly">Loading banner fields…</div>
+          <template v-else>
+            <div v-if="bannerEditor.error" class="modal-alert error">{{ bannerEditor.error }}</div>
+            <div v-if="bannerEditor.success" class="modal-alert success">{{ bannerEditor.success }}</div>
+            <div v-if="!bannerEditor.fields.length" class="field-readonly">
+              No editable fields were found for the Banner table.
+            </div>
+            <template v-else>
+              <div
+                v-for="field in bannerEditor.fields"
+                :key="field.id"
+                class="field-group"
+              >
+                <label :for="'banner-field-' + field.id">
+                  {{ field.name }}
+                  <span v-if="field.required" class="field-help">(required)</span>
+                </label>
+                <div v-if="field.typeLabel" class="field-help">{{ field.typeLabel }}</div>
+                <div v-if="field.description" class="field-help">{{ field.description }}</div>
+
+                <template v-if="field.editable">
+                  <input
+                    v-if="field.input === 'text'"
+                    :id="'banner-field-' + field.id"
+                    v-model="bannerEditor.formValues[field.name]"
+                    v-bind="field.inputAttrs"
+                  />
+                  <textarea
+                    v-else-if="field.input === 'textarea'"
+                    :id="'banner-field-' + field.id"
+                    v-model="bannerEditor.formValues[field.name]"
+                    rows="4"
+                  ></textarea>
+                  <input
+                    v-else-if="field.input === 'number'"
+                    :id="'banner-field-' + field.id"
+                    type="number"
+                    v-model="bannerEditor.formValues[field.name]"
+                    v-bind="field.inputAttrs"
+                  />
+                  <div v-else-if="field.input === 'checkbox'" class="checkbox-group">
+                    <input
+                      :id="'banner-field-' + field.id"
+                      type="checkbox"
+                      v-model="bannerEditor.formValues[field.name]"
+                    />
+                    <span>Checked</span>
+                  </div>
+                  <select
+                    v-else-if="field.input === 'single-select'"
+                    :id="'banner-field-' + field.id"
+                    v-model="bannerEditor.formValues[field.name]"
+                  >
+                    <option value=""></option>
+                    <option v-for="choice in field.choices" :key="choice" :value="choice">{{ choice }}</option>
+                  </select>
+                  <select
+                    v-else-if="field.input === 'multi-select'"
+                    :id="'banner-field-' + field.id"
+                    v-model="bannerEditor.formValues[field.name]"
+                    multiple
+                    class="multi-select"
+                  >
+                    <option v-for="choice in field.choices" :key="choice" :value="choice">{{ choice }}</option>
+                  </select>
+                  <input
+                    v-else-if="field.input === 'date'"
+                    :id="'banner-field-' + field.id"
+                    type="date"
+                    v-model="bannerEditor.formValues[field.name]"
+                  />
+                  <input
+                    v-else-if="field.input === 'datetime'"
+                    :id="'banner-field-' + field.id"
+                    type="datetime-local"
+                    v-model="bannerEditor.formValues[field.name]"
+                  />
+                  <input
+                    v-else
+                    :id="'banner-field-' + field.id"
+                    v-model="bannerEditor.formValues[field.name]"
+                  />
+                </template>
+
+                <template v-else>
+                  <div class="field-readonly">{{ displayFieldValue(field) }}</div>
+                  <div v-if="field.readOnlyReason" class="field-help" v-html="field.readOnlyReason"></div>
+                </template>
+              </div>
+            </template>
+          </template>
+        </div>
+        <div class="modal-footer">
+          <button class="secondary" type="button" @click="closeBannerEditor" :disabled="bannerEditor.saving">Cancel</button>
+          <button class="primary" type="button" @click="submitBannerEditor" :disabled="bannerEditor.saving">
+            <span v-if="bannerEditor.saving">Saving…</span>
+            <span v-else>Save Changes</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const { createApp } = Vue
+    const PRIMARY_KEYS = ['Date', 'Milestone Type', 'Deliverable']
+
+    createApp({
+      data() {
+        return {
+          record: null,
+          baseId: '',
+          table: '',
+          id: '',
+          loading: true,
+          error: '',
+          primaryFields: [],
+          additionalFields: [],
+          primaryTitle: 'Record Detail',
+          deliveredOn: '',
+          bannerTableName: 'Banner',
+          bannerDetails: {
+            logoUrl: '',
+            title: '',
+            subtitle: '',
+            description: ''
+          },
+          bannerRecordId: '',
+          bannerRecordFields: {},
+          bannerTableSchema: null,
+          recordTableSchema: null,
+          bannerError: '',
+          pdfError: '',
+          isExportingPdf: false,
+          recordEditor: {
+            visible: false,
+            loading: false,
+            saving: false,
+            error: '',
+            success: '',
+            fields: [],
+            formValues: {}
+          },
+          bannerEditor: {
+            visible: false,
+            loading: false,
+            saving: false,
+            error: '',
+            success: '',
+            fields: [],
+            formValues: {}
+          }
+        }
+      },
+      computed: {
+        normalizedTable() {
+          return (this.table || '').trim().toLowerCase()
+        },
+        isMilestoneActivities() {
+          const normalized = this.normalizedTable
+          if (!normalized) return false
+          if (normalized === 'milestone activities') return true
+          return normalized.replace(/\s+/g, '') === 'milestoneactivities'
+        },
+        isBanner() {
+          const normalized = this.normalizedTable
+          if (!normalized) return false
+          if (normalized === 'banner' || normalized === 'banners') return true
+          if (normalized.includes('banner')) return true
+
+          const fields = (this.record && this.record.fields) ? this.record.fields : {}
+          const normalizedKeys = Object.keys(fields).map(key => key.replace(/[\s_-]+/g, '').toLowerCase())
+          const bannerLikeKeys = ['bannerlogo', 'bannertitle', 'bannerheading', 'bannersubtitle', 'bannertagline']
+          const coreBannerKeys = ['logo', 'title', 'subtitle', 'sub-title', 'description', 'body', 'summary']
+
+          const hasBannerPrefixed = normalizedKeys.some(key => bannerLikeKeys.includes(key))
+          const hasCoreFields = coreBannerKeys.some(candidate => normalizedKeys.includes(candidate.replace(/[\s_-]+/g, '').toLowerCase()))
+          return hasBannerPrefixed || hasCoreFields
+        },
+        hasBannerContent() {
+          return Boolean(
+            this.bannerDetails.logoUrl ||
+            this.bannerDetails.title ||
+            this.bannerDetails.subtitle ||
+            this.bannerDetails.description
+          )
+        }
+      },
+      created() {
+        const params = new URLSearchParams(window.location.search)
+        this.baseId = params.get('baseId') || ''
+        this.table = params.get('table') || ''
+        this.id = params.get('id') || ''
+
+        console.info('[RecordDetail:init]', {
+          baseId: this.baseId,
+          table: this.table,
+          id: this.id
+        })
+
+        if (!this.baseId || !this.table || !this.id) {
+          this.error = 'Missing required parameters.'
+          this.loading = false
+          return
+        }
+
+        this.fetchRecord()
+        this.fetchBanner()
+      },
+      methods: {
+        async openRecordEditor() {
+          this.recordEditor.visible = true
+          this.recordEditor.error = ''
+          this.recordEditor.success = ''
+          this.recordEditor.loading = true
+
+          try {
+            if (!this.baseId) {
+              throw new Error('Base ID is missing; cannot edit record.')
+            }
+            if (!this.table) {
+              throw new Error('Table name is missing; cannot edit record.')
+            }
+            if (!this.record || !this.record.id) {
+              throw new Error('Record details are unavailable.')
+            }
+
+            await this.loadRecordSchema()
+            this.prepareRecordEditorFields()
+          } catch (e) {
+            this.recordEditor.error = this.errMsg(e)
+          } finally {
+            this.recordEditor.loading = false
+          }
+        },
+        closeRecordEditor() {
+          this.recordEditor.visible = false
+          this.recordEditor.loading = false
+          this.recordEditor.saving = false
+          this.recordEditor.error = ''
+          this.recordEditor.success = ''
+          this.recordEditor.fields = []
+          this.recordEditor.formValues = {}
+        },
+        async loadRecordSchema(force = false) {
+          if (this.recordTableSchema && !force) {
+            return this.recordTableSchema
+          }
+
+          const params = {
+            action: 'listTables',
+            baseId: this.baseId
+          }
+
+          const res = await axios.get('../backend/api.php', { params })
+          const tables = res.data && res.data.tables ? res.data.tables : []
+          const targetName = (this.table || '').trim().toLowerCase()
+          const targetId = (this.table || '').trim()
+
+          let tableSchema = tables.find(table => (table.name || '').trim().toLowerCase() === targetName)
+
+          if (!tableSchema) {
+            tableSchema = tables.find(table => (table.id || '').trim() === targetId)
+          }
+
+          if (!tableSchema) {
+            throw new Error(`Unable to locate the "${this.table}" table metadata in Airtable.`)
+          }
+
+          this.recordTableSchema = tableSchema
+          return tableSchema
+        },
+        prepareRecordEditorFields() {
+          if (!this.recordTableSchema) {
+            this.recordEditor.fields = []
+            this.recordEditor.formValues = {}
+            return
+          }
+
+          const recordFields = this.record && this.record.fields ? this.record.fields : {}
+          const configuredFields = []
+          const formValues = {}
+
+          for (const rawField of this.recordTableSchema.fields || []) {
+            const fieldConfig = this.buildFieldConfig(rawField, recordFields)
+            configuredFields.push(fieldConfig)
+            formValues[fieldConfig.name] = this.cloneFieldValue(fieldConfig.initialValue)
+          }
+
+          this.recordEditor.fields = configuredFields
+          this.recordEditor.formValues = formValues
+        },
+        async submitRecordEditor() {
+          if (this.recordEditor.saving || !this.recordEditor.fields.length) return
+
+          this.recordEditor.error = ''
+          this.recordEditor.success = ''
+
+          const updates = {}
+
+          for (const fieldConfig of this.recordEditor.fields) {
+            if (!fieldConfig.editable) continue
+            const formValue = this.recordEditor.formValues[fieldConfig.name]
+
+            if (fieldConfig.required) {
+              const isEmpty = (fieldConfig.input === 'multi-select' && (!Array.isArray(formValue) || formValue.length === 0)) ||
+                (fieldConfig.input === 'checkbox' ? false : (formValue === '' || formValue === null || typeof formValue === 'undefined'))
+              if (isEmpty) {
+                this.recordEditor.error = `${fieldConfig.name} is required.`
+                return
+              }
+            }
+
+            if (fieldConfig.input === 'number' && formValue !== '' && formValue !== null) {
+              const numeric = Number(formValue)
+              if (Number.isNaN(numeric)) {
+                this.recordEditor.error = `${fieldConfig.name} must be a valid number.`
+                return
+              }
+            }
+
+            if (this.fieldValuesEqual(fieldConfig, formValue, fieldConfig.originalValue)) {
+              continue
+            }
+
+            updates[fieldConfig.name] = this.formatFieldValueForSave(fieldConfig, formValue)
+          }
+
+          if (!Object.keys(updates).length) {
+            this.recordEditor.success = 'No changes to save.'
+            return
+          }
+
+          this.recordEditor.saving = true
+
+          try {
+            const params = {
+              action: 'updateRecord',
+              baseId: this.baseId,
+              table: this.table,
+              id: this.record.id
+            }
+            const res = await axios.patch('../backend/api.php', { fields: updates }, { params })
+            if (res.data && res.data.fields) {
+              this.record = res.data
+            } else if (this.record) {
+              this.record = {
+                ...this.record,
+                fields: {
+                  ...(this.record.fields || {}),
+                  ...updates
+                }
+              }
+            }
+
+            await this.fetchRecord()
+            this.recordEditor.success = 'Record updated successfully.'
+            this.prepareRecordEditorFields()
+          } catch (e) {
+            this.recordEditor.error = this.errMsg(e)
+          } finally {
+            this.recordEditor.saving = false
+          }
+        },
+        async fetchRecord() {
+          this.loading = true
+          try {
+            const res = await axios.get('../backend/api.php', {
+              params: {
+                action: 'getRecord',
+                baseId: this.baseId,
+                table: this.table,
+                id: this.id
+              }
+            })
+            this.record = res.data
+            if (!this.record || !this.record.fields) {
+              throw new Error('No record data returned from server')
+            }
+            const fields = this.record.fields
+            this.primaryFields = PRIMARY_KEYS.map(key => ({
+              key,
+              value: this.normalizeValue(fields[key]),
+              attachments: this.extractAttachments(fields[key])
+            }))
+            this.additionalFields = Object.keys(fields)
+              .filter(key => !PRIMARY_KEYS.includes(key))
+              .map(key => ({
+                key,
+                value: this.normalizeValue(fields[key]),
+                attachments: this.extractAttachments(fields[key])
+              }))
+            this.primaryTitle = fields['Summary'] || `Record ${this.record.id}`
+            this.deliveredOn = this.normalizeValue(fields['Deliverable Date'])
+            this.bannerDetails = this.extractBannerDetails(fields)
+            this.bannerError = this.validateBannerDetails(this.bannerDetails, fields)
+            console.info('[RecordDetail]', {
+              table: this.table,
+              id: this.id,
+              isBanner: this.isBanner,
+              fields: Object.keys(fields),
+              bannerDetails: this.bannerDetails,
+              bannerError: this.bannerError
+            })
+            if (this.isBanner && this.bannerDetails.title) {
+              this.primaryTitle = this.bannerDetails.title
+            }
+            document.title = `${this.primaryTitle} • Detail`
+            if (this.recordEditor.visible && this.recordTableSchema) {
+              this.prepareRecordEditorFields()
+            }
+          } catch (e) {
+            this.error = this.errMsg(e)
+            this.bannerError = ''
+            console.error('[RecordDetail:error]', e)
+          } finally {
+            this.loading = false
+          }
+        },
+        async fetchBanner() {
+          if (!this.baseId || this._bannerFetchInFlight) return
+          this._bannerFetchInFlight = true
+          try {
+            const params = {
+              action: 'listRecords',
+              baseId: this.baseId,
+              table: 'Banner',
+              pageSize: 1
+            }
+            const res = await axios.get('../backend/api.php', { params })
+            const records = res.data && res.data.records ? res.data.records : []
+            if (records.length) {
+              const bannerRecord = records[0] || {}
+              const bannerFields = bannerRecord.fields || {}
+              const details = this.extractBannerDetails(bannerFields)
+              this.bannerDetails = details
+              this.bannerRecordId = bannerRecord.id || ''
+              this.bannerRecordFields = bannerFields
+              this.bannerError = this.validateBannerDetails(details, bannerFields, { force: true })
+              console.info('[RecordDetail:banner]', {
+                fields: Object.keys(bannerFields),
+                bannerDetails: details,
+                bannerError: this.bannerError
+              })
+              if (this.bannerEditor.visible && this.bannerTableSchema) {
+                this.prepareBannerEditorFields()
+              }
+            } else {
+              this.bannerRecordId = ''
+              this.bannerRecordFields = {}
+              this.bannerError = 'Banner table returned no records.'
+            }
+          } catch (e) {
+            console.error('[RecordDetail:bannerError]', e)
+            this.bannerRecordId = ''
+            this.bannerRecordFields = {}
+            this.bannerError = this.errMsg(e)
+          } finally {
+            this._bannerFetchInFlight = false
+          }
+        },
+        async openBannerEditor() {
+          if (!this.baseId) {
+            this.bannerEditor.error = 'Base ID is missing; cannot edit banner.'
+            return
+          }
+
+          this.bannerEditor.visible = true
+          this.bannerEditor.error = ''
+          this.bannerEditor.success = ''
+          this.bannerEditor.loading = true
+
+          try {
+            if (!this.bannerRecordId) {
+              await this.fetchBanner()
+            }
+
+            if (!this.bannerRecordId) {
+              throw new Error('Banner record was not found.')
+            }
+
+            await this.loadBannerSchema()
+            this.prepareBannerEditorFields()
+          } catch (e) {
+            this.bannerEditor.error = this.errMsg(e)
+          } finally {
+            this.bannerEditor.loading = false
+          }
+        },
+        closeBannerEditor() {
+          this.bannerEditor.visible = false
+          this.bannerEditor.loading = false
+          this.bannerEditor.saving = false
+          this.bannerEditor.error = ''
+          this.bannerEditor.success = ''
+          this.bannerEditor.fields = []
+          this.bannerEditor.formValues = {}
+        },
+        async loadBannerSchema(force = false) {
+          if (this.bannerTableSchema && !force) {
+            return this.bannerTableSchema
+          }
+
+          const params = {
+            action: 'listTables',
+            baseId: this.baseId
+          }
+
+          const res = await axios.get('../backend/api.php', { params })
+          const tables = res.data && res.data.tables ? res.data.tables : []
+          const targetName = (this.bannerTableName || 'Banner').toLowerCase()
+          let tableSchema = tables.find(table => (table.name || '').toLowerCase() === targetName)
+
+          if (!tableSchema && tables.length === 1) {
+            tableSchema = tables[0]
+          }
+
+          if (!tableSchema) {
+            throw new Error(`Unable to locate the "${this.bannerTableName}" table metadata in Airtable.`)
+          }
+
+          this.bannerTableSchema = tableSchema
+          return tableSchema
+        },
+        prepareBannerEditorFields() {
+          if (!this.bannerTableSchema) {
+            this.bannerEditor.fields = []
+            this.bannerEditor.formValues = {}
+            return
+          }
+
+          const recordFields = this.bannerRecordFields || {}
+          const formValues = {}
+          const configuredFields = []
+
+          for (const rawField of this.bannerTableSchema.fields || []) {
+            const fieldConfig = this.buildFieldConfig(rawField, recordFields)
+            configuredFields.push(fieldConfig)
+            formValues[fieldConfig.name] = this.cloneFieldValue(fieldConfig.initialValue)
+          }
+
+          this.bannerEditor.fields = configuredFields
+          this.bannerEditor.formValues = formValues
+        },
+        buildFieldConfig(rawField, recordFields = {}) {
+          const currentValue = recordFields[rawField.name]
+          const baseConfig = {
+            id: rawField.id || rawField.name,
+            name: rawField.name,
+            type: rawField.type,
+            typeLabel: this.formatFieldType(rawField),
+            description: rawField.description || '',
+            required: Boolean(rawField.options && rawField.options.isRequired),
+            editable: false,
+            readOnlyReason: '',
+            input: 'text',
+            inputAttrs: {},
+            choices: [],
+            initialValue: currentValue,
+            originalValue: currentValue
+          }
+
+          const readOnly = reason => ({
+            ...baseConfig,
+            editable: false,
+            readOnlyReason: reason || 'This field type cannot be edited from this view.'
+          })
+
+          const editable = (input, attrs = {}) => ({
+            ...baseConfig,
+            editable: true,
+            input,
+            inputAttrs: attrs
+          })
+
+          switch (rawField.type) {
+            case 'singleLineText':
+            case 'email':
+            case 'phoneNumber':
+            case 'url':
+              return {
+                ...editable('text', rawField.type === 'url' ? { type: 'url' } : rawField.type === 'email' ? { type: 'email' } : rawField.type === 'phoneNumber' ? { type: 'tel' } : {}),
+                initialValue: typeof currentValue === 'string' ? currentValue : ''
+              }
+            case 'multilineText':
+            case 'richText':
+              return {
+                ...editable('textarea'),
+                initialValue: typeof currentValue === 'string' ? currentValue : ''
+              }
+            case 'number':
+            case 'percent':
+            case 'currency':
+            case 'rating':
+              return {
+                ...editable('number', { step: 'any' }),
+                initialValue: typeof currentValue === 'number' ? currentValue : currentValue || ''
+              }
+            case 'checkbox':
+              return {
+                ...editable('checkbox'),
+                initialValue: Boolean(currentValue)
+              }
+            case 'singleSelect': {
+              const choices = (rawField.options && Array.isArray(rawField.options.choices))
+                ? rawField.options.choices.map(choice => choice && (choice.name || choice)).filter(Boolean)
+                : []
+              return {
+                ...editable('single-select'),
+                choices,
+                initialValue: typeof currentValue === 'string' ? currentValue : ''
+              }
+            }
+            case 'multipleSelects': {
+              const choices = (rawField.options && Array.isArray(rawField.options.choices))
+                ? rawField.options.choices.map(choice => choice && (choice.name || choice)).filter(Boolean)
+                : []
+              return {
+                ...editable('multi-select'),
+                choices,
+                initialValue: Array.isArray(currentValue) ? [...currentValue] : []
+              }
+            }
+            case 'date':
+              return {
+                ...editable('date'),
+                initialValue: typeof currentValue === 'string' ? currentValue.slice(0, 10) : ''
+              }
+            case 'dateTime':
+              return {
+                ...editable('datetime'),
+                initialValue: this.fieldDateTimeToLocal(currentValue)
+              }
+            default: {
+              const nonEditableTypes = new Set([
+                'formula',
+                'rollup',
+                'lookup',
+                'count',
+                'autoNumber',
+                'createdTime',
+                'lastModifiedTime',
+                'createdBy',
+                'lastModifiedBy',
+                'multipleAttachments',
+                'multipleRecordLinks',
+                'barcode',
+                'button',
+                'duration'
+              ])
+
+              if (nonEditableTypes.has(rawField.type)) {
+                return readOnly('This field is managed by Airtable and can be edited here: <a href="https://airtable.com/appAIxASkp5dv39O6/tbl3gRlcjLqjMJe9W/viwJHCFL6SnytJ3Eg?blocks=hide">https://airtable.com/appAIxASkp5dv39O6/tbl3gRlcjLqjMJe9W/viwJHCFL6SnytJ3Eg?blocks=hide</a>')
+              }
+
+              return readOnly()
+            }
+          }
+        },
+        fieldDateTimeToLocal(value) {
+          if (!value) return ''
+          const date = new Date(value)
+          if (Number.isNaN(date.getTime())) return ''
+          const offsetMinutes = date.getTimezoneOffset()
+          const local = new Date(date.getTime() - offsetMinutes * 60000)
+          return local.toISOString().slice(0, 16)
+        },
+        fieldDateTimeToIso(value) {
+          if (!value) return null
+          const date = new Date(value)
+          if (Number.isNaN(date.getTime())) return null
+          return date.toISOString()
+        },
+        cloneFieldValue(value) {
+          if (Array.isArray(value)) {
+            return value.map(entry => (typeof entry === 'object' && entry !== null) ? { ...entry } : entry)
+          }
+          if (value && typeof value === 'object') {
+            return { ...value }
+          }
+          return value
+        },
+        formatFieldType(rawField) {
+          const map = {
+            singleLineText: 'Single line text',
+            multilineText: 'Long text',
+            richText: 'Rich text',
+            number: 'Number',
+            percent: 'Percent',
+            currency: 'Currency',
+            checkbox: 'Checkbox',
+            singleSelect: 'Single select',
+            multipleSelects: 'Multiple select',
+            date: 'Date',
+            dateTime: 'Date & time',
+            email: 'Email',
+            phoneNumber: 'Phone number',
+            url: 'URL',
+            rating: 'Rating'
+          }
+          return map[rawField.type] || (rawField.type ? rawField.type.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase()) : '')
+        },
+        fieldValuesEqual(fieldConfig, newValue, currentValue) {
+          switch (fieldConfig.input) {
+            case 'number': {
+              const a = newValue === '' || newValue === null ? null : Number(newValue)
+              const b = typeof currentValue === 'number' ? currentValue : currentValue === '' ? null : Number(currentValue)
+              if (Number.isNaN(a) && Number.isNaN(b)) return true
+              return a === b
+            }
+            case 'checkbox':
+              return Boolean(newValue) === Boolean(currentValue)
+            case 'multi-select': {
+              const arrA = Array.isArray(newValue) ? [...newValue] : []
+              const arrB = Array.isArray(currentValue) ? [...currentValue] : []
+              if (arrA.length !== arrB.length) return false
+              return arrA.every((val, idx) => val === arrB[idx])
+            }
+            case 'date':
+              return (newValue || '') === (currentValue || '').slice(0, 10)
+            case 'datetime': {
+              const iso = newValue ? this.fieldDateTimeToIso(newValue) : null
+              const normalizedCurrent = currentValue ? new Date(currentValue).toISOString() : null
+              return iso === normalizedCurrent
+            }
+            default:
+              return (newValue ?? '') === (currentValue ?? '')
+          }
+        },
+        formatFieldValueForSave(fieldConfig, value) {
+          switch (fieldConfig.input) {
+            case 'number':
+              if (value === '' || value === null || Number.isNaN(Number(value))) {
+                return null
+              }
+              return Number(value)
+            case 'checkbox':
+              return Boolean(value)
+            case 'multi-select':
+              return Array.isArray(value) ? value.filter(Boolean) : []
+            case 'single-select':
+              return value || null
+            case 'date':
+              return value || null
+            case 'datetime':
+              return this.fieldDateTimeToIso(value)
+            default:
+              if (typeof value === 'string') {
+                return value
+              }
+              return value == null ? null : value
+          }
+        },
+        displayFieldValue(fieldConfig) {
+          const value = fieldConfig.originalValue
+          if (Array.isArray(value)) {
+            if (value.length && typeof value[0] === 'object') {
+              return value.map(item => item && (item.name || item.filename || item.url || JSON.stringify(item))).join(', ')
+            }
+            return value.join(', ')
+          }
+          if (typeof value === 'boolean') {
+            return value ? 'True' : 'False'
+          }
+          return this.normalizeValue(value) || '—'
+        },
+        async submitBannerEditor() {
+          if (this.bannerEditor.saving || !this.bannerEditor.fields.length) return
+
+          this.bannerEditor.error = ''
+          this.bannerEditor.success = ''
+
+          const updates = {}
+
+          for (const fieldConfig of this.bannerEditor.fields) {
+            if (!fieldConfig.editable) continue
+            const formValue = this.bannerEditor.formValues[fieldConfig.name]
+
+            if (fieldConfig.required) {
+              const isEmpty = (fieldConfig.input === 'multi-select' && (!Array.isArray(formValue) || formValue.length === 0)) ||
+                (fieldConfig.input === 'checkbox' ? false : (formValue === '' || formValue === null || typeof formValue === 'undefined'))
+              if (isEmpty) {
+                this.bannerEditor.error = `${fieldConfig.name} is required.`
+                return
+              }
+            }
+
+            if (fieldConfig.input === 'number' && formValue !== '' && formValue !== null) {
+              const numeric = Number(formValue)
+              if (Number.isNaN(numeric)) {
+                this.bannerEditor.error = `${fieldConfig.name} must be a valid number.`
+                return
+              }
+            }
+
+            const currentValue = fieldConfig.originalValue
+
+            if (this.fieldValuesEqual(fieldConfig, formValue, currentValue)) {
+              continue
+            }
+
+            const formattedValue = this.formatFieldValueForSave(fieldConfig, formValue)
+            updates[fieldConfig.name] = formattedValue
+          }
+
+          if (!Object.keys(updates).length) {
+            this.bannerEditor.success = 'No changes to save.'
+            return
+          }
+
+          this.bannerEditor.saving = true
+
+          try {
+            const params = {
+              action: 'updateRecord',
+              baseId: this.baseId,
+              table: this.bannerTableName,
+              id: this.bannerRecordId
+            }
+            const res = await axios.patch('../backend/api.php', { fields: updates }, { params })
+            const updatedRecord = res.data
+            if (updatedRecord && updatedRecord.fields) {
+              this.bannerRecordFields = updatedRecord.fields
+            } else {
+              this.bannerRecordFields = { ...this.bannerRecordFields, ...updates }
+            }
+            await this.fetchBanner()
+            this.bannerEditor.success = 'Banner updated successfully.'
+            this.prepareBannerEditorFields()
+          } catch (e) {
+            this.bannerEditor.error = this.errMsg(e)
+          } finally {
+            this.bannerEditor.saving = false
+          }
+        },
+        normalizeValue(value) {
+          if (value === null || value === undefined) return ''
+          if (Array.isArray(value)) {
+            return value.map(v => this.normalizeValue(v)).join(', ')
+          }
+          if (typeof value === 'object') {
+            return JSON.stringify(value, null, 2)
+          }
+          return value
+        },
+        formatDate(dateString) {
+          const date = new Date(dateString)
+          if (Number.isNaN(date.getTime())) return dateString
+          return date.toLocaleString(undefined, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        },
+        async exportPdf() {
+          this.pdfError = ''
+          this.isExportingPdf = true
+
+          const page = document.querySelector('.page')
+          const html2pdfAvailable = typeof html2pdf !== 'undefined'
+
+          if (!page || !html2pdfAvailable) {
+            console.error('html2pdf library is missing or page element not found.')
+            this.pdfError = 'PDF generator is unavailable. Please refresh and try again.'
+            this.isExportingPdf = false
+            return
+          }
+
+          const headerEl = page.querySelector('header')
+          const hasAdditionalContent = headerEl
+            ? Array.from(page.children).some(child => {
+                if (child === headerEl) return false
+                if (child.classList && child.classList.contains('no-pdf')) return false
+                const style = window.getComputedStyle(child)
+                if (style.display === 'none' || style.visibility === 'hidden') return false
+                return child.offsetHeight > 0 && child.offsetWidth > 0
+              })
+            : page.children.length > 1
+
+          page.classList.add('pdf-exporting')
+          page.classList.remove('pdf-has-content', 'pdf-cover-only')
+          page.classList.add(hasAdditionalContent ? 'pdf-has-content' : 'pdf-cover-only')
+          const filename = `${this.primaryTitle || 'record'}`
+            .trim()
+            .replace(/\s+/g, '_') || 'record'
+
+          const options = {
+            margin: [0.5, 0.5, 0.5, 0.5],
+            filename: `${filename}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: {
+              scale: 2,
+              useCORS: true,
+              ignoreElements: element => element.classList && element.classList.contains('no-pdf')
+            },
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+          }
+
+          try {
+            await html2pdf().set(options).from(page).save()
+          } catch (error) {
+            console.error('Failed to generate PDF', error)
+            this.pdfError = 'Unable to generate PDF. Please try again later.'
+          } finally {
+            page.classList.remove('pdf-exporting', 'pdf-has-content', 'pdf-cover-only')
+            this.isExportingPdf = false
+          }
+        },
+        exportWord() {
+          const page = document.querySelector('.page')
+          if (!page) return
+
+          const filename = `${this.primaryTitle || 'record'}`
+            .trim()
+            .replace(/\s+/g, '_') || 'record'
+
+          const html = `<!DOCTYPE html>
+            <html>
+              <head>
+                <meta charset="utf-8" />
+                <title>${this.primaryTitle}</title>
+              </head>
+              <body>
+                ${page.innerHTML}
+              </body>
+            </html>`
+
+          const blob = new Blob(['\ufeff', html], { type: 'application/msword' })
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = `${filename}.doc`
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          URL.revokeObjectURL(url)
+        },
+        extractBannerDetails(fields) {
+          if (!fields) {
+            return {
+              logoUrl: '',
+              title: '',
+              subtitle: '',
+              description: ''
+            }
+          }
+
+          const logoField = this.getFieldValue(fields, ['Logo', 'Banner Logo', 'Logo Url', 'Image', 'Primary Image'])
+          let logoUrl = ''
+          if (Array.isArray(logoField) && logoField.length) {
+            const first = logoField[0]
+            if (first) {
+              logoUrl = first.url || (first.thumbnails && first.thumbnails.large && first.thumbnails.large.url) || ''
+            }
+          } else if (typeof logoField === 'string') {
+            logoUrl = logoField
+          }
+
+          return {
+            logoUrl,
+            title: this.normalizeValue(this.getFieldValue(fields, ['Title', 'Banner Title', 'Heading', 'Name'])) || '',
+            subtitle: this.normalizeValue(this.getFieldValue(fields, ['Sub-Title', 'Subtitle', 'Tagline'])) || '',
+            description: this.normalizeValue(this.getFieldValue(fields, ['Description', 'Body', 'Summary', 'Details'])) || ''
+          }
+        },
+        extractAttachments(value) {
+          if (!value) return []
+
+          const toName = url => {
+            try {
+              const parsed = new URL(url)
+              const pathname = parsed.pathname || ''
+              const parts = pathname.split('/')
+              const last = parts.pop() || parts.pop()
+              return last || 'Download file'
+            } catch (e) {
+              return 'Download file'
+            }
+          }
+
+          const normalizeAttachment = item => {
+            if (!item) return null
+
+            if (typeof item === 'string') {
+              if (/^https?:\/\//i.test(item)) {
+                return { url: item, name: toName(item) }
+              }
+              return null
+            }
+
+            if (typeof item === 'object') {
+              const url = item.url || item.href || ''
+              if (!url) return null
+              const name = item.filename || item.name || item.title || toName(url)
+              return { url, name }
+            }
+
+            return null
+          }
+
+          if (Array.isArray(value)) {
+            return value.map(normalizeAttachment).filter(Boolean)
+          }
+
+          return normalizeAttachment(value) ? [normalizeAttachment(value)] : []
+        },
+        validateBannerDetails(details, fields, options = {}) {
+          const force = Boolean(options.force)
+          if (!force && !this.isBanner) return ''
+          const hasContent = Boolean(details.logoUrl || details.title || details.subtitle || details.description)
+          if (!hasContent) {
+            const available = fields ? Object.keys(fields).join(', ') : 'none'
+            return `Banner content is missing. Populate the Logo, Title, Sub-Title, or Description fields. Available fields: ${available}`
+          }
+          return ''
+        },
+        getFieldValue(fields, candidates = []) {
+          if (!fields) return undefined
+          const normalized = {}
+          Object.entries(fields).forEach(([key, value]) => {
+            const norm = key.replace(/[\s_-]+/g, '').toLowerCase()
+            if (!(norm in normalized)) {
+              normalized[norm] = value
+            }
+          })
+          for (const candidate of candidates) {
+            const norm = String(candidate).replace(/[\s_-]+/g, '').toLowerCase()
+            if (norm in normalized) {
+              return normalized[norm]
+            }
+          }
+          return undefined
+        },
+        backToList() {
+          window.location.href = 'index.html'
+        },
+        errMsg(e) {
+          if (e.response && e.response.data) {
+            const d = e.response.data
+            if (typeof d === 'string') return d
+            if (d.error) return typeof d.error === 'string' ? d.error : (d.error.message || JSON.stringify(d.error))
+          }
+          return e.message || 'Request failed'
+        }
+      }
+    }).mount('#app')
+  </script>
+</body>
+</html>

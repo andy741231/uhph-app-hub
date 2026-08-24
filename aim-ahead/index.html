@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aim-Ahead Analytics</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .table-container {
+            overflow-x: auto;
+        }
+        .data-table th, .data-table td {
+            text-align: left;
+            padding: 12px 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-content">
+                <div class="navbar-brand">
+                    <svg class="navbar-logo" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    <span class="navbar-title">Aim-Ahead Analytics</span>
+                </div>
+                <div class="navbar-nav">
+                    <a href="dashboard.html" class="nav-link">Dashboard</a>
+                    <a href="index.html" class="nav-link nav-link-active">View Data</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+    <div class="container">
+        
+        <div class="controls">
+            <div class="controls-header">
+                <div class="search-wrapper">
+                    <input type="text" id="searchInput" placeholder="Search data..." class="form-input search-input">
+                    <i data-lucide="search" class="search-icon"></i>
+                </div>
+                <div class="controls-actions">
+                    <button class="btn btn-light" onclick="app.toggleFilters()" title="Toggle Filters">
+                        <i data-lucide="filter" class="icon-small"></i>
+                        <span id="filterToggleText">Show Filters</span>
+                    </button>
+                </div>
+            </div>
+
+             <div class="filter-group" id="filterGroup" style="display: none;">
+                <select id="yearSelect">
+                    <option value="">All Years</option>
+                </select>
+                <select id="stateSelect">
+                    <option value="">All States</option>
+                </select>
+                <select id="itemsPerPage">
+                    <option value="25" selected>25 per page</option>
+                    <option value="50">50 per page</option>
+                    <option value="100">100 per page</option>
+                    <option value="all">All items</option>
+                </select>
+                <select id="sortBy">
+                    <option value="year-desc">Sort by Year (Newest)</option>
+                    <option value="year-asc">Sort by Year (Oldest)</option>
+                    <option value="state-asc">Sort by State (A-Z)</option>
+                    <option value="state-desc">Sort by State (Z-A)</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="events-count">
+            <span id="eventsCount">0</span> records found
+        </div>
+        
+        <div id="eventsTable" class="table-view">
+            <div class="table-card">
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Year</th>
+                                <th>State</th>
+                                <th>Consortium Avg Applications</th>
+                                <th>South Central Hub Applications</th>
+                                <th>Consortium Avg Awardees</th>
+                                <th>South Central Hub Awardees</th>
+                                <th>Stakeholders</th>
+                            </tr>
+                        </thead>
+                        <tbody id="eventsTableBody">
+                            <tr>
+                                <td colspan="7" class="loading">Loading data...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="pagination-container" id="paginationControls">
+        </div>
+    </div>
+
+    <!-- Notification Modal -->
+    <div id="notificationModal" class="modal-overlay" style="display: none;">
+        <div class="modal modal-small">
+            <div class="modal-header">
+                <h2 class="modal-title" id="notificationTitle">Notification</h2>
+                <button class="close-btn" onclick="app.closeNotificationModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p id="notificationMessage" class="notification-message"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="app.closeNotificationModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/js/app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

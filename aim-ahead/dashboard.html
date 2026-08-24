@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Aim-Ahead Analytics</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+    <link rel="stylesheet" href="static/css/dashboard.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/chartjs-chart-geo@4.2.8/build/index.umd.min.js"></script>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-content">
+                <div class="navbar-brand">
+                    <svg class="navbar-logo" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    <span class="navbar-title">Aim-Ahead Analytics</span>
+                </div>
+                <div class="navbar-nav">
+                    <a href="dashboard.html" class="nav-link nav-link-active">Dashboard</a>
+                    <a href="index.html" class="nav-link">View Data</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="dashboard-header">
+            <div>
+                <h1 class="dashboard-title">Analytics Dashboard</h1>
+                <p class="dashboard-subtitle">Aim-Ahead Hub Comparisons & Trends</p>
+            </div>
+            <div class="dashboard-actions">
+                <select id="globalYearFilter" class="form-input" style="width: auto; padding: 6px 12px; border-radius: 4px;">
+                    <option value="">All Years</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="stats-grid-dashboard">
+            <div class="stat-card-dashboard">
+                <div class="stat-icon" style="background: #DBEAFE; color: #2563EB;">
+                    <i data-lucide="file-text"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value" id="totalApplications">0</div>
+                    <div class="stat-label">Total SC Hub Applications</div>
+                </div>
+            </div>
+
+            <div class="stat-card-dashboard">
+                <div class="stat-icon" style="background: #D1FAE5; color: #059669;">
+                    <i data-lucide="award"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value" id="totalAwardees">0</div>
+                    <div class="stat-label">Total SC Hub Awardees</div>
+                </div>
+            </div>
+
+            <div class="stat-card-dashboard">
+                <div class="stat-icon" style="background: #FEF3C7; color: #D97706;">
+                    <i data-lucide="users"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value" id="totalStakeholders">0</div>
+                    <div class="stat-label">Total Stakeholders</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-grid" style="grid-template-columns: 1fr; margin-top: 2rem;">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i data-lucide="bar-chart-2"></i>
+                        Applications by Year
+                    </h3>
+                </div>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="applicationsChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i data-lucide="bar-chart-2"></i>
+                        Awardees by Year
+                    </h3>
+                </div>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="awardeesChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3 class="chart-title">
+                        <i data-lucide="map"></i>
+                        Stakeholders by State
+                    </h3>
+                    <select id="stakeholdersStateFilter" class="form-input" style="width: auto; padding: 4px 8px;">
+                        <option value="">All States</option>
+                    </select>
+                </div>
+                <div class="chart-container" style="height: 500px;">
+                    <canvas id="stakeholdersChart"></canvas>
+                </div>
+                <hr style="margin: 20px 0; border: 0; border-top: 1px solid #E5E7EB;">
+                <h4 style="font-size: 1rem; color: #4B5563; margin-bottom: 10px; font-weight: 500; text-align: center;">Stakeholders Over Time</h4>
+                <div class="chart-container" style="height: 250px;">
+                    <canvas id="stakeholdersBarChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="static/js/dashboard.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

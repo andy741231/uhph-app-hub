@@ -1,0 +1,3 @@
+- generic [active] [ref=f1e1]:
+  - generic [ref=f1e2]: initPageFlip mobile= false bookWidth= 600 orient= landscape page= 0
+  - generic [ref=f1e3]: P1

@@ -1,0 +1,24 @@
+{
+    "name": "uh/app-hub-client",
+    "description": "Reusable Laravel client for the transitional App Hub authorization-code flow.",
+    "type": "library",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.2",
+        "laravel/framework": "^11.0|^12.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Uh\\AppHub\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Uh\\AppHub\\AppHubServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

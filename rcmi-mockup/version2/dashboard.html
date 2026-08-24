@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Living Dashboard — RCMI</title>
+  <meta name="description" content="Nine metrics, updated monthly. People return because it changes." />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <nav class="nav" aria-label="Primary">
+    <div class="nav__inner">
+      <a class="nav__brand" href="index.html"><span class="nav__brand-mark" aria-hidden="true">UH</span><span>RCMI</span></a>
+      <ul class="nav__links">
+        <li><a href="why.html">Why We Exist</a></li>
+        <li><a href="cores.html">Cores</a></li>
+        <li><a href="journey.html">Journey</a></li>
+        <li><a href="dashboard.html" aria-current="page">Dashboard</a></li>
+        <li><a href="stories.html">Stories</a></li>
+        <li><a href="partners.html">Partners</a></li>
+        <li><a href="publications.html">Publications</a></li>
+      </ul>
+      <a class="btn btn--pop nav__cta" href="start.html">Start Collaborating</a>
+    </div>
+  </nav>
+
+  <main id="main">
+    <header class="page-head">
+      <div class="container">
+        <p class="page-head__crumb"><a href="index.html">Home</a> / Dashboard</p>
+        <span class="eyebrow eyebrow--pop">A Living Dashboard</span>
+        <h1 class="page-head__title">9 Metrics.<br/><span style="color:var(--pop);">Updated Monthly.</span></h1>
+        <p class="page-head__lede">People return because it changes. Here's a snapshot of where we stand right now — with trend lines for each metric.</p>
+        <p class="mono" style="margin-top:var(--space-lg); font-size:0.8125rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--uh-slate);">Last updated: July 2026 · Next refresh: August 2026</p>
+      </div>
+    </header>
+
+    <!-- BENTO DASHBOARD -->
+    <section class="section section--paper">
+      <div class="container">
+        <div class="bento" style="grid-auto-rows:200px;">
+          <!-- Big featured metric -->
+          <div class="bento__cell bento__cell--pop bento__cell--span2 bento__cell--row2">
+            <span class="mono">01 · Featured</span>
+            <div style="font-family:var(--font-display); font-size:clamp(4rem,10vw,8rem); line-height:0.85;">$8.4M</div>
+            <h3 class="h3">Funding Leveraged</h3>
+            <p style="font-family:var(--font-editorial); margin:0;">Total funding leveraged by RCMI-supported investigators since launch.</p>
+            <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden="true">
+              <polyline points="0,35 25,32 50,28 75,22 100,18 125,14 150,10 175,6 200,3" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
+            </svg>
+            <span class="mono" style="color:var(--gold);">+ $1.2M YoY</span>
+          </div>
+
+          <div class="bento__cell">
+            <span class="mono">02</span>
+            <div class="stat__value">24</div>
+            <span class="stat__label">Pilot Projects</span>
+            <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,30 40,28 80,24 120,20 160,14 200,10" fill="none" stroke="var(--pop)" stroke-width="2"/></svg>
+            <span class="mono" style="color:var(--teal);">+4 Q2</span>
+          </div>
+
+          <div class="bento__cell bento__cell--ink">
+            <span class="mono" style="color:var(--gold);">03</span>
+            <div class="stat__value" style="color:var(--gold);">68</div>
+            <span class="stat__label" style="color:var(--paper);">Active Investigators</span>
+            <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,34 40,30 80,24 120,18 160,12 200,8" fill="none" stroke="var(--gold)" stroke-width="2"/></svg>
+            <span class="mono" style="color:var(--teal);">+12 this year</span>
+          </div>
+
+          <div class="bento__cell bento__cell--gold">
+            <span class="mono">04</span>
+            <div class="stat__value" style="color:var(--ink);">412</div>
+            <span class="stat__label" style="color:var(--ink);">Training Participants</span>
+            <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,36 40,32 80,26 120,18 160,10 200,4" fill="none" stroke="var(--ink)" stroke-width="2"/></svg>
+            <span class="mono">+87 Q2</span>
+          </div>
+
+          <div class="bento__cell bento__cell--teal">
+            <span class="mono">05</span>
+            <div class="stat__value" style="color:var(--uh-white);">31</div>
+            <span class="stat__label" style="color:var(--uh-white);">Community Partnerships</span>
+            <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,32 40,28 80,24 120,20 160,16 200,12" fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2"/></svg>
+            <span class="mono">+3 new MOUs</span>
+          </div>
+
+          <div class="bento__cell">
+            <span class="mono">06</span>
+            <div class="stat__value">156</div>
+            <span class="stat__label">Publications</span>
+            <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,34 40,30 80,26 120,20 160,14 200,8" fill="none" stroke="var(--pop)" stroke-width="2"/></svg>
+            <span class="mono" style="color:var(--teal);">+22 this year</span>
+          </div>
+
+          <div class="bento__cell bento__cell--chocolate">
+            <span class="mono" style="color:var(--gold);">07</span>
+            <div class="stat__value" style="color:var(--gold);">189</div>
+            <span class="stat__label" style="color:var(--paper);">Consultations</span>
+            <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,32 40,28 80,22 120,16 160,10 200,6" fill="none" stroke="var(--gold)" stroke-width="2"/></svg>
+            <span class="mono" style="color:var(--teal);">+34 Q2</span>
+          </div>
+
+          <div class="bento__cell">
+            <span class="mono">08</span>
+            <div class="stat__value">17</div>
+            <span class="stat__label">Counties Served</span>
+            <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,30 40,28 80,24 120,22 160,18 200,14" fill="none" stroke="var(--pop)" stroke-width="2"/></svg>
+            <span class="mono" style="color:var(--teal);">+2 new counties</span>
+          </div>
+
+          <div class="bento__cell bento__cell--ink bento__cell--span2">
+            <span class="mono" style="color:var(--gold);">09</span>
+            <div class="stat__value" style="color:var(--gold);">42</div>
+            <span class="stat__label" style="color:var(--paper);">Research Questions Being Studied</span>
+            <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,34 40,30 80,26 120,22 160,16 200,10" fill="none" stroke="var(--gold)" stroke-width="2"/></svg>
+            <span class="mono" style="color:var(--teal);">+6 new studies</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NOTE -->
+    <section class="section--tight section--ink">
+      <div class="container container--narrow" style="text-align:center;">
+        <span class="eyebrow eyebrow--gold">Why a dashboard?</span>
+        <p class="lede lede--light" style="margin:var(--space-lg) auto 0;">A dashboard isn't vanity. It's accountability. If the numbers stop moving, we're not doing our job. Come back next month — they'll be different.</p>
+      </div>
+    </section>
+
+    <!-- NEXT -->
+    <section class="section section--paper" style="text-align:center;">
+      <div class="container container--narrow">
+        <span class="eyebrow">Next</span>
+        <h2 class="h2" style="margin-block:var(--space-lg);">Numbers are nice.<br/>Stories are better.</h2>
+        <a class="btn btn--pop btn--lg" href="stories.html">Research in Action →</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__grid">
+        <div><div class="footer__brand">RCMI · University of Houston</div><small>Research Centers in Minority Institutions — building research capacity, developing investigators, and partnering with communities to improve chronic disease outcomes.</small></div>
+        <div><h4>Cores</h4><ul><li><a href="cores.html">Administrative</a></li><li><a href="cores.html">Investigator Development</a></li><li><a href="cores.html">Community Engagement</a></li><li><a href="cores.html">Research Capacity</a></li></ul></div>
+        <div><h4>Explore</h4><ul><li><a href="dashboard.html">Dashboard</a></li><li><a href="stories.html">Stories</a></li><li><a href="partners.html">Partners</a></li><li><a href="publications.html">Publications</a></li></ul></div>
+        <div><h4>Get Involved</h4><ul><li><a href="start.html">Start Collaborating</a></li><li><a href="start.html">Request Support</a></li><li><a href="partners.html">Partner With Us</a></li><li><a href="index.html">Contact</a></li></ul></div>
+      </div>
+      <div class="footer__bottom">© 2026 University of Houston · RCMI · Brand identity per the UH Brand Style Guide · v2 Editorial Brutalism</div>
+    </div>
+  </footer>
+</body>
+</html>

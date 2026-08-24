@@ -1,0 +1,25 @@
+- generic [ref=e1]:
+  - generic [ref=e6]:
+    - generic [ref=e7]: UH Grants Portal
+    - generic [ref=e8]: University of Houston
+  - generic [ref=e9]:
+    - generic [ref=e10]:
+      - heading "Sign In" [level=1] [ref=e11]
+      - paragraph [ref=e12]: Enter your credentials to access the grants portal.
+      - generic [ref=e13]:
+        - generic [ref=e14]:
+          - generic [ref=e15]: Username or Email
+          - textbox "Username or Email" [active] [ref=e16]:
+            - /placeholder: CougarNet username or UH email
+          - paragraph [ref=e17]: Use your CougarNet username (e.g. jcougar) or UH email address.
+        - generic [ref=e18]:
+          - generic [ref=e19]: Password
+          - textbox "Password" [ref=e20]
+        - generic [ref=e21]:
+          - generic [ref=e22] [cursor=pointer]:
+            - checkbox "Remember me" [ref=e23]
+            - text: Remember me
+          - link "Forgot password?" [ref=e24] [cursor=pointer]:
+            - /url: http://localhost:8000/forgot-password
+        - button "Sign In" [ref=e25] [cursor=pointer]
+    - paragraph [ref=e26]: Don't have an account? Contact the grants administrator for an invitation.

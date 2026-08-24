@@ -1,0 +1,114 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Fira+Code:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --color-primary: #C8102E;
+        --color-primary-hover: #960C22;
+        --color-secondary: #54585A;
+        --color-accent: #00866C;
+        --color-background: #F8FAFC;
+        --color-foreground: #111827;
+        --color-muted: #F4F5F7;
+        --color-border: #E2E5E9;
+        --color-destructive: #C8102E;
+    }
+
+    body {
+        @apply bg-uh-bg text-uh-fg font-sans antialiased;
+    }
+
+    /* Visible focus for keyboard navigation (WCAG 2.1 AA) */
+    *:focus-visible {
+        @apply outline-none ring-2 ring-uh-red ring-offset-2 ring-offset-uh-bg;
+    }
+}
+
+@layer components {
+    .btn {
+        @apply inline-flex items-center justify-center px-4 py-2 rounded-md font-semibold text-sm transition-all duration-150 cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-uh-red focus-visible:ring-offset-2;
+    }
+
+    .btn-primary {
+        @apply btn bg-uh-red text-white hover:bg-uh-brick shadow-sm;
+    }
+
+    .btn-secondary {
+        @apply btn bg-uh-slate text-white hover:bg-[#3E4244] shadow-sm;
+    }
+
+    .btn-accent {
+        @apply btn bg-uh-green text-white hover:bg-[#00705A] shadow-sm;
+    }
+
+    .btn-danger {
+        @apply btn bg-uh-red text-white hover:bg-uh-brick shadow-sm;
+    }
+
+    .btn-ghost {
+        @apply btn bg-transparent text-uh-red hover:bg-uh-red/10;
+    }
+
+    .card {
+        @apply bg-white rounded-lg shadow-sm border border-uh-border;
+    }
+
+    .input {
+        @apply w-full rounded-md border-uh-border shadow-sm focus:border-uh-red focus:ring-uh-red transition-colors duration-150;
+    }
+
+    .label {
+        @apply block text-sm font-semibold text-uh-fg mb-1.5;
+    }
+
+    .req {
+        @apply text-uh-red font-bold ml-0.5;
+    }
+
+    .badge {
+        @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+    }
+
+    .badge-green {
+        @apply badge bg-[#00866C]/10 text-[#00866C] border border-[#00866C]/20;
+    }
+
+    .badge-yellow {
+        @apply badge bg-[#F6BE00]/15 text-[#8F6000] border border-[#F6BE00]/30;
+    }
+
+    .badge-gray {
+        @apply badge bg-[#54585A]/10 text-[#54585A] border border-[#54585A]/20;
+    }
+
+    .badge-blue, .badge-red {
+        @apply badge bg-uh-red/10 text-uh-red border border-uh-red/20;
+    }
+
+    .table-wrapper {
+        @apply overflow-x-auto;
+    }
+
+    .data-table {
+        @apply w-full text-sm;
+    }
+
+    .data-table thead {
+        @apply bg-uh-muted text-uh-fg text-left;
+    }
+
+    .data-table th {
+        @apply px-4 py-3 font-semibold whitespace-nowrap;
+    }
+
+    .data-table td {
+        @apply px-4 py-3 border-t border-uh-border;
+    }
+
+    .data-table tbody tr {
+        @apply transition-colors duration-100 hover:bg-uh-muted/50;
+    }
+}

@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swag Inventory Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['DM Sans', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#4F46E5', // Indigo 600
+                        secondary: '#10B981', // Emerald 500
+                        danger: '#EF4444', // Red 500
+                        warning: '#F59E0B', // Amber 500
+                        dark: '#111827', // Gray 900
+                    },
+                    animation: {
+                        'gradient': 'gradientShift 8s ease infinite',
+                        'fade-in': 'fadeIn 0.5s ease-out forwards',
+                    },
+                    keyframes: {
+                        gradientShift: {
+                            '0%, 100%': { backgroundPosition: '0% 50%' },
+                            '50%': { backgroundPosition: '100% 50%' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        [v-cloak] { display: none; }
+        
+        .vibrant-gradient-text {
+            background: linear-gradient(135deg, #4F46E5, #ec4899, #8b5cf6);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% 200%;
+            animation: gradientShift 6s ease infinite;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-link-active {
+            position: relative;
+            color: #4F46E5;
+        }
+        
+        .nav-link-active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, #4F46E5, #ec4899);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans antialiased">
+    <div id="app" v-cloak class="min-h-screen flex flex-col">
+        <!-- Navigation -->
+        <nav class="bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-200 sticky top-0 z-50 transition-all duration-300">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex">
+                        <div class="flex-shrink-0 flex items-center cursor-pointer" @click="currentView = 'dashboard'">
+                            <svg class="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg>
+                            <span class="ml-2 text-xl font-bold tracking-tight font-display vibrant-gradient-text">SwagTrack</span>
+                        </div>
+                        <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                            <a @click="currentView = 'dashboard'" :class="[currentView === 'dashboard' ? 'nav-link-active font-bold' : 'text-gray-500 hover:text-gray-900', 'cursor-pointer inline-flex items-center px-1 pt-1 text-sm font-medium transition-all duration-200']">
+                                Dashboard
+                            </a>
+                            <a @click="currentView = 'inventory'" :class="[currentView === 'inventory' ? 'nav-link-active font-bold' : 'text-gray-500 hover:text-gray-900', 'cursor-pointer inline-flex items-center px-1 pt-1 text-sm font-medium transition-all duration-200']">
+                                Inventory
+                            </a>
+                            <a @click="currentView = 'transactions'" :class="[currentView === 'transactions' ? 'nav-link-active font-bold' : 'text-gray-500 hover:text-gray-900', 'cursor-pointer inline-flex items-center px-1 pt-1 text-sm font-medium transition-all duration-200']">
+                                History
+                            </a>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <button @click="openTransactionModal()" class="group relative inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-full shadow-md text-white bg-gradient-to-r from-primary via-purple-600 to-pink-600 hover:shadow-lg hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary overflow-hidden">
+                            <span class="absolute inset-0 bg-white/20 group-hover:translate-x-full transition-transform duration-500 ease-out -skew-x-12 origin-left"></span>
+                            <svg class="-ml-1 mr-2 h-5 w-5 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            New Transaction
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            
+            <!-- Loading State -->
+            <div v-if="loading" class="flex justify-center items-center h-64">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+
+            <!-- Error State -->
+            <div v-else-if="error" class="bg-red-50 border-l-4 border-red-400 p-4 mb-8">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-red-700">{{ error }}</p>
+                    </div>
+                    <div class="ml-auto pl-3">
+                        <div class="-mx-1.5 -my-1.5">
+                            <button @click="error = null" class="inline-flex rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none">
+                                <span class="sr-only">Dismiss</span>
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <template v-else>
+                <!-- Dashboard View -->
+                <div v-if="currentView === 'dashboard'" class="space-y-8 animate-fade-in">
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                        <!-- Total Items -->
+                        <div class="glass-card rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 bg-indigo-50 group-hover:bg-indigo-100 transition-colors rounded-xl p-3">
+                                    <svg class="h-8 w-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                    </svg>
+                                </div>
+                                <div class="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt class="text-sm font-medium text-gray-500 truncate font-display">Total Items</dt>
+                                        <dd class="text-3xl font-bold text-gray-900 font-display">{{ inventory.length }}</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Low Stock Alert -->
+                        <div class="glass-card rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group border-l-4 border-l-red-500">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 bg-red-50 group-hover:bg-red-100 transition-colors rounded-xl p-3">
+                                    <svg class="h-8 w-8 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                </div>
+                                <div class="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt class="text-sm font-medium text-gray-500 truncate font-display">Low Stock Items</dt>
+                                        <dd class="text-3xl font-bold text-red-600 font-display">{{ lowStockItems.length }}</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Total Transactions -->
+                        <div class="glass-card rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 bg-emerald-50 group-hover:bg-emerald-100 transition-colors rounded-xl p-3">
+                                    <svg class="h-8 w-8 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
+                                </div>
+                                <div class="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt class="text-sm font-medium text-gray-500 truncate font-display">Total Transactions</dt>
+                                        <dd class="text-3xl font-bold text-gray-900 font-display">{{ transactions.length }}</dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Most Popular Item -->
+                        <div class="glass-card rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 group bg-gradient-to-br from-white to-amber-50">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 bg-amber-100 group-hover:bg-amber-200 transition-colors rounded-xl p-3">
+                                    <svg class="h-8 w-8 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                    </svg>
+                                </div>
+                                <div class="ml-5 w-0 flex-1">
+                                    <dl>
+                                        <dt class="text-sm font-medium text-gray-500 truncate font-display">Most Popular</dt>
+                                        <dd class="text-lg font-bold text-gray-900 truncate font-display" :title="popularItem?.name || 'N/A'">
+                                            {{ popularItem ? popularItem.name : 'N/A' }}
+                                        </dd>
+                                        <dd v-if="popularItem" class="text-xs text-amber-600 font-medium mt-1">
+                                            {{ popularItem.count }} checked out
+                                        </dd>
+                                    </dl>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Analytics Charts -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Stock by Item Name -->
+                        <div class="glass-card rounded-2xl p-6 shadow-sm">
+                            <h3 class="text-lg font-bold text-gray-900 font-display mb-4">Stock by Item Name</h3>
+                            <div class="relative h-64">
+                                <canvas id="stockChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Transaction Distribution -->
+                        <div class="glass-card rounded-2xl p-6 shadow-sm">
+                            <h3 class="text-lg font-bold text-gray-900 font-display mb-4">Transaction Activity</h3>
+                            <div class="relative h-64">
+                                <canvas id="transactionChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Low Stock Table Preview -->
+                    <div v-if="lowStockItems.length > 0" class="glass-card rounded-2xl shadow-lg overflow-hidden border-0 ring-1 ring-black ring-opacity-5">
+                        <div class="px-6 py-5 border-b border-gray-100 bg-gradient-to-r from-red-50 to-white">
+                            <h3 class="text-lg leading-6 font-bold text-red-800 flex items-center font-display">
+                                <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                Needs Restocking
+                            </h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Item Name</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Stock</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Threshold</th>
+                                        <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr v-for="item in lowStockItems" :key="item.id" class="hover:bg-gray-50">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.fields['Item Name'] }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-bold">{{ item.fields['Current Stock Quantity'] || 0 }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ item.fields['Minimum Stock Threshold'] || 0 }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button @click="openTransactionModal('Restock', item.id)" class="text-primary hover:text-indigo-900 font-medium">Restock</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inventory View -->
+                <div v-if="currentView === 'inventory'" class="space-y-6 animate-fade-in">
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <h2 class="text-3xl font-bold text-gray-900 font-display tracking-tight">Inventory</h2>
+                        <div class="relative w-full sm:w-72 group">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                            <input v-model="searchQuery" type="text" placeholder="Search items..." class="block w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-xl leading-5 bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all duration-200 shadow-sm hover:shadow-md">
+                        </div>
+                    </div>
+                    
+                    <div class="glass-card rounded-2xl shadow-lg overflow-hidden border-0 ring-1 ring-black ring-opacity-5">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50/50 backdrop-blur-sm">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider font-display">Item Name</th>
+                                        <!-- <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider font-display">Category</th> -->
+                                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider font-display">Stock</th>
+                                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider font-display">Status</th>
+                                        <th scope="col" class="px-6 py-4 text-right text-xs font-bold text-gray-500 uppercase tracking-wider font-display">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white/50 divide-y divide-gray-100">
+                                    <tr v-for="item in filteredInventory" :key="item.id" @click="openItemDetailsModal(item)" class="hover:bg-indigo-50/30 transition-colors duration-150 cursor-pointer">
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 font-bold text-lg">
+                                                    {{ item.fields['Item Name']?.charAt(0) || '?' }}
+                                                </div>
+                                                <div class="ml-4">
+                                                    <div class="text-sm font-bold text-gray-900">{{ item.fields['Item Name'] }}</div>
+                                                    <div class="text-xs text-gray-500 truncate max-w-xs">{{ item.fields['Description'] }}</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <!-- <td class="px-6 py-4 whitespace-nowrap">
+                                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-700 border border-gray-200">
+                                                {{ item.fields['Category'] || 'Uncategorized' }}
+                                            </span>
+                                        </td> -->
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="text-sm font-bold text-gray-900">{{ item.fields['Current Stock Quantity'] || 0 }}</div>
+                                            <!-- <div class="text-xs text-gray-400">Min: {{ item.fields['Minimum Stock Threshold'] || 0 }}</div> -->
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span v-if="(item.fields['Current Stock Quantity'] || 0) <= (item.fields['Minimum Stock Threshold'] || 0)" class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-red-100 text-red-800 border border-red-200 shadow-sm animate-pulse">
+                                                Low Stock
+                                            </span>
+                                            <span v-else class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm">
+                                                In Stock
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                            <button @click.stop="openTransactionModal('Check Out', item.id)" class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-all duration-200">Check Out</button>
+                                            <button @click.stop="openTransactionModal('Check In', item.id)" class="text-emerald-600 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-all duration-200">Check In</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transactions History View -->
+                <div v-if="currentView === 'transactions'" class="space-y-6 animate-fade-in">
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <h2 class="text-3xl font-bold text-gray-900 font-display tracking-tight">Transaction History</h2>
+                        
+                        <!-- Filters -->
+                        <div class="flex p-1 space-x-1 bg-gray-100 rounded-xl">
+                            <button @click="transactionFilter = 'all'" :class="[transactionFilter === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700', 'px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200']">All</button>
+                            <button @click="transactionFilter = 'Check In'" :class="[transactionFilter === 'Check In' ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-700', 'px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200']">Check Ins</button>
+                            <button @click="transactionFilter = 'Check Out'" :class="[transactionFilter === 'Check Out' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700', 'px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200']">Check Outs</button>
+                            <button @click="transactionFilter = 'Restock'" :class="[transactionFilter === 'Restock' ? 'bg-white text-amber-600 shadow-sm' : 'text-gray-500 hover:text-gray-700', 'px-4 py-2 rounded-lg text-sm font-bold transition-all duration-200']">Restocks</button>
+                        </div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl shadow-lg overflow-hidden border-0 ring-1 ring-black ring-opacity-5">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50/50 backdrop-blur-sm">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider font-display">ID</th>
+                                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider font-display">Date</th>
+                                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider font-display">Type</th>
+                                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider font-display">Item</th>
+                                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider font-display">Qty</th>
+                                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider font-display">User</th>
+                                        <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider font-display">Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white/50 divide-y divide-gray-100">
+                                    <tr v-for="t in filteredTransactions" :key="t.id" class="hover:bg-gray-50/50 transition-colors duration-150">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">#{{ t.fields['Transaction ID'] }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-medium">{{ formatDate(t.createdTime) }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <span :class="[
+                                                t.fields['Transaction Type'] === 'Check In' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 
+                                                t.fields['Transaction Type'] === 'Check Out' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' : 
+                                                'bg-amber-100 text-amber-800 border-amber-200',
+                                                'px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full border shadow-sm'
+                                            ]">
+                                                {{ t.fields['Transaction Type'] }}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                                            {{ getItemName(t.fields['Items']?.[0]) }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-mono font-bold text-gray-900">{{ t.fields['Quantity'] }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <div class="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 mr-2">
+                                                    {{ getUserName(t.fields['User Name']).charAt(0) }}
+                                                </div>
+                                                <span class="text-sm font-medium text-gray-900">{{ getUserName(t.fields['User Name']) }}</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 truncate max-w-xs italic">{{ t.fields['Notes'] || '-' }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </main>
+
+        <!-- Item Details Modal -->
+        <div v-if="showItemDetailsModal" class="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="item-details-title" role="dialog" aria-modal="true">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" @click="closeItemDetailsModal" aria-hidden="true"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div class="inline-block align-bottom bg-white rounded-2xl px-4 pt-5 pb-4 text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full sm:p-6 border border-gray-100">
+                    <div v-if="selectedItem">
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="min-w-0">
+                                <h3 class="text-2xl leading-6 font-bold text-gray-900 font-display" id="item-details-title">
+                                    {{ selectedItem.fields['Item Name'] || 'Item Details' }}
+                                </h3>
+                                <p v-if="selectedItem.fields['Description']" class="mt-2 text-sm text-gray-600">
+                                    {{ selectedItem.fields['Description'] }}
+                                </p>
+                            </div>
+                            <button type="button" @click="closeItemDetailsModal" class="inline-flex rounded-xl p-2 text-gray-500 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200">
+                                <span class="sr-only">Close</span>
+                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="bg-gray-50/70 rounded-xl border border-gray-100 p-4">
+                                <div class="text-xs font-bold text-gray-500 uppercase tracking-wider font-display">Stock</div>
+                                <div class="mt-1 text-2xl font-bold text-gray-900 font-display">{{ selectedItem.fields['Current Stock Quantity'] || 0 }}</div>
+                                <div class="mt-2">
+                                    <span v-if="(selectedItem.fields['Current Stock Quantity'] || 0) <= (selectedItem.fields['Minimum Stock Threshold'] || 0)" class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-red-100 text-red-800 border border-red-200 shadow-sm">
+                                        Low Stock
+                                    </span>
+                                    <span v-else class="px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm">
+                                        In Stock
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50/70 rounded-xl border border-gray-100 p-4">
+                                <div class="text-xs font-bold text-gray-500 uppercase tracking-wider font-display">Minimum Threshold</div>
+                                <div class="mt-1 text-2xl font-bold text-gray-900 font-display">{{ selectedItem.fields['Minimum Stock Threshold'] || 0 }}</div>
+                            </div>
+                            <div class="bg-gray-50/70 rounded-xl border border-gray-100 p-4">
+                                <div class="text-xs font-bold text-gray-500 uppercase tracking-wider font-display">Category</div>
+                                <div class="mt-1 text-lg font-bold text-gray-900 font-display">{{ selectedItem.fields['Category'] || 'Uncategorized' }}</div>
+                            </div>
+                        </div>
+
+                        <div v-if="selectedItemDisplayFields.length" class="mt-6">
+                            <div class="text-sm font-bold text-gray-900 font-display mb-3">Details</div>
+                            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div v-for="field in selectedItemDisplayFields" :key="field.key" class="bg-white rounded-xl border border-gray-100 p-4">
+                                    <dt class="text-xs font-bold text-gray-500 uppercase tracking-wider font-display">{{ field.key }}</dt>
+                                    <dd class="mt-1 text-sm text-gray-900 break-words">{{ field.value }}</dd>
+                                </div>
+                            </dl>
+                        </div>
+
+                        <div class="mt-8 sm:grid sm:grid-cols-3 sm:gap-3 sm:grid-flow-row-dense">
+                            <button type="button" @click="openTransactionModal('Check Out', selectedItem.id); closeItemDetailsModal()" class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-lg px-4 py-3 bg-indigo-600 text-base font-bold text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600 sm:col-start-3 sm:text-sm transition-all duration-200">
+                                Check Out
+                            </button>
+                            <button type="button" @click="openTransactionModal('Check In', selectedItem.id); closeItemDetailsModal()" class="mt-3 w-full inline-flex justify-center rounded-xl border border-transparent shadow-lg px-4 py-3 bg-emerald-600 text-base font-bold text-white hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-600 sm:mt-0 sm:col-start-2 sm:text-sm transition-all duration-200">
+                                Check In
+                            </button>
+                            <button type="button" @click="closeItemDetailsModal" class="mt-3 w-full inline-flex justify-center rounded-xl border border-gray-200 shadow-sm px-4 py-3 bg-white text-base font-bold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 sm:mt-0 sm:col-start-1 sm:text-sm transition-all duration-200">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction Modal -->
+        <div v-if="showModal" class="fixed z-10 inset-0 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity" @click="closeModal" aria-hidden="true"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div class="inline-block align-bottom bg-white rounded-2xl px-4 pt-5 pb-4 text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6 border border-gray-100">
+                    <div>
+                        <div class="mt-3 text-center sm:mt-5">
+                            <h3 class="text-2xl leading-6 font-bold text-gray-900 font-display" id="modal-title">
+                                New Transaction
+                            </h3>
+                            <div class="mt-4">
+                                <form @submit.prevent="submitTransaction" class="space-y-5 text-left">
+                                    
+                                    <!-- Transaction Type -->
+                                    <div>
+                                        <label class="block text-sm font-bold text-gray-700 font-display mb-1">Type</label>
+                                        <select v-model="form.type" class="block w-full pl-3 pr-10 py-3 text-base border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm rounded-xl transition-shadow shadow-sm hover:shadow-md">
+                                            <option value="Check In">Check In</option>
+                                            <option value="Check Out">Check Out</option>
+                                            <option value="Restock">Restock</option>
+                                            <option value="Create Item">Create New Item</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Create Item Fields -->
+                                    <div v-if="form.type === 'Create Item'" class="space-y-4 bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 font-display mb-1">Item Name</label>
+                                            <input type="text" v-model="form.newItem.name" class="block w-full border-gray-200 rounded-xl shadow-sm py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all" required>
+                                        </div>
+                                        <!-- <div>
+                                            <label class="block text-sm font-bold text-gray-700 font-display mb-1">Category</label>
+                                            <input type="text" v-model="form.newItem.category" class="block w-full border-gray-200 rounded-xl shadow-sm py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all" placeholder="e.g. Apparel, Tech">
+                                        </div> -->
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 font-display mb-1">Description</label>
+                                            <textarea v-model="form.newItem.description" rows="2" class="block w-full border-gray-200 rounded-xl shadow-sm py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all"></textarea>
+                                        </div>
+                                        <div class="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-sm font-bold text-gray-700 font-display mb-1">Initial Stock</label>
+                                                <input type="number" v-model.number="form.newItem.stock" min="0" class="block w-full border-gray-200 rounded-xl shadow-sm py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all">
+                                            </div>
+                                            <!-- <div>
+                                                <label class="block text-sm font-bold text-gray-700 font-display mb-1">Low Stock Threshold</label>
+                                                <input type="number" v-model.number="form.newItem.threshold" min="0" class="block w-full border-gray-200 rounded-xl shadow-sm py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all">
+                                            </div> -->
+                                        </div>
+                                    </div>
+
+                                    <!-- Standard Transaction Fields -->
+                                    <template v-else>
+                                        <!-- Item Selection -->
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 font-display mb-1">Item</label>
+                                            <select v-model="form.itemId" class="block w-full pl-3 pr-10 py-3 text-base border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm rounded-xl transition-shadow shadow-sm hover:shadow-md" required>
+                                                <option v-for="item in inventory" :key="item.id" :value="item.id">
+                                                    {{ item.fields['Item Name'] }} (Stock: {{ item.fields['Current Stock Quantity'] || 0 }})
+                                                </option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Quantity -->
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 font-display mb-1">Quantity</label>
+                                            <input type="number" v-model.number="form.quantity" min="1" :max="maxQuantity" class="block w-full border-gray-200 rounded-xl shadow-sm py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all" required>
+                                            <p v-if="form.type === 'Check Out' && form.itemId" class="mt-2 text-xs font-medium text-gray-500 bg-gray-50 inline-block px-2 py-1 rounded-lg">
+                                                Available: <span class="text-gray-900 font-bold">{{ getCurrentStock(form.itemId) }}</span>
+                                            </p>
+                                        </div>
+
+                                        <!-- User -->
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 font-display mb-1">User</label>
+                                            <select v-model="form.user" class="block w-full pl-3 pr-10 py-3 text-base border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm rounded-xl transition-shadow shadow-sm hover:shadow-md" required>
+                                                <option v-for="user in users" :key="user.id" :value="user.id">
+                                                    {{ user.fields['Name'] }} {{ user.fields['Email'] ? `(${user.fields['Email']})` : '' }}
+                                                </option>
+                                            </select>
+                                        </div>
+
+                                        <!-- Notes -->
+                                        <div>
+                                            <label class="block text-sm font-bold text-gray-700 font-display mb-1">Notes</label>
+                                            <textarea v-model="form.notes" rows="3" class="block w-full border-gray-200 rounded-xl shadow-sm py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary sm:text-sm transition-all"></textarea>
+                                        </div>
+                                    </template>
+
+                                    <div class="mt-8 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                                        <button type="submit" :disabled="submitting" class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-lg px-4 py-3 bg-gradient-to-r from-primary to-indigo-600 text-base font-bold text-white hover:from-indigo-600 hover:to-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary sm:col-start-2 sm:text-sm disabled:opacity-50 transition-all duration-300 transform hover:scale-[1.02]">
+                                            {{ submitting ? 'Processing...' : 'Submit' }}
+                                        </button>
+                                        <button type="button" @click="closeModal" class="mt-3 w-full inline-flex justify-center rounded-xl border border-gray-200 shadow-sm px-4 py-3 bg-white text-base font-bold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 sm:mt-0 sm:col-start-1 sm:text-sm transition-all duration-200">
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <transition name="fade">
+            <div v-if="toast.show" class="fixed bottom-5 right-5 z-50 flex items-center bg-white/90 backdrop-blur-md border-l-4 shadow-2xl rounded-xl p-4 w-80 transform transition-all duration-300 ring-1 ring-black/5" :class="toast.type === 'error' ? 'border-red-500' : 'border-emerald-500'">
+                <div class="flex-shrink-0 mr-3">
+                    <svg v-if="toast.type === 'success'" class="h-6 w-6 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <svg v-else class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold font-display" :class="toast.type === 'error' ? 'text-red-800' : 'text-emerald-800'">
+                        {{ toast.title }}
+                    </h3>
+                    <p class="text-sm mt-1 font-medium" :class="toast.type === 'error' ? 'text-red-600' : 'text-emerald-600'">
+                        {{ toast.message }}
+                    </p>
+                </div>
+            </div>
+        </transition>
+
+    </div>
+
+    <script src="assets/js/config.js"></script>
+    <script src="assets/js/app.js"></script>
+</body>
+</html>

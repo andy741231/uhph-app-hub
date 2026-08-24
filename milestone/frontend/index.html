@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Airtable Manager (Vue + PHP)</title>
+  <script src="https://unpkg.com/vue@3.4.29/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios@1.7.2/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" /> -->
+  
+  <!-- Modular CSS -->
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/forms.css" />
+  <link rel="stylesheet" href="css/modals.css" />
+  <link rel="stylesheet" href="css/tables.css" />
+  <link rel="stylesheet" href="css/pdf.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+</head>
+<body>
+  <div id="app" class="page app-shell">
+    <header>
+      <div v-if="hasBannerContent" class="banner-header">
+        <div class="flex justify-center">
+          <div v-if="bannerDetails.logoUrl" class="banner-logo">
+            <img :src="bannerDetails.logoUrl" :alt="bannerDetails.title || 'Banner logo'" />
+          </div>
+          <div class="banner-text">
+            <h1>{{ bannerDetails.title || 'Airtable Manager' }}</h1>
+            <p v-if="bannerDetails.subtitle" class="banner-subtitle">{{ bannerDetails.subtitle }}</p>
+            <p v-if="bannerDetails.description" class="banner-description">{{ bannerDetails.description }}</p>
+            <p v-else class="banner-description">Manage Airtable data with streamlined connections, quick insights, and actionable tools.</p>
+            <div class="banner-actions">
+              <button
+                class="secondary"
+                type="button"
+                @click="openBannerEditor"
+                :disabled="!bannerRecordId || bannerEditor.saving || bannerEditor.loading"
+              >
+                Edit Banner
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p v-else-if="bannerError" class="banner-error">{{ bannerError }}</p>
+      <div v-else class="default-banner">
+        <h1>Airtable Manager</h1>
+        <p>Manage Airtable data with streamlined connections, quick insights, and actionable tools.</p>
+        <div class="banner-actions">
+          <button
+            class="secondary"
+            type="button"
+            @click="openBannerEditor"
+            :disabled="bannerEditor.loading"
+          >
+            Edit Banner
+          </button>
+        </div>
+      </div>
+    </header>
+    <section class="panel quick-links-panel">
+      <div class="panel-body quick-links-body">
+        <div class="quick-links">
+          <a class="quick-link" href="https://airtable.com/appAIxASkp5dv39O6/tbl3gRlcjLqjMJe9W/viwJHCFL6SnytJ3Eg?blocks=hide" target="_blank">Edit Airtable</a>
+          <a class="quick-link" href="https://airtable.com/appAIxASkp5dv39O6/pagnHoo5xR03Cublz/form" target="_blank">Enter a new record</a>
+        </div>
+      </div>
+    </section>
+    
+    <div class="">
+      <div class="panel">
+        <div class="panel-header">
+          
+          <div class="panel-controls-container">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+            <div class="panel-controls">
+              <h2>Records</h2>
+            </div>
+            <div class="panel-header-actions">
+          
+            <div class="panel-metrics">
+              <span class="tag">{{ records.length }} total</span>
+              <span class="tag" v-if="filteredRecords.length !== records.length">{{ filteredRecords.length }} shown</span>
+              <span class="tag" v-if="offset">More available</span>
+            </div>
+            <div class="panel-toolbar" aria-label="PDF export controls">
+              <div class="right-actions">
+                <button
+                  class="primary"
+                  type="button"
+                  @click="exportPdf"
+                  :disabled="isExportingPdf || !filteredRecords.length"
+                >
+                  <span v-if="isExportingPdf">Preparing PDF…</span>
+                  <span v-else>Download PDF</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          </div>
+          
+          <div class="panel-controls">
+            <div class="panel-controls">
+              <div class="input-with-icon">
+                <label class="sr-only" for="records-search">Search records</label>
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <input
+                  id="records-search"
+                  type="search"
+                  v-model.trim="searchQuery"
+                  placeholder="Search records…"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="control-group">
+                <label class="sr-only" for="records-sort">Sort records</label>
+                <select id="records-sort" v-model="sortOption">
+                  <option value="none">Sort</option>
+                  <option value="ID:asc:string">ID (Ascending)</option>
+                  <option value="ID:desc:string">ID (Descending)</option>
+                  <option value="Date:desc:date">Date (Newest first)</option>
+                  <option value="Date:asc:date">Date (Oldest first)</option>
+                  <option value="Deliverable:asc:string">Deliverable (A → Z)</option>
+                  <option value="Deliverable:desc:string">Deliverable (Z → A)</option>
+                </select>
+              </div>
+              <div class="control-group">
+                <label class="sr-only" for="records-filter-from">Filter from date</label>
+                <input id="records-filter-from" type="date" v-model="dateFilter.from" />
+              </div>
+              <div class="control-group">
+                <label class="sr-only" for="records-filter-to">Filter to date</label>
+                <input id="records-filter-to" type="date" v-model="dateFilter.to" />
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+        <div class="panel-body">
+          <div v-if="message.text" :class="[{ success: message.type==='success', error: message.type==='error' }, 'muted']">
+            {{ message.text }}
+          </div>
+          <p v-if="pdfError" class="export-error">{{ pdfError }}</p>
+          <div class="muted" v-if="!records.length">Load records to start editing.</div>
+          <div class="muted" v-else-if="!filteredRecords.length">No records match your current search or filters.</div>
+          <div class="scroll" v-else>
+            <table>
+              <thead>
+                <tr>
+                  <th v-for="col in displayColumns" :key="col">{{ col }}</th>
+                  <th class="nowrap">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="rec in filteredRecords" :key="rec.id">
+                  <td v-for="col in displayColumns" :key="col">
+                    <div class="value-preview">{{ rec.fields && rec.fields[col] ? rec.fields[col] : '' }}</div>
+                  </td>
+                  <td>
+                    <div class="actions">
+                      <button class="secondary" @click="viewRecord(rec.id)">View</button>
+                      <!-- <button class="secondary" @click="deleteRecord(rec.id)">Delete</button> -->
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="panel-toolbar" v-if="offset">
+            <div class="muted">You are viewing a partial result set.</div>
+            <div class="right-actions">
+              <button class="secondary" @click="loadNextPage">Load Next Page</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Banner Editor Modal -->
+    <div
+      v-if="bannerEditor.visible"
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="dashboard-banner-editor-title"
+      @click.self="closeBannerEditor"
+    >
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title" id="dashboard-banner-editor-title">Edit Banner</h2>
+          <button type="button" class="modal-close" @click="closeBannerEditor" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div v-if="bannerEditor.loading" class="field-readonly">Loading banner fields…</div>
+          <template v-else>
+            <div v-if="bannerEditor.error" class="modal-alert error">{{ bannerEditor.error }}</div>
+            <div v-if="bannerEditor.success" class="modal-alert success">{{ bannerEditor.success }}</div>
+            <div v-if="!bannerEditor.fields.length" class="field-readonly">No editable fields were found for the Banner table.</div>
+            <template v-else>
+              <div
+                v-for="field in bannerEditor.fields"
+                :key="field.id"
+                class="field-group"
+              >
+                <label :for="'dashboard-banner-field-' + field.id">
+                  {{ field.name }}
+                  <span v-if="field.required" class="field-help">(required)</span>
+                </label>
+                <div v-if="field.typeLabel" class="field-help">{{ field.typeLabel }}</div>
+                <div v-if="field.description" class="field-help">{{ field.description }}</div>
+
+                <template v-if="field.editable">
+                  <input
+                    v-if="field.input === 'text'"
+                    :id="'dashboard-banner-field-' + field.id"
+                    v-model="bannerEditor.formValues[field.name]"
+                    v-bind="field.inputAttrs"
+                  />
+                  <textarea
+                    v-else-if="field.input === 'textarea'"
+                    :id="'dashboard-banner-field-' + field.id"
+                    v-model="bannerEditor.formValues[field.name]"
+                    rows="4"
+                  ></textarea>
+                  <input
+                    v-else-if="field.input === 'number'"
+                    :id="'dashboard-banner-field-' + field.id"
+                    type="number"
+                    v-model="bannerEditor.formValues[field.name]"
+                    v-bind="field.inputAttrs"
+                  />
+                  <div v-else-if="field.input === 'checkbox'" class="checkbox-group">
+                    <input
+                      :id="'dashboard-banner-field-' + field.id"
+                      type="checkbox"
+                      v-model="bannerEditor.formValues[field.name]"
+                    />
+                    <span>Checked</span>
+                  </div>
+                  <select
+                    v-else-if="field.input === 'single-select'"
+                    :id="'dashboard-banner-field-' + field.id"
+                    v-model="bannerEditor.formValues[field.name]"
+                  >
+                    <option value=""></option>
+                    <option v-for="choice in field.choices" :key="choice" :value="choice">{{ choice }}</option>
+                  </select>
+                  <select
+                    v-else-if="field.input === 'multi-select'"
+                    :id="'dashboard-banner-field-' + field.id"
+                    v-model="bannerEditor.formValues[field.name]"
+                    multiple
+                    class="multi-select"
+                  >
+                    <option v-for="choice in field.choices" :key="choice" :value="choice">{{ choice }}</option>
+                  </select>
+                  <input
+                    v-else-if="field.input === 'date'"
+                    :id="'dashboard-banner-field-' + field.id"
+                    type="date"
+                    v-model="bannerEditor.formValues[field.name]"
+                  />
+                  <input
+                    v-else-if="field.input === 'datetime'"
+                    :id="'dashboard-banner-field-' + field.id"
+                    type="datetime-local"
+                    v-model="bannerEditor.formValues[field.name]"
+                  />
+                  <input
+                    v-else
+                    :id="'dashboard-banner-field-' + field.id"
+                    v-model="bannerEditor.formValues[field.name]"
+                  />
+                </template>
+
+                <template v-else>
+                  <div class="field-readonly">{{ displayBannerFieldValue(field) }}</div>
+                  <div
+                    v-if="field.readOnlyReason"
+                    class="field-help"
+                    v-html="field.readOnlyReason"
+                  ></div>
+                </template>
+              </div>
+            </template>
+          </template>
+        </div>
+        <div class="modal-footer">
+          <button class="secondary" type="button" @click="closeBannerEditor" :disabled="bannerEditor.saving">Cancel</button>
+          <button class="primary" type="button" @click="submitBannerEditor" :disabled="bannerEditor.saving">
+            <span v-if="bannerEditor.saving">Saving…</span>
+            <span v-else>Save Changes</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modular JavaScript -->
+  <script type="module">
+    import { MainApp } from './js/main-app.js';
+    
+    const { createApp } = Vue;
+    const mainApp = new MainApp();
+    
+    createApp({
+      data() {
+        return mainApp.getVueData();
+      },
+      computed: mainApp.getVueComputed(),
+      methods: mainApp.getVueMethods(),
+      async mounted() {
+        await mainApp.init();
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>

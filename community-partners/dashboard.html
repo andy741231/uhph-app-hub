@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Community Partners Manager</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+    <link rel="stylesheet" href="static/css/dashboard.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-content">
+                <div class="navbar-brand">
+                    <svg class="navbar-logo" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 0 0-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 0 1 5.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 0 1 9.288 0M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm6 3a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM7 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0z"></path>
+                    </svg>
+                    <span class="navbar-title">Community Partners Manager</span>
+                </div>
+                <div class="navbar-nav">
+                    <a href="dashboard.html" class="nav-link nav-link-active">Dashboard</a>
+                    <a href="index.html" class="nav-link">View Partners</a>
+                </div>
+                <div class="navbar-actions">
+                  
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="dashboard-header">
+            <div>
+                <h1 class="dashboard-title">Analytics Dashboard</h1>
+                <p class="dashboard-subtitle">Community Partners Overview & Insights</p>
+            </div>
+            <div class="dashboard-actions">
+                <button class="btn btn-secondary" id="exportPdfBtn" onclick="exportDashboardPDF()">
+                    <i data-lucide="file-down" class="icon-small"></i>
+                    Export PDF
+                </button>
+            </div>
+        </div>
+
+        <div class="stats-grid-dashboard">
+            <div class="stat-card-dashboard">
+                <div class="stat-icon" style="background: #FEE2E2; color: #DC2626;">
+                    <i data-lucide="building-2"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value" id="totalPartners">0</div>
+                    <div class="stat-label">Total Partners</div>
+                </div>
+            </div>
+
+            
+            <div class="stat-card-dashboard">
+                <div class="stat-icon" style="background: #D1FAE5; color: #059669;">
+                    <i data-lucide="map-pin"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value" id="uniqueCities">0</div>
+                    <div class="stat-label">Cities Covered</div>
+                </div>
+            </div>
+
+            <div class="stat-card-dashboard">
+                <div class="stat-icon" style="background: #FEF3C7; color: #D97706;">
+                    <i data-lucide="layers"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value" id="orgTypes">0</div>
+                    <div class="stat-label">Organization Types</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i data-lucide="pie-chart"></i>
+                        Partners by Organization Type
+                    </h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="orgTypeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i data-lucide="bar-chart-3"></i>
+                        MOU Status Distribution
+                    </h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="mouStatusChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i data-lucide="map"></i>
+                        Geographic Distribution
+                    </h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="cityChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i data-lucide="users"></i>
+                        Partners by Principal Investigator
+                    </h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="piChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card chart-card-full">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i data-lucide="user-check"></i>
+                        Neighborhood Distribution
+                    </h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="neighborhoodChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="insights-section">
+            <div class="insights-card">
+                <div class="insights-header">
+                    <h3 class="insights-title">
+                        <i data-lucide="lightbulb"></i>
+                        Key Insights
+                    </h3>
+                </div>
+                <div class="insights-content" id="insightsContent">
+                    <div class="loading">Analyzing data...</div>
+                </div>
+            </div>
+
+            <div class="insights-card">
+                <div class="insights-header">
+                    <h3 class="insights-title">
+                        <i data-lucide="trending-up"></i>
+                        Top Performing Categories
+                    </h3>
+                </div>
+                <div class="insights-content" id="topCategories">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="data-table-section">
+            <div class="table-card">
+                <div class="table-header">
+                    <h3 class="table-title">
+                        <i data-lucide="table"></i>
+                        Partnership Summary by State
+                    </h3>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="stateTable">
+                        <thead>
+                            <tr>
+                                <th>State</th>
+                                <th>Total Partners</th>
+                                <th>MOU Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody id="stateTableBody">
+                            <tr>
+                                <td colspan="3" class="loading">Loading data...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/js/dashboard.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+    <script>
+        async function exportDashboardPDF() {
+            const btn = document.getElementById('exportPdfBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader" class="icon-small"></i> Generating...';
+            btn.disabled = true;
+            lucide.createIcons();
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                const margin = 15;
+                const contentWidth = pageWidth - margin * 2;
+                let yPos = margin;
+
+                // Header bar
+                pdf.setFillColor(200, 16, 46);
+                pdf.rect(0, 0, pageWidth, 28, 'F');
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(18);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text('Community Partners Manager', margin, 12);
+                pdf.setFontSize(10);
+                pdf.setFont('helvetica', 'normal');
+                pdf.text('Analytics Dashboard Report', margin, 19);
+                const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                pdf.text(dateStr, pageWidth - margin - pdf.getTextWidth(dateStr), 19);
+                yPos = 36;
+
+                // Accent line
+                pdf.setDrawColor(200, 16, 46);
+                pdf.setLineWidth(0.5);
+                pdf.line(margin, yPos, pageWidth - margin, yPos);
+                yPos += 8;
+
+                // Summary stats
+                const stats = [
+                    { label: 'Total Partners', value: document.getElementById('totalPartners')?.textContent || '0' },
+                    { label: 'Cities Covered', value: document.getElementById('uniqueCities')?.textContent || '0' },
+                    { label: 'Organization Types', value: document.getElementById('orgTypes')?.textContent || '0' }
+                ];
+
+                pdf.setFontSize(13);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setTextColor(40, 40, 41);
+                pdf.text('Summary Statistics', margin, yPos);
+                yPos += 8;
+
+                const statBoxWidth = (contentWidth - 10) / 3;
+                stats.forEach((stat, i) => {
+                    const x = margin + i * (statBoxWidth + 5);
+                    pdf.setFillColor(244, 245, 247);
+                    pdf.roundedRect(x, yPos, statBoxWidth, 22, 3, 3, 'F');
+                    pdf.setFontSize(18);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setTextColor(200, 16, 46);
+                    pdf.text(stat.value, x + statBoxWidth / 2, yPos + 10, { align: 'center' });
+                    pdf.setFontSize(7);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setTextColor(84, 88, 90);
+                    pdf.text(stat.label.toUpperCase(), x + statBoxWidth / 2, yPos + 18, { align: 'center' });
+                });
+                yPos += 30;
+
+                // Capture charts
+                const charts = document.querySelectorAll('.chart-card');
+                const chartCanvases = [];
+                for (const chart of charts) {
+                    const canvas = await html2canvas(chart, {
+                        scale: 2,
+                        backgroundColor: '#FFFFFF',
+                        logging: false,
+                        useCORS: true
+                    });
+                    chartCanvases.push({
+                        canvas,
+                        title: chart.querySelector('.chart-title')?.textContent?.trim() || 'Chart'
+                    });
+                }
+
+                // Render charts 2-per-row
+                const chartWidth = (contentWidth - 6) / 2;
+                const chartHeight = 65;
+                for (let i = 0; i < chartCanvases.length; i += 2) {
+                    if (yPos + chartHeight + 10 > pageHeight - 20) {
+                        pdf.addPage();
+                        yPos = margin;
+                    }
+                    for (let j = 0; j < 2 && (i + j) < chartCanvases.length; j++) {
+                        const x = margin + j * (chartWidth + 6);
+                        const { canvas, title } = chartCanvases[i + j];
+                        pdf.setDrawColor(208, 211, 212);
+                        pdf.setFillColor(255, 255, 255);
+                        pdf.roundedRect(x, yPos, chartWidth, chartHeight, 3, 3, 'FD');
+                        const imgData = canvas.toDataURL('image/png');
+                        pdf.addImage(imgData, 'PNG', x + 2, yPos + 2, chartWidth - 4, chartHeight - 4);
+                    }
+                    yPos += chartHeight + 6;
+                }
+
+                // Insights section
+                const insightsContent = document.getElementById('insightsContent');
+                const topCategories = document.getElementById('topCategories');
+
+                if (insightsContent || topCategories) {
+                    if (yPos + 40 > pageHeight - 20) {
+                        pdf.addPage();
+                        yPos = margin;
+                    }
+
+                    pdf.setFontSize(13);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setTextColor(40, 40, 41);
+                    pdf.text('Key Insights & Categories', margin, yPos);
+                    yPos += 6;
+
+                    if (insightsContent) {
+                        const items = insightsContent.querySelectorAll('.insight-item');
+                        items.forEach(item => {
+                            const text = item.querySelector('.insight-text')?.textContent?.trim() || '';
+                            if (text) {
+                                if (yPos + 10 > pageHeight - 20) {
+                                    pdf.addPage();
+                                    yPos = margin;
+                                }
+                                pdf.setFillColor(243, 232, 255);
+                                pdf.roundedRect(margin, yPos, contentWidth, 8, 2, 2, 'F');
+                                pdf.setDrawColor(200, 16, 46);
+                                pdf.setLineWidth(0.8);
+                                pdf.line(margin, yPos, margin, yPos + 8);
+                                pdf.setFontSize(8);
+                                pdf.setFont('helvetica', 'normal');
+                                pdf.setTextColor(40, 40, 41);
+                                const lines = pdf.splitTextToSize(text, contentWidth - 8);
+                                pdf.text(lines[0], margin + 4, yPos + 5.5);
+                                yPos += 10;
+                            }
+                        });
+                    }
+
+                    if (topCategories) {
+                        yPos += 4;
+                        const catItems = topCategories.querySelectorAll('.category-item');
+                        catItems.forEach(item => {
+                            const name = item.querySelector('.category-name')?.textContent?.trim() || '';
+                            const badge = item.querySelector('.category-badge')?.textContent?.trim() || '';
+                            if (name) {
+                                if (yPos + 8 > pageHeight - 20) {
+                                    pdf.addPage();
+                                    yPos = margin;
+                                }
+                                pdf.setFontSize(8);
+                                pdf.setFont('helvetica', 'normal');
+                                pdf.setTextColor(40, 40, 41);
+                                pdf.text(name, margin + 4, yPos + 5);
+                                if (badge) {
+                                    pdf.setFillColor(200, 16, 46);
+                                    const badgeWidth = pdf.getTextWidth(badge) + 8;
+                                    pdf.roundedRect(pageWidth - margin - badgeWidth, yPos + 1, badgeWidth, 6, 3, 3, 'F');
+                                    pdf.setTextColor(255, 255, 255);
+                                    pdf.setFontSize(7);
+                                    pdf.text(badge, pageWidth - margin - badgeWidth + 4, yPos + 5.2);
+                                }
+                                yPos += 8;
+                            }
+                        });
+                    }
+                }
+
+                // State table
+                const stateTable = document.getElementById('stateTable');
+                if (stateTable) {
+                    if (yPos + 30 > pageHeight - 20) {
+                        pdf.addPage();
+                        yPos = margin;
+                    }
+
+                    pdf.setFontSize(13);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setTextColor(40, 40, 41);
+                    pdf.text('Partnership Summary by State', margin, yPos);
+                    yPos += 6;
+
+                    const headers = ['State', 'Total Partners', 'MOU Rate'];
+                    const colWidths = [contentWidth * 0.35, contentWidth * 0.35, contentWidth * 0.3];
+
+                    // Table header
+                    pdf.setFillColor(244, 245, 247);
+                    pdf.rect(margin, yPos, contentWidth, 7, 'F');
+                    pdf.setFontSize(7);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setTextColor(40, 40, 41);
+                    let colX = margin;
+                    headers.forEach((h, i) => {
+                        pdf.text(h.toUpperCase(), colX + 3, yPos + 4.5);
+                        colX += colWidths[i];
+                    });
+                    yPos += 7;
+
+                    // Table rows
+                    const rows = stateTable.querySelectorAll('tbody tr');
+                    rows.forEach((row, idx) => {
+                        const cells = row.querySelectorAll('td');
+                        if (cells.length >= 3) {
+                            if (yPos + 7 > pageHeight - 20) {
+                                pdf.addPage();
+                                yPos = margin;
+                            }
+                            if (idx % 2 === 0) {
+                                pdf.setFillColor(250, 250, 252);
+                                pdf.rect(margin, yPos, contentWidth, 7, 'F');
+                            }
+                            pdf.setFontSize(7);
+                            pdf.setFont('helvetica', 'normal');
+                            pdf.setTextColor(40, 40, 41);
+                            colX = margin;
+                            cells.forEach((cell, i) => {
+                                if (i < colWidths.length) {
+                                    const text = cell.textContent?.trim() || '';
+                                    pdf.text(text, colX + 3, yPos + 4.5);
+                                    colX += colWidths[i];
+                                }
+                            });
+                            yPos += 7;
+                        }
+                    });
+                }
+
+                // Footer on every page
+                const totalPages = pdf.internal.getNumberOfPages();
+                for (let p = 1; p <= totalPages; p++) {
+                    pdf.setPage(p);
+                    pdf.setDrawColor(200, 16, 46);
+                    pdf.setLineWidth(0.3);
+                    pdf.line(margin, pageHeight - 12, pageWidth - margin, pageHeight - 12);
+                    pdf.setFontSize(7);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setTextColor(84, 88, 90);
+                    pdf.text('Community Partners Manager — Analytics Report', margin, pageHeight - 8);
+                    pdf.text('Page ' + p + ' of ' + totalPages, pageWidth - margin - pdf.getTextWidth('Page ' + p + ' of ' + totalPages), pageHeight - 8);
+                }
+
+                pdf.save('Community_Partners_Analytics_' + new Date().toISOString().slice(0, 10) + '.pdf');
+            } catch (err) {
+                console.error('PDF export error:', err);
+                alert('Failed to generate PDF. Please try again.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                lucide.createIcons();
+            }
+        }
+    </script>
+</body>
+</html>

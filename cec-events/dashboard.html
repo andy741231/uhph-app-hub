@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - CEC Events Manager</title>
+    <link rel="stylesheet" href="static/css/styles.css">
+    <link rel="stylesheet" href="static/css/dashboard.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-content">
+                <div class="navbar-brand">
+                    <svg class="navbar-logo" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                    <span class="navbar-title">CEC Events Manager</span>
+                </div>
+                <div class="navbar-nav">
+                    <a href="dashboard.html" class="nav-link nav-link-active">Dashboard</a>
+                    <a href="index.html" class="nav-link">View Events</a>
+                </div>
+                <div class="navbar-actions">
+                  
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="dashboard-header">
+            <div>
+                <h1 class="dashboard-title">Analytics Dashboard</h1>
+                <p class="dashboard-subtitle">CEC Events Overview & Insights</p>
+            </div>
+            <div class="dashboard-actions">
+                <select id="yearSelect">
+                    <option value="">Loading years...</option>
+                </select>
+                <button class="btn btn-secondary" id="exportPdfBtn" onclick="exportDashboardPDF()">
+                    <i data-lucide="file-down" class="icon-small"></i>
+                    Export PDF
+                </button>
+            </div>
+        </div>
+
+        <div class="stats-grid-dashboard">
+            <div class="stat-card-dashboard">
+                <div class="stat-icon" style="background: #FEE2E2; color: #DC2626;">
+                    <i data-lucide="calendar"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value" id="totalEvents">0</div>
+                    <div class="stat-label">Total Events</div>
+                </div>
+            </div>
+
+            
+            <div class="stat-card-dashboard">
+                <div class="stat-icon" style="background: #D1FAE5; color: #059669;">
+                    <i data-lucide="clock"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value" id="upcomingEvents">0</div>
+                    <div class="stat-label">Upcoming Events</div>
+                </div>
+            </div>
+
+            <div class="stat-card-dashboard">
+                <div class="stat-icon" style="background: #FEF3C7; color: #D97706;">
+                    <i data-lucide="layers"></i>
+                </div>
+                <div class="stat-content">
+                    <div class="stat-value" id="eventTypes">0</div>
+                    <div class="stat-label">Event Types</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="interactions-insight-section">
+            <div class="interactions-card">
+                <div class="interactions-header">
+                    <div>
+                        <h3 class="interactions-title">
+                            <i data-lucide="users"></i>
+                            Community Interactions Analysis
+                        </h3>
+                        <p class="interactions-subtitle">Engagement metrics across events and demographics</p>
+                    </div>
+                    <div class="interactions-filter">
+                        <label for="demographicFilter" style="font-size: 0.875rem; color: var(--color-text-muted); margin-right: 8px;">Filter by:</label>
+                        <select id="demographicFilter" class="demographic-select">
+                            <option value="all">All Demographics</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="interactions-content">
+                    <div class="interactions-stats-grid">
+                        <div class="interaction-stat-card" title="Total number of community interactions from all completed events in the selected demographic">
+                            <div class="interaction-stat-icon" style="background: #DBEAFE; color: #2563EB;">
+                                <i data-lucide="users"></i>
+                            </div>
+                            <div class="interaction-stat-content">
+                                <div class="interaction-stat-value" id="filteredTotalInteractions">0</div>
+                                <div class="interaction-stat-label">Total Interactions</div>
+                            </div>
+                        </div>
+                        <div class="interaction-stat-card" title="Number of completed events in the selected demographic (excludes upcoming/tentative events)">
+                            <div class="interaction-stat-icon" style="background: #D1FAE5; color: #059669;">
+                                <i data-lucide="calendar"></i>
+                            </div>
+                            <div class="interaction-stat-content">
+                                <div class="interaction-stat-value" id="filteredEventCount">0</div>
+                                <div class="interaction-stat-label">Completed Events</div>
+                            </div>
+                        </div>
+                        <div class="interaction-stat-card" title="Average interactions per completed event (calculated from past events only)">
+                            <div class="interaction-stat-icon" style="background: #FEF3C7; color: #D97706;">
+                                <i data-lucide="trending-up"></i>
+                            </div>
+                            <div class="interaction-stat-content">
+                                <div class="interaction-stat-value" id="filteredAvgInteractions">0</div>
+                                <div class="interaction-stat-label">Avg per Event</div>
+                            </div>
+                        </div>
+                        <div class="interaction-stat-card" title="Event with the highest number of community interactions">
+                            <div class="interaction-stat-icon" style="background: #FEE2E2; color: #DC2626;">
+                                <i data-lucide="award"></i>
+                            </div>
+                            <div class="interaction-stat-content">
+                                <div class="interaction-stat-value interaction-stat-value-small" id="filteredTopEvent">-</div>
+                                <div class="interaction-stat-label">Highest Engagement</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="interactions-breakdown" id="interactionsBreakdown">
+                        <div class="loading">Analyzing interactions...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i data-lucide="pie-chart"></i>
+                        Events by Type
+                    </h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="eventTypeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i data-lucide="bar-chart-3"></i>
+                        Status Distribution
+                    </h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i data-lucide="map"></i>
+                        Top Locations
+                    </h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="locationChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h3 class="chart-title">
+                        <i data-lucide="users"></i>
+                        Demographics Served
+                    </h3>
+                </div>
+                <div class="chart-container">
+                    <canvas id="demographicChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="insights-section">
+            <div class="insights-card">
+                <div class="insights-header">
+                    <h3 class="insights-title">
+                        <i data-lucide="lightbulb"></i>
+                        Key Insights
+                    </h3>
+                </div>
+                <div class="insights-content" id="insightsContent">
+                    <div class="loading">Analyzing data...</div>
+                </div>
+            </div>
+
+            <div class="insights-card">
+                <div class="insights-header">
+                    <h3 class="insights-title">
+                        <i data-lucide="trending-up"></i>
+                        Top Event Categories
+                    </h3>
+                </div>
+                <div class="insights-content" id="topCategories">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/js/dashboard.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+    <script>
+        async function exportDashboardPDF() {
+            const btn = document.getElementById('exportPdfBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i data-lucide="loader" class="icon-small"></i> Generating...';
+            btn.disabled = true;
+            lucide.createIcons();
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+                const margin = 15;
+                const contentWidth = pageWidth - margin * 2;
+                let yPos = margin;
+
+                // Header bar
+                pdf.setFillColor(200, 16, 46);
+                pdf.rect(0, 0, pageWidth, 28, 'F');
+                pdf.setTextColor(255, 255, 255);
+                pdf.setFontSize(18);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text('CEC Events Manager', margin, 12);
+                pdf.setFontSize(10);
+                pdf.setFont('helvetica', 'normal');
+                const yearSelect = document.getElementById('yearSelect');
+                const selectedYear = yearSelect ? yearSelect.value : new Date().getFullYear().toString();
+                pdf.text('Analytics Dashboard Report — ' + selectedYear, margin, 19);
+                const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                pdf.text(dateStr, pageWidth - margin - pdf.getTextWidth(dateStr), 19);
+                yPos = 36;
+
+                // Accent line
+                pdf.setDrawColor(200, 16, 46);
+                pdf.setLineWidth(0.5);
+                pdf.line(margin, yPos, pageWidth - margin, yPos);
+                yPos += 8;
+
+                // Summary stats
+                const stats = [
+                    { label: 'Total Events', value: document.getElementById('totalEvents')?.textContent || '0' },
+                    { label: 'Upcoming Events', value: document.getElementById('upcomingEvents')?.textContent || '0' },
+                    { label: 'Event Types', value: document.getElementById('eventTypes')?.textContent || '0' }
+                ];
+
+                pdf.setFontSize(13);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setTextColor(40, 40, 41);
+                pdf.text('Summary Statistics', margin, yPos);
+                yPos += 8;
+
+                const statBoxWidth = (contentWidth - 10) / 3;
+                stats.forEach((stat, i) => {
+                    const x = margin + i * (statBoxWidth + 5);
+                    pdf.setFillColor(244, 245, 247);
+                    pdf.roundedRect(x, yPos, statBoxWidth, 22, 3, 3, 'F');
+                    pdf.setFontSize(18);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setTextColor(200, 16, 46);
+                    pdf.text(stat.value, x + statBoxWidth / 2, yPos + 10, { align: 'center' });
+                    pdf.setFontSize(8);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setTextColor(84, 88, 90);
+                    pdf.text(stat.label.toUpperCase(), x + statBoxWidth / 2, yPos + 18, { align: 'center' });
+                });
+                yPos += 30;
+
+                // Community Interactions section
+                const interactionStats = [
+                    { label: 'Total Interactions', value: document.getElementById('filteredTotalInteractions')?.textContent || '0' },
+                    { label: 'Completed Events', value: document.getElementById('filteredEventCount')?.textContent || '0' },
+                    { label: 'Avg per Event', value: document.getElementById('filteredAvgInteractions')?.textContent || '0' },
+                    { label: 'Highest Engagement', value: document.getElementById('filteredTopEvent')?.textContent || '-' }
+                ];
+
+                const demographicFilter = document.getElementById('demographicFilter');
+                const selectedDemographic = demographicFilter ? demographicFilter.options[demographicFilter.selectedIndex].text : 'All Demographics';
+
+                pdf.setFontSize(13);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setTextColor(40, 40, 41);
+                pdf.text('Community Interactions Analysis', margin, yPos);
+                pdf.setFontSize(9);
+                pdf.setFont('helvetica', 'normal');
+                pdf.setTextColor(84, 88, 90);
+                pdf.text('Filter: ' + selectedDemographic, margin, yPos + 5);
+                yPos += 11;
+
+                const iStatBoxWidth = (contentWidth - 15) / 4;
+                interactionStats.forEach((stat, i) => {
+                    const x = margin + i * (iStatBoxWidth + 5);
+                    pdf.setFillColor(219, 234, 254);
+                    pdf.roundedRect(x, yPos, iStatBoxWidth, 22, 3, 3, 'F');
+                    pdf.setFontSize(14);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setTextColor(37, 99, 235);
+                    const val = stat.value.length > 15 ? stat.value.substring(0, 14) + '...' : stat.value;
+                    pdf.text(val, x + iStatBoxWidth / 2, yPos + 10, { align: 'center' });
+                    pdf.setFontSize(6.5);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setTextColor(84, 88, 90);
+                    pdf.text(stat.label.toUpperCase(), x + iStatBoxWidth / 2, yPos + 18, { align: 'center' });
+                });
+                yPos += 28;
+
+                // Event breakdown list
+                const interactionsBreakdown = document.getElementById('interactionsBreakdown');
+                if (interactionsBreakdown) {
+                    const breakdownItems = interactionsBreakdown.querySelectorAll('.breakdown-item');
+                    if (breakdownItems.length > 0) {
+                        yPos += 4;
+                        breakdownItems.forEach(item => {
+                            const eventName = item.querySelector('.breakdown-event-name')?.textContent?.trim() || '';
+                            const interactions = item.querySelector('.breakdown-interactions')?.textContent?.trim() || '';
+                            const eventType = item.querySelector('.breakdown-event-meta')?.textContent?.trim().split('\n')[0] || '';
+                            const eventDate = item.querySelector('.breakdown-event-meta')?.textContent?.trim().split('\n')[1] || '';
+                            
+                            if (eventName) {
+                                if (yPos + 12 > pageHeight - 20) {
+                                    pdf.addPage();
+                                    yPos = margin;
+                                }
+                                
+                                pdf.setFillColor(255, 255, 255);
+                                pdf.roundedRect(margin, yPos, contentWidth, 10, 2, 2, 'F');
+                                pdf.setDrawColor(200, 16, 46);
+                                pdf.setLineWidth(0.8);
+                                pdf.line(margin, yPos, margin, yPos + 10);
+                                
+                                pdf.setFontSize(8);
+                                pdf.setFont('helvetica', 'bold');
+                                pdf.setTextColor(40, 40, 41);
+                                const nameLines = pdf.splitTextToSize(eventName, contentWidth - 35);
+                                pdf.text(nameLines[0], margin + 3, yPos + 4);
+                                
+                                pdf.setFontSize(7);
+                                pdf.setFont('helvetica', 'normal');
+                                pdf.setTextColor(84, 88, 90);
+                                const metaText = eventType + (eventDate ? ' • ' + eventDate : '');
+                                pdf.text(metaText, margin + 3, yPos + 8);
+                                
+                                if (interactions) {
+                                    pdf.setFillColor(200, 16, 46);
+                                    const intWidth = pdf.getTextWidth(interactions) + 6;
+                                    pdf.roundedRect(pageWidth - margin - intWidth - 2, yPos + 2, intWidth, 6, 3, 3, 'F');
+                                    pdf.setFontSize(7);
+                                    pdf.setFont('helvetica', 'bold');
+                                    pdf.setTextColor(255, 255, 255);
+                                    pdf.text(interactions, pageWidth - margin - intWidth + 1, yPos + 6);
+                                }
+                                
+                                yPos += 12;
+                            }
+                        });
+                    }
+                }
+                yPos += 2;
+
+                // Capture charts
+                const charts = document.querySelectorAll('.chart-card');
+                const chartCanvases = [];
+                for (const chart of charts) {
+                    const canvas = await html2canvas(chart, {
+                        scale: 2,
+                        backgroundColor: '#FFFFFF',
+                        logging: false,
+                        useCORS: true
+                    });
+                    chartCanvases.push({
+                        canvas,
+                        title: chart.querySelector('.chart-title')?.textContent?.trim() || 'Chart'
+                    });
+                }
+
+                // Render charts 2-per-row
+                const chartWidth = (contentWidth - 6) / 2;
+                const chartHeight = 65;
+                for (let i = 0; i < chartCanvases.length; i += 2) {
+                    if (yPos + chartHeight + 10 > pageHeight - 20) {
+                        pdf.addPage();
+                        yPos = margin;
+                    }
+                    for (let j = 0; j < 2 && (i + j) < chartCanvases.length; j++) {
+                        const x = margin + j * (chartWidth + 6);
+                        const { canvas, title } = chartCanvases[i + j];
+                        pdf.setDrawColor(208, 211, 212);
+                        pdf.setFillColor(255, 255, 255);
+                        pdf.roundedRect(x, yPos, chartWidth, chartHeight, 3, 3, 'FD');
+                        const imgData = canvas.toDataURL('image/png');
+                        pdf.addImage(imgData, 'PNG', x + 2, yPos + 2, chartWidth - 4, chartHeight - 4);
+                    }
+                    yPos += chartHeight + 6;
+                }
+
+                // Insights section
+                const insightsContent = document.getElementById('insightsContent');
+                const topCategories = document.getElementById('topCategories');
+
+                if (insightsContent || topCategories) {
+                    if (yPos + 40 > pageHeight - 20) {
+                        pdf.addPage();
+                        yPos = margin;
+                    }
+
+                    pdf.setFontSize(13);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setTextColor(40, 40, 41);
+                    pdf.text('Key Insights & Categories', margin, yPos);
+                    yPos += 6;
+
+                    if (insightsContent) {
+                        const items = insightsContent.querySelectorAll('.insight-item');
+                        items.forEach(item => {
+                            const text = item.querySelector('.insight-text')?.textContent?.trim() || '';
+                            if (text) {
+                                if (yPos + 10 > pageHeight - 20) {
+                                    pdf.addPage();
+                                    yPos = margin;
+                                }
+                                pdf.setFillColor(243, 232, 255);
+                                pdf.roundedRect(margin, yPos, contentWidth, 8, 2, 2, 'F');
+                                pdf.setDrawColor(200, 16, 46);
+                                pdf.setLineWidth(0.8);
+                                pdf.line(margin, yPos, margin, yPos + 8);
+                                pdf.setFontSize(8);
+                                pdf.setFont('helvetica', 'normal');
+                                pdf.setTextColor(40, 40, 41);
+                                const lines = pdf.splitTextToSize(text, contentWidth - 8);
+                                pdf.text(lines[0], margin + 4, yPos + 5.5);
+                                yPos += 10;
+                            }
+                        });
+                    }
+
+                    if (topCategories) {
+                        yPos += 4;
+                        const catItems = topCategories.querySelectorAll('.category-item');
+                        catItems.forEach(item => {
+                            const name = item.querySelector('.category-name')?.textContent?.trim() || '';
+                            const badge = item.querySelector('.category-badge')?.textContent?.trim() || '';
+                            if (name) {
+                                if (yPos + 8 > pageHeight - 20) {
+                                    pdf.addPage();
+                                    yPos = margin;
+                                }
+                                pdf.setFontSize(8);
+                                pdf.setFont('helvetica', 'normal');
+                                pdf.setTextColor(40, 40, 41);
+                                pdf.text(name, margin + 4, yPos + 5);
+                                if (badge) {
+                                    pdf.setFillColor(200, 16, 46);
+                                    const badgeWidth = pdf.getTextWidth(badge) + 8;
+                                    pdf.roundedRect(pageWidth - margin - badgeWidth, yPos + 1, badgeWidth, 6, 3, 3, 'F');
+                                    pdf.setTextColor(255, 255, 255);
+                                    pdf.setFontSize(7);
+                                    pdf.text(badge, pageWidth - margin - badgeWidth + 4, yPos + 5.2);
+                                }
+                                yPos += 8;
+                            }
+                        });
+                    }
+                }
+
+                // Footer on every page
+                const totalPages = pdf.internal.getNumberOfPages();
+                for (let p = 1; p <= totalPages; p++) {
+                    pdf.setPage(p);
+                    pdf.setDrawColor(200, 16, 46);
+                    pdf.setLineWidth(0.3);
+                    pdf.line(margin, pageHeight - 12, pageWidth - margin, pageHeight - 12);
+                    pdf.setFontSize(7);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setTextColor(84, 88, 90);
+                    pdf.text('CEC Events Manager — Analytics Report', margin, pageHeight - 8);
+                    pdf.text('Page ' + p + ' of ' + totalPages, pageWidth - margin - pdf.getTextWidth('Page ' + p + ' of ' + totalPages), pageHeight - 8);
+                }
+
+                pdf.save('CEC_Events_Analytics_' + new Date().toISOString().slice(0, 10) + '.pdf');
+            } catch (err) {
+                console.error('PDF export error:', err);
+                alert('Failed to generate PDF. Please try again.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                lucide.createIcons();
+            }
+        }
+    </script>
+</body>
+</html>

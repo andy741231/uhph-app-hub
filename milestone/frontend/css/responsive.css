@@ -1,0 +1,157 @@
+/* Responsive design styles */
+
+@media (max-width: 900px) {
+  header {
+    padding: 2rem 1.5rem;
+    margin: 1.5rem 1rem;
+  }
+  
+  header h1 {
+    font-size: 1.75rem;
+  }
+  
+  .container {
+    padding: 0 1rem 3rem;
+  }
+  
+  .panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .panel-header-actions {
+    width: 100%;
+    /* align-items: flex-start; */
+    display: flex;
+    justify-content: flex-end;
+  }
+  
+  .panel-controls {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .panel-controls .input-with-icon {
+    flex: 1 1 100%;
+    max-width: none;
+    min-width: 0;
+  }
+  
+  .panel-controls .control-group {
+    width: 100%;
+  }
+  
+  .panel-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .panel-toolbar .right-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  .panel-metrics {
+    justify-content: flex-start;
+  }
+  
+  .scroll {
+    max-height: none;
+  }
+}
+
+/* Detail page responsive styles */
+@media (max-width: 768px) {
+  .page {
+    margin: 1.5rem auto;
+    padding: 0 1rem 2rem;
+  }
+  
+  .banner-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .banner-text {
+    padding-left: 0;
+  }
+  
+  .meta-grid {
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  }
+  
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  header .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  header .actions button {
+    width: 100%;
+  }
+}
+
+/* Loading spinner */
+.loader {
+  margin: 4.5rem auto;
+  max-width: 26rem;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.loader .spinner {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  border: 0.35rem solid rgba(37, 99, 235, 0.12);
+  border-top-color: var(--primary);
+  margin: 0 auto 1rem;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Print styles */
+@media print {
+  @page {
+    margin: 0.5in;
+  }
+  
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  body {
+    background: #fff;
+  }
+  
+  .page,
+  header,
+  section,
+  .field-card,
+  button {
+    box-shadow: none !important;
+  }
+  
+  header .actions,
+  button,
+  .no-pdf {
+    display: none !important;
+  }
+  
+  header,
+  section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

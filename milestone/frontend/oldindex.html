@@ -1,0 +1,1959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Airtable Manager (Vue + PHP)</title>
+  <script src="https://unpkg.com/vue@3.4.29/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios@1.7.2/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  
+  <!-- Modular CSS -->
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/forms.css" />
+  <link rel="stylesheet" href="css/modals.css" />
+  <link rel="stylesheet" href="css/tables.css" />
+  <link rel="stylesheet" href="css/pdf.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header>
+      <div v-if="hasBannerContent" class="banner-header">
+        <div class="flex justify-center">
+          <div v-if="bannerDetails.logoUrl" class="banner-logo">
+            <img :src="bannerDetails.logoUrl" :alt="bannerDetails.title || 'Banner logo'" />
+          </div>
+          <div class="banner-text">
+            <h1>{{ bannerDetails.title || 'Airtable Manager' }}</h1>
+            <p v-if="bannerDetails.subtitle" class="banner-subtitle">{{ bannerDetails.subtitle }}</p>
+            <p v-if="bannerDetails.description" class="banner-description">{{ bannerDetails.description }}</p>
+            <p v-else class="banner-description">Manage Airtable data with streamlined connections, quick insights, and actionable tools.</p>
+            <div class="banner-actions">
+              <button
+                class="secondary"
+                type="button"
+                @click="openBannerEditor"
+                :disabled="!bannerRecordId || bannerEditor.saving || bannerEditor.loading"
+              >
+                Edit Banner
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p v-else-if="bannerError" class="banner-error">{{ bannerError }}</p>
+      <div v-else class="default-banner">
+        <h1>Airtable Manager</h1>
+        <p>Manage Airtable data with streamlined connections, quick insights, and actionable tools.</p>
+        <div class="banner-actions">
+          <button
+            class="secondary"
+            type="button"
+            @click="openBannerEditor"
+            :disabled="bannerEditor.loading"
+          >
+            Edit Banner
+          </button>
+        </div>
+      </div>
+    </header>
+    <div class="container">
+      <div class="panel">
+        <!-- <div class="panel-header">
+{{ ... }}
+          <div>
+            <h2>Quick Create</h2>
+            <p>Paste JSON for new record fields to add items without leaving the dashboard.</p>
+          </div>
+        </div> -->
+        <!-- <div class="panel-body">
+          <div class="row">
+            <div>
+              <label>New record (JSON fields)</label>
+              <input v-model="newRecordJson" placeholder='{"Name":"New item"}' />
+            </div>
+            <div style="flex:0 1 220px; align-self:flex-end;">
+              <button @click="createRecord" :disabled="!baseId || !tableName || loading">Create Record</button>
+            </div>
+          </div>
+        </div> -->
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <div>
+            <h2>Records</h2>
+            <p>Inline-edit the focused delivery fields and open any row to view the full detail.</p>
+          </div>
+          <div class="panel-header-actions">
+            <div class="panel-metrics">
+              <span class="tag">{{ records.length }} total</span>
+              <span class="tag" v-if="filteredRecords.length !== records.length">{{ filteredRecords.length }} shown</span>
+              <span class="tag" v-if="offset">More available</span>
+            </div>
+            <div class="panel-toolbar" aria-label="PDF export controls">
+              <div class="right-actions">
+                <button
+                  class="primary"
+                  type="button"
+                  @click="exportPdf"
+                  :disabled="isExportingPdf || !filteredRecords.length"
+                >
+                  <span v-if="isExportingPdf">Preparing PDF…</span>
+                  <span v-else>Download PDF</span>
+                </button>
+              </div>
+            </div>
+            <div class="panel-controls">
+              <div class="input-with-icon">
+                <label class="sr-only" for="records-search">Search records</label>
+                <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                <input
+                  id="records-search"
+                  type="search"
+                  v-model.trim="searchQuery"
+                  placeholder="Search records…"
+                  autocomplete="off"
+                />
+              </div>
+              <div class="control-group">
+                <label class="sr-only" for="records-sort">Sort records</label>
+                <select id="records-sort" v-model="sortOption">
+                  <option value="none">Sort</option>
+                  <option value="Date:desc:date">Date (Newest first)</option>
+                  <option value="Date:asc:date">Date (Oldest first)</option>
+                  <option value="Deliverable:asc:string">Deliverable (A → Z)</option>
+                  <option value="Deliverable:desc:string">Deliverable (Z → A)</option>
+                </select>
+              </div>
+              <div class="control-group">
+                <label class="sr-only" for="records-filter-from">Filter from date</label>
+                <input id="records-filter-from" type="date" v-model="dateFilter.from" />
+              </div>
+              <div class="control-group">
+                <label class="sr-only" for="records-filter-to">Filter to date</label>
+                <input id="records-filter-to" type="date" v-model="dateFilter.to" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel-body">
+        <div v-if="message.text" :class="[{ success: message.type==='success', error: message.type==='error' }, 'muted']">
+          {{ message.text }}
+        </div>
+        <p v-if="pdfError" class="export-error">{{ pdfError }}</p>
+        <div class="muted" v-if="!records.length">Load records to start editing.</div>
+        <div class="muted" v-else-if="!filteredRecords.length">No records match your current search or filters.</div>
+        <div class="scroll" v-else>
+          <table>
+            <thead>
+              <tr>
+                <th v-for="col in displayColumns" :key="col">{{ col }}</th>
+                <th class="nowrap">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="rec in filteredRecords" :key="rec.id">
+                <td v-for="col in displayColumns" :key="col">
+                  <div class="value-preview">{{ rec.fields && rec.fields[col] ? rec.fields[col] : '' }}</div>
+                </td>
+                <td>
+                  <div class="actions">
+                    <button class="secondary" @click="viewRecord(rec.id)">View</button>
+                    <button class="secondary" @click="deleteRecord(rec.id)">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="panel-toolbar" v-if="offset">
+          <div class="muted">You are viewing a partial result set.</div>
+          <div class="right-actions">
+            <button class="secondary" @click="loadNextPage">Load Next Page</button>
+          </div>
+        </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      v-if="bannerEditor.visible"
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="dashboard-banner-editor-title"
+      @click.self="closeBannerEditor"
+    >
+      <div class="modal">
+        <div class="modal-header">
+          <h2 class="modal-title" id="dashboard-banner-editor-title">Edit Banner</h2>
+          <button type="button" class="modal-close" @click="closeBannerEditor" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div v-if="bannerEditor.loading" class="field-readonly">Loading banner fields…</div>
+          <template v-else>
+            <div v-if="bannerEditor.error" class="modal-alert error">{{ bannerEditor.error }}</div>
+            <div v-if="bannerEditor.success" class="modal-alert success">{{ bannerEditor.success }}</div>
+            <div v-if="!bannerEditor.fields.length" class="field-readonly">No editable fields were found for the Banner table.</div>
+            <template v-else>
+              <div
+                v-for="field in bannerEditor.fields"
+                :key="field.id"
+                class="field-group"
+              >
+                <label :for="'dashboard-banner-field-' + field.id">
+                  {{ field.name }}
+                  <span v-if="field.required" class="field-help">(required)</span>
+                </label>
+                <div v-if="field.typeLabel" class="field-help">{{ field.typeLabel }}</div>
+                <div v-if="field.description" class="field-help">{{ field.description }}</div>
+
+                <template v-if="field.editable">
+                  <input
+                    v-if="field.input === 'text'"
+                    :id="'dashboard-banner-field-' + field.id"
+                    v-model="bannerEditor.formValues[field.name]"
+                    v-bind="field.inputAttrs"
+                  />
+                  <textarea
+                    v-else-if="field.input === 'textarea'"
+                    :id="'dashboard-banner-field-' + field.id"
+                    v-model="bannerEditor.formValues[field.name]"
+                    rows="4"
+                  ></textarea>
+                  <input
+                    v-else-if="field.input === 'number'"
+                    :id="'dashboard-banner-field-' + field.id"
+                    type="number"
+                    v-model="bannerEditor.formValues[field.name]"
+                    v-bind="field.inputAttrs"
+                  />
+                  <div v-else-if="field.input === 'checkbox'" class="checkbox-group">
+                    <input
+                      :id="'dashboard-banner-field-' + field.id"
+                      type="checkbox"
+                      v-model="bannerEditor.formValues[field.name]"
+                    />
+                    <span>Checked</span>
+                  </div>
+                  <select
+                    v-else-if="field.input === 'single-select'"
+                    :id="'dashboard-banner-field-' + field.id"
+                    v-model="bannerEditor.formValues[field.name]"
+                  >
+                    <option value=""></option>
+                    <option v-for="choice in field.choices" :key="choice" :value="choice">{{ choice }}</option>
+                  </select>
+                  <select
+                    v-else-if="field.input === 'multi-select'"
+                    :id="'dashboard-banner-field-' + field.id"
+                    v-model="bannerEditor.formValues[field.name]"
+                    multiple
+                    class="multi-select"
+                  >
+                    <option v-for="choice in field.choices" :key="choice" :value="choice">{{ choice }}</option>
+                  </select>
+                  <input
+                    v-else-if="field.input === 'date'"
+                    :id="'dashboard-banner-field-' + field.id"
+                    type="date"
+                    v-model="bannerEditor.formValues[field.name]"
+                  />
+                  <input
+                    v-else-if="field.input === 'datetime'"
+                    :id="'dashboard-banner-field-' + field.id"
+                    type="datetime-local"
+                    v-model="bannerEditor.formValues[field.name]"
+                  />
+                  <input
+                    v-else
+                    :id="'dashboard-banner-field-' + field.id"
+                    v-model="bannerEditor.formValues[field.name]"
+                  />
+                </template>
+
+                <template v-else>
+                  <div class="field-readonly">{{ displayBannerFieldValue(field) }}</div>
+                  <div
+                    v-if="field.readOnlyReason"
+                    class="field-help"
+                    v-html="field.readOnlyReason"
+                  ></div>
+                </template>
+              </div>
+            </template>
+          </template>
+        </div>
+        <div class="modal-footer">
+          <button class="secondary" type="button" @click="closeBannerEditor" :disabled="bannerEditor.saving">Cancel</button>
+          <button class="primary" type="button" @click="submitBannerEditor" :disabled="bannerEditor.saving">
+            <span v-if="bannerEditor.saving">Saving…</span>
+            <span v-else>Save Changes</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modular JavaScript -->
+  <script type="module">
+    import { MainApp } from './js/main-app.js';
+    
+    const { createApp } = Vue;
+    const app = new MainApp();
+    
+    createApp({
+      data() {
+        return {
+          apiBase: '../backend/api.php',
+          baseId: 'appAIxASkp5dv39O6',
+          tableName: 'Milestone Activities',
+          records: [],
+          offset: '',
+          hiddenFields: ['id', 'ID'],
+          searchQuery: '',
+          sortOption: 'none',
+          dateFilter: {
+            from: '',
+            to: ''
+          },
+          dateField: 'Date',
+          columnList: [],
+          view: '',
+          filterByFormula: '',
+          newRecordJson: '',
+          loading: false,
+          message: { text: '', type: '' },
+          pdfError: '',
+          isExportingPdf: false,
+          bannerDetails: {
+            logoUrl: '',
+            title: '',
+            subtitle: '',
+            description: ''
+          },
+          bannerError: '',
+          bannerTableName: 'Banner',
+          bannerRecordId: '',
+          bannerRecordFields: {},
+          bannerTableSchema: null,
+          bannerEditor: {
+            visible: false,
+            loading: false,
+            saving: false,
+            error: '',
+            success: '',
+            fields: [],
+            formValues: {}
+          }
+        }
+      },
+      computed: {
+        displayColumns() {
+          return this.columnList
+        },
+        filteredRecords() {
+          let items = this.records.slice()
+
+          const fromTs = this.parseDateFilter(this.dateFilter.from)
+          const toTs = this.parseDateFilter(this.dateFilter.to, true)
+
+          if (fromTs != null || toTs != null) {
+            items = items.filter(rec => {
+              const fieldValue = rec && rec.fields ? rec.fields[this.dateField] : undefined
+              const recordTs = this.normalizeDateForSort(fieldValue)
+              if (recordTs == null) return false
+              if (fromTs != null && recordTs < fromTs) return false
+              if (toTs != null && recordTs > toTs) return false
+              return true
+            })
+          }
+
+          const query = this.searchQuery.trim().toLowerCase()
+          if (query) {
+            items = items.filter(rec => {
+              if (!rec || !rec.fields) return false
+              return this.displayColumns.some(col => {
+                const value = rec.fields[col]
+                if (value == null) return false
+                if (Array.isArray(value)) {
+                  return value.some(entry => this.normalizeValue(entry).toLowerCase().includes(query))
+                }
+                return this.normalizeValue(value).toLowerCase().includes(query)
+              })
+            })
+          }
+
+          if (this.sortOption !== 'none') {
+            const [field, direction, valueType] = this.sortOption.split(':')
+            const multiplier = direction === 'desc' ? -1 : 1
+            const localeOptions = { sensitivity: 'base', numeric: true }
+            items = items.slice().sort((a, b) => {
+              const aField = a && a.fields ? a.fields[field] : undefined
+              const bField = b && b.fields ? b.fields[field] : undefined
+
+              if (valueType === 'date') {
+                const aTime = this.normalizeDateForSort(aField)
+                const bTime = this.normalizeDateForSort(bField)
+                if (aTime == null && bTime == null) return 0
+                if (aTime == null) return 1
+                if (bTime == null) return -1
+                return (aTime - bTime) * multiplier
+              }
+
+              const aText = this.normalizeSortValue(aField)
+              const bText = this.normalizeSortValue(bField)
+              if (!aText && !bText) return 0
+              if (!aText) return 1
+              if (!bText) return -1
+              return aText.localeCompare(bText, undefined, localeOptions) * multiplier
+            })
+          }
+
+          return items
+        },
+        hasBannerContent() {
+          const details = this.bannerDetails || {}
+          return Boolean(details.logoUrl || details.title || details.subtitle || details.description)
+        }
+      },
+      methods: {
+        notify(text, type = 'success') {
+          this.message = { text, type }
+          setTimeout(() => { this.message = { text: '', type: '' } }, 3000)
+        },
+        parseDateFilter(value, endOfDay = false) {
+          if (!value) return null
+          const parts = String(value).split('-').map(segment => Number(segment))
+          if (parts.length !== 3 || parts.some(segment => Number.isNaN(segment))) return null
+          const [year, month, day] = parts
+          if (!year || !month || !day) return null
+          const date = new Date(Date.UTC(year, month - 1, day, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0))
+          const timestamp = date.getTime()
+          return Number.isNaN(timestamp) ? null : timestamp
+        },
+        normalizeSortValue(value) {
+          if (value == null) return ''
+          if (Array.isArray(value)) {
+            for (const entry of value) {
+              const normalized = this.normalizeValue(entry).trim()
+              if (normalized) return normalized
+            }
+            return ''
+          }
+          const normalized = this.normalizeValue(value)
+          return normalized ? normalized.trim() : ''
+        },
+        normalizeDateForSort(value) {
+          if (value == null) return null
+          if (Array.isArray(value)) {
+            for (const entry of value) {
+              const parsed = this.normalizeDateForSort(entry)
+              if (parsed != null) return parsed
+            }
+            return null
+          }
+          const date = new Date(value)
+          const timestamp = date.getTime()
+          return Number.isNaN(timestamp) ? null : timestamp
+        },
+        viewRecord(id) {
+          if (!id) return
+          if (!this.baseId || !this.tableName) {
+            this.notify('Base and Table required to view record', 'error')
+            return
+          }
+          const params = new URLSearchParams({ baseId: this.baseId, table: this.tableName, id })
+          window.open(`detail.html?${params.toString()}`, '_blank')
+        },
+        async loadRecords(next = false) {
+          if (!this.baseId || !this.tableName) { this.notify('Base and Table required', 'error'); return }
+          this.loading = true
+          try {
+            const params = { action: 'listRecords', baseId: this.baseId, table: this.tableName }
+            if (this.view) params.view = this.view
+            if (this.filterByFormula) params.filterByFormula = this.filterByFormula
+            if (next && this.offset) params.offset = this.offset
+
+            const res = await axios.get(this.apiBase, { params })
+            const recs = res.data.records || []
+            this.offset = res.data.offset || ''
+            if (!next) {
+              this.records = recs
+            } else {
+              this.records = this.records.concat(recs)
+            }
+            const firstRecord = this.records[0]
+            if (firstRecord && firstRecord.fields) {
+              const fields = firstRecord.fields
+              const preferred = PREFERRED_ORDER.filter(field => Object.prototype.hasOwnProperty.call(fields, field))
+              const fallback = Object.keys(fields).filter(key => !preferred.includes(key) && !this.hiddenFields.includes(key))
+              this.columnList = preferred.concat(fallback).slice(0, 3)
+            } else {
+              this.columnList = []
+            }
+            this.notify(`Loaded ${recs.length} records${this.offset ? ' (more available)' : ''}`)
+          } catch (e) {
+            this.notify(this.errMsg(e), 'error')
+          } finally { this.loading = false }
+        },
+        loadNextPage() { this.loadRecords(true) },
+        async exportPdf() {
+          if (this.isExportingPdf) return
+
+          const jsPDFLib = window.jspdf && window.jspdf.jsPDF
+          if (!jsPDFLib) {
+            this.pdfError = 'PDF generator is unavailable. Please refresh and try again.'
+            return
+          }
+
+          const records = (this.filteredRecords && this.filteredRecords.length)
+            ? this.filteredRecords
+            : this.records
+
+          if (!records || !records.length) {
+            this.pdfError = 'No records available to export.'
+            return
+          }
+
+          this.pdfError = ''
+          this.isExportingPdf = true
+
+          const palette = {
+            text: [15, 23, 42],
+            muted: [71, 85, 105],
+            border: [226, 232, 240],
+            surface: [255, 255, 255],
+            surfaceAlt: [241, 245, 249],
+            accent: [37, 99, 235],
+            background: [248, 250, 252],
+            cardBackground: [255, 255, 255]
+          }
+
+          const normalizeValue = value => {
+            if (value == null) return ''
+            if (Array.isArray(value)) {
+              return value.map(entry => normalizeValue(entry)).join(', ')
+            }
+            if (typeof value === 'object') {
+              if (value.name) return value.name
+              if (value.filename) return value.filename
+              if (value.url) return value.url
+              return JSON.stringify(value, null, 2)
+            }
+            return String(value)
+          }
+
+          const toDataUrl = async url => {
+            if (!url) return null
+            try {
+              const response = await fetch(url, { mode: 'cors' })
+              if (!response.ok) return null
+              const blob = await response.blob()
+              return await new Promise(resolve => {
+                const reader = new FileReader()
+                reader.onloadend = () => resolve(reader.result)
+                reader.onerror = () => resolve(null)
+                reader.readAsDataURL(blob)
+              })
+            } catch (error) {
+              return null
+            }
+          }
+
+          const renderCoverCard = async ({ title, subtitle, description, logoDataUrl }) => {
+            if (typeof window.html2canvas === 'undefined') return null
+
+            const sandbox = document.createElement('div')
+            sandbox.style.position = 'fixed'
+            sandbox.style.left = '0'
+            sandbox.style.top = '-9999px'
+            sandbox.style.width = '860px'
+            sandbox.style.padding = '60px 0'
+            sandbox.style.background = '#f8fafc'
+            sandbox.style.display = 'flex'
+            sandbox.style.justifyContent = 'center'
+            sandbox.style.fontFamily = '"Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
+
+            const card = document.createElement('div')
+            card.style.width = '640px'
+            card.style.maxWidth = '640px'
+            card.style.background = '#ffffff'
+            card.style.borderRadius = '24px'
+            card.style.padding = '80px 72px'
+            card.style.boxShadow = '0 24px 60px rgba(15, 23, 42, 0.12)'
+            card.style.display = 'flex'
+            card.style.flexDirection = 'column'
+            card.style.alignItems = 'center'
+            card.style.gap = '32px'
+            card.style.textAlign = 'center'
+            card.style.color = 'rgb(15, 23, 42)'
+
+            const headerGroup = document.createElement('div')
+            headerGroup.style.display = 'flex'
+            headerGroup.style.flexDirection = 'column'
+            headerGroup.style.alignItems = 'center'
+            headerGroup.style.gap = '24px'
+
+            if (logoDataUrl) {
+              const logoWrap = document.createElement('div')
+              logoWrap.style.width = '150px'
+              logoWrap.style.height = '150px'
+              logoWrap.style.borderRadius = '32px'
+              logoWrap.style.background = 'rgba(241, 245, 249, 1)'
+              logoWrap.style.border = '1px solid rgba(226, 232, 240, 1)'
+              logoWrap.style.display = 'flex'
+              logoWrap.style.alignItems = 'center'
+              logoWrap.style.justifyContent = 'center'
+              logoWrap.style.overflow = 'hidden'
+              logoWrap.style.padding = '18px'
+
+              const img = document.createElement('img')
+              img.src = logoDataUrl
+              img.alt = title || 'Banner logo'
+              img.style.maxWidth = '100%'
+              img.style.maxHeight = '100%'
+              img.style.objectFit = 'contain'
+
+              logoWrap.appendChild(img)
+              headerGroup.appendChild(logoWrap)
+            }
+
+            const textBlock = document.createElement('div')
+            textBlock.style.display = 'flex'
+            textBlock.style.flexDirection = 'column'
+            textBlock.style.alignItems = 'center'
+            textBlock.style.gap = '16px'
+
+            const titleEl = document.createElement('h1')
+            titleEl.textContent = title || 'Airtable Manager'
+            titleEl.style.margin = '0'
+            titleEl.style.fontSize = '36px'
+            titleEl.style.fontWeight = '600'
+            titleEl.style.letterSpacing = '0.04em'
+            titleEl.style.textTransform = 'uppercase'
+            titleEl.style.color = 'rgb(15, 23, 42)'
+
+            textBlock.appendChild(titleEl)
+
+            if (subtitle) {
+              const subtitleEl = document.createElement('p')
+              subtitleEl.textContent = subtitle
+              subtitleEl.style.margin = '0'
+              subtitleEl.style.fontSize = '20px'
+              subtitleEl.style.fontWeight = '500'
+              subtitleEl.style.color = 'rgb(71, 85, 105)'
+              textBlock.appendChild(subtitleEl)
+            }
+
+            const desc = description || 'Manage Airtable data with streamlined connections, quick insights, and actionable tools.'
+            if (desc) {
+              const descEl = document.createElement('p')
+              descEl.textContent = desc
+              descEl.style.margin = '0'
+              descEl.style.maxWidth = '520px'
+              descEl.style.fontSize = '15px'
+              descEl.style.lineHeight = '1.65'
+              descEl.style.color = 'rgb(71, 85, 105)'
+              descEl.style.whiteSpace = 'pre-wrap'
+              textBlock.appendChild(descEl)
+            }
+
+            headerGroup.appendChild(textBlock)
+            card.appendChild(headerGroup)
+            sandbox.appendChild(card)
+            document.body.appendChild(sandbox)
+
+            try {
+              const canvas = await window.html2canvas(card, {
+                backgroundColor: null,
+                scale: 2
+              })
+              return canvas.toDataURL('image/png', 1.0)
+            } catch (error) {
+              console.error('Failed to render cover card', error)
+              return null
+            } finally {
+              sandbox.remove()
+            }
+          }
+
+          const getImageDimensions = src => new Promise(resolve => {
+            if (!src) return resolve(null)
+            const img = new Image()
+            img.onload = () => resolve({ width: img.width, height: img.height })
+            img.onerror = () => resolve(null)
+            img.src = src
+          })
+
+          const pxToIn = pixels => pixels / 96
+
+          const renderRecordCard = async ({ title, milestone, deliverable, notes, lessons, metrics = [], attachments = [] }) => {
+            if (typeof window.html2canvas === 'undefined') return null
+
+            // Create multiple cards to avoid element splitting
+            const cards = []
+            
+            // Helper function to create a clean card for PDF
+            const createPdfCard = (content) => {
+              const sandbox = document.createElement('div')
+              sandbox.style.position = 'fixed'
+              sandbox.style.left = '0'
+              sandbox.style.top = '-9999px'
+              sandbox.style.width = '900px'
+              sandbox.style.minHeight = 'auto' // Let content determine height
+              sandbox.style.padding = '40px 0' // Reduced padding
+              sandbox.style.background = '#ffffff' // Clean white background
+              sandbox.style.display = 'flex'
+              sandbox.style.justifyContent = 'center'
+              sandbox.style.fontFamily = '"Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
+
+              const card = document.createElement('div')
+              card.style.width = '720px'
+              card.style.maxWidth = '720px'
+              card.style.minHeight = 'auto' // Allow card to size to content
+              card.style.background = '#ffffff' // Clean white background
+              card.style.borderRadius = '0' // Remove rounded corners for PDF
+              card.style.padding = '60px 84px' // Reduced padding
+              card.style.boxShadow = 'none' // Remove shadow for PDF
+              card.style.display = 'flex'
+              card.style.flexDirection = 'column'
+              card.style.gap = '24px' // Reduced gap
+              card.style.color = 'rgb(15, 23, 42)'
+
+              content.forEach(element => card.appendChild(element))
+              sandbox.appendChild(card)
+              return { sandbox, card }
+            }
+
+            // Create header section
+            const createHeader = () => {
+              const headingGroup = document.createElement('div')
+              headingGroup.style.display = 'flex'
+              headingGroup.style.flexDirection = 'column'
+              headingGroup.style.alignItems = 'flex-start'
+              headingGroup.style.gap = '14px'
+
+              const titleEl = document.createElement('h2')
+              titleEl.textContent = title
+              titleEl.style.margin = '0'
+              titleEl.style.fontSize = '26px'
+              titleEl.style.fontWeight = '600'
+              titleEl.style.letterSpacing = '0.05em'
+              titleEl.style.textTransform = 'uppercase'
+              headingGroup.appendChild(titleEl)
+
+              const subline = document.createElement('div')
+              subline.style.height = '5px'
+              subline.style.width = '88px'
+              subline.style.borderRadius = '999px'
+              subline.style.background = 'rgba(37, 99, 235, 0.35)'
+              headingGroup.appendChild(subline)
+
+              return headingGroup
+            }
+
+            // Create table section
+            const createTable = () => {
+              const table = document.createElement('div')
+              table.style.display = 'grid'
+              table.style.gridTemplateColumns = 'repeat(2, minmax(0, 1fr))'
+              table.style.border = '1px solid rgba(226, 232, 240, 1)'
+              table.style.borderRadius = '18px'
+              table.style.overflow = 'hidden'
+
+              const headerCell = (text) => {
+                const cell = document.createElement('div')
+                cell.textContent = text
+                cell.style.background = 'rgba(241, 245, 249, 1)'
+                cell.style.color = 'rgba(71, 85, 105, 1)'
+                cell.style.fontSize = '12px'
+                cell.style.fontWeight = '600'
+                cell.style.letterSpacing = '0.06em'
+                cell.style.textTransform = 'uppercase'
+                cell.style.padding = '16px 24px'
+                cell.style.display = 'flex'
+                cell.style.alignItems = 'center'
+                return cell
+              }
+
+              const valueCell = (text) => {
+                const cell = document.createElement('div')
+                cell.textContent = text || '—'
+                cell.style.fontSize = '16px'
+                cell.style.color = 'rgb(15, 23, 42)'
+                cell.style.padding = '20px 24px'
+                cell.style.display = 'flex'
+                cell.style.alignItems = 'center'
+                cell.style.whiteSpace = 'pre-wrap'
+                return cell
+              }
+
+              table.appendChild(headerCell('Milestone Type'))
+              table.appendChild(headerCell('Deliverable'))
+              table.appendChild(valueCell(milestone))
+              table.appendChild(valueCell(deliverable))
+              return table
+            }
+
+            // Build content for first card
+            const firstCardContent = [createHeader(), createTable()]
+            
+            // Add notes if they exist
+            if (notes && notes.trim()) {
+              const notesBox = document.createElement('div')
+              notesBox.style.border = '1px solid rgba(226, 232, 240, 1)'
+              notesBox.style.background = 'rgba(241, 245, 249, 1)'
+              notesBox.style.borderRadius = '18px'
+              notesBox.style.padding = '28px 30px'
+              notesBox.style.display = 'flex'
+              notesBox.style.flexDirection = 'column'
+              notesBox.style.gap = '13px'
+
+              const notesTitle = document.createElement('h3')
+              notesTitle.textContent = 'Notes'
+              notesTitle.style.margin = '0'
+              notesTitle.style.fontSize = '13px'
+              notesTitle.style.fontWeight = '600'
+              notesTitle.style.letterSpacing = '0.08em'
+              notesTitle.style.textTransform = 'uppercase'
+              notesTitle.style.color = 'rgba(71, 85, 105, 1)'
+              notesBox.appendChild(notesTitle)
+
+              const notesContent = document.createElement('p')
+              notesContent.textContent = notes
+              notesContent.style.margin = '0'
+              notesContent.style.fontSize = '15px'
+              notesContent.style.lineHeight = '1.7'
+              notesContent.style.color = 'rgb(15, 23, 42)'
+              notesContent.style.whiteSpace = 'pre-wrap'
+              notesBox.appendChild(notesContent)
+
+              firstCardContent.push(notesBox)
+            }
+
+            // Try to fit lessons learned on first card if short
+            if (lessons && lessons.trim() && lessons.length < 150) {
+              const lessonsBox = document.createElement('div')
+              lessonsBox.style.border = '1px solid rgba(226, 232, 240, 1)'
+              lessonsBox.style.background = '#ffffff'
+              lessonsBox.style.borderRadius = '18px'
+              lessonsBox.style.padding = '28px 30px'
+              lessonsBox.style.display = 'flex'
+              lessonsBox.style.flexDirection = 'column'
+              lessonsBox.style.gap = '13px'
+
+              const lessonsTitle = document.createElement('h3')
+              lessonsTitle.textContent = 'Lessons Learned'
+              lessonsTitle.style.margin = '0'
+              lessonsTitle.style.fontSize = '13px'
+              lessonsTitle.style.fontWeight = '600'
+              lessonsTitle.style.letterSpacing = '0.08em'
+              lessonsTitle.style.textTransform = 'uppercase'
+              lessonsTitle.style.color = 'rgba(71, 85, 105, 1)'
+              lessonsBox.appendChild(lessonsTitle)
+
+              const lessonsText = document.createElement('p')
+              lessonsText.textContent = lessons
+              lessonsText.style.margin = '0'
+              lessonsText.style.fontSize = '15px'
+              lessonsText.style.lineHeight = '1.7'
+              lessonsText.style.color = 'rgb(15, 23, 42)'
+              lessonsText.style.whiteSpace = 'pre-wrap'
+              lessonsBox.appendChild(lessonsText)
+
+              firstCardContent.push(lessonsBox)
+            }
+
+            // Create first card
+            const firstCard = createPdfCard(firstCardContent)
+            cards.push(firstCard)
+
+            // Create second card if needed (long lessons, metrics, or attachments)
+            const needsSecondCard = (lessons && lessons.length >= 150) || (metrics && metrics.length) || (attachments && attachments.length)
+            
+            if (needsSecondCard) {
+              const lessonsContent = []
+              
+              // Add header for continuation
+              const continuationHeader = document.createElement('h2')
+              continuationHeader.textContent = `${title} (continued)`
+              continuationHeader.style.margin = '0'
+              continuationHeader.style.fontSize = '20px'
+              continuationHeader.style.fontWeight = '600'
+              continuationHeader.style.color = 'rgba(71, 85, 105, 1)'
+              continuationHeader.style.marginBottom = '32px'
+              lessonsContent.push(continuationHeader)
+
+              const lessonsBox = document.createElement('div')
+              lessonsBox.style.border = '1px solid rgba(226, 232, 240, 1)'
+              lessonsBox.style.background = '#ffffff'
+              lessonsBox.style.borderRadius = '18px'
+              lessonsBox.style.padding = '28px 30px'
+              lessonsBox.style.display = 'flex'
+              lessonsBox.style.flexDirection = 'column'
+              lessonsBox.style.gap = '13px'
+
+              const lessonsTitle = document.createElement('h3')
+              lessonsTitle.textContent = 'Lessons Learned'
+              lessonsTitle.style.margin = '0'
+              lessonsTitle.style.fontSize = '13px'
+              lessonsTitle.style.fontWeight = '600'
+              lessonsTitle.style.letterSpacing = '0.08em'
+              lessonsTitle.style.textTransform = 'uppercase'
+              lessonsTitle.style.color = 'rgba(71, 85, 105, 1)'
+              lessonsBox.appendChild(lessonsTitle)
+
+              const lessonsText = document.createElement('p')
+              lessonsText.textContent = lessons
+              lessonsText.style.margin = '0'
+              lessonsText.style.fontSize = '15px'
+              lessonsText.style.lineHeight = '1.7'
+              lessonsText.style.color = 'rgb(15, 23, 42)'
+              lessonsText.style.whiteSpace = 'pre-wrap'
+              lessonsBox.appendChild(lessonsText)
+
+              lessonsContent.push(lessonsBox)
+
+              // Add metrics if they exist
+              if (metrics && metrics.length) {
+                const metricsWrap = document.createElement('div')
+                metricsWrap.style.display = 'flex'
+                metricsWrap.style.flexWrap = 'wrap'
+                metricsWrap.style.gap = '20px'
+
+                metrics.forEach(metric => {
+                  const metricCard = document.createElement('div')
+                  metricCard.style.flex = '1 1 180px'
+                  metricCard.style.minWidth = '180px'
+                  metricCard.style.border = '1px solid rgba(226, 232, 240, 1)'
+                  metricCard.style.background = 'rgba(241, 245, 249, 1)'
+                  metricCard.style.borderRadius = '16px'
+                  metricCard.style.padding = '20px 24px'
+                  metricCard.style.display = 'flex'
+                  metricCard.style.flexDirection = 'column'
+                  metricCard.style.gap = '6px'
+
+                  const metricLabel = document.createElement('span')
+                  metricLabel.textContent = metric.label.toUpperCase()
+                  metricLabel.style.fontSize = '11px'
+                  metricLabel.style.fontWeight = '600'
+                  metricLabel.style.letterSpacing = '0.08em'
+                  metricLabel.style.color = 'rgba(71, 85, 105, 1)'
+                  metricCard.appendChild(metricLabel)
+
+                  const metricValue = document.createElement('span')
+                  metricValue.textContent = metric.value
+                  metricValue.style.fontSize = '28px'
+                  metricValue.style.fontWeight = '600'
+                  metricValue.style.color = 'rgb(15, 23, 42)'
+                  metricCard.appendChild(metricValue)
+
+                  metricsWrap.appendChild(metricCard)
+                })
+
+                lessonsContent.push(metricsWrap)
+              }
+
+              // Add attachments if they exist
+              if (attachments && attachments.length) {
+                const attachmentsBox = document.createElement('div')
+                attachmentsBox.style.border = '1px solid rgba(226, 232, 240, 1)'
+                attachmentsBox.style.background = 'rgba(241, 245, 249, 1)'
+                attachmentsBox.style.borderRadius = '18px'
+                attachmentsBox.style.padding = '26px 30px'
+                attachmentsBox.style.display = 'flex'
+                attachmentsBox.style.flexDirection = 'column'
+                attachmentsBox.style.gap = '12px'
+
+                const attachmentsTitle = document.createElement('h3')
+                attachmentsTitle.textContent = 'Attachments'
+                attachmentsTitle.style.margin = '0'
+                attachmentsTitle.style.fontSize = '13px'
+                attachmentsTitle.style.fontWeight = '600'
+                attachmentsTitle.style.letterSpacing = '0.08em'
+                attachmentsTitle.style.textTransform = 'uppercase'
+                attachmentsTitle.style.color = 'rgba(71, 85, 105, 1)'
+                attachmentsBox.appendChild(attachmentsTitle)
+
+                attachments.forEach((attachment, idx) => {
+                  const link = document.createElement('div')
+                  link.innerHTML = `${idx + 1}. <span style="color: #2563eb; text-decoration: underline;">${attachment.name}</span><br><span style="color: #2563eb; font-size: 13px; word-break: break-all;">${attachment.url}</span>`
+                  link.style.fontSize = '15px'
+                  link.style.color = 'rgb(15, 23, 42)'
+                  link.style.wordBreak = 'break-word'
+                  link.style.display = 'block'
+                  link.style.marginBottom = '12px'
+                  link.style.lineHeight = '1.4'
+                  // Store URL as data attribute for later PDF processing
+                  link.setAttribute('data-url', attachment.url)
+                  attachmentsBox.appendChild(link)
+                })
+
+                lessonsContent.push(attachmentsBox)
+              }
+
+              const secondCard = createPdfCard(lessonsContent)
+              cards.push(secondCard)
+            }
+
+            // Render all cards and return URLs
+            const cardUrls = []
+            const cardMetadata = [] // Store positioning info for each card
+            
+            for (const { sandbox, card } of cards) {
+              document.body.appendChild(sandbox)
+              
+              try {
+                await new Promise(resolve => setTimeout(resolve, 100))
+                
+                // Adjust sandbox height to fit content exactly
+                const cardHeight = card.scrollHeight
+                sandbox.style.height = `${cardHeight + 80}px` // Minimal padding for sandbox
+                
+                // Find attachment links and their positions
+                const attachmentElements = card.querySelectorAll('[data-url]')
+                const attachmentPositions = []
+                
+                attachmentElements.forEach((element) => {
+                  const rect = element.getBoundingClientRect()
+                  const cardRect = card.getBoundingClientRect()
+                  const relativeTop = rect.top - cardRect.top
+                  const relativeLeft = rect.left - cardRect.left
+                  
+                  attachmentPositions.push({
+                    url: element.getAttribute('data-url'),
+                    top: relativeTop,
+                    left: relativeLeft,
+                    width: rect.width,
+                    height: rect.height
+                  })
+                })
+                
+                const canvas = await window.html2canvas(card, {
+                  backgroundColor: '#ffffff',
+                  scale: 2,
+                  useCORS: true,
+                  allowTaint: true,
+                  height: cardHeight,
+                  width: card.scrollWidth
+                })
+                
+                cardUrls.push(canvas.toDataURL('image/png', 1.0))
+                cardMetadata.push({ attachmentPositions, cardHeight })
+              } catch (error) {
+                console.error('Failed to render card', error)
+                cardUrls.push(null)
+                cardMetadata.push({ attachmentPositions: [], cardHeight: 0 })
+              } finally {
+                sandbox.remove()
+              }
+            }
+
+            return cardUrls.length > 0 ? { cardUrls, cardMetadata } : null
+          }
+
+          try {
+            const doc = new jsPDFLib({ unit: 'in', format: 'letter', orientation: 'portrait' })
+            const setTextColor = rgb => doc.setTextColor(rgb[0], rgb[1], rgb[2])
+            const setFillColor = rgb => doc.setFillColor(rgb[0], rgb[1], rgb[2])
+            const setDrawColor = rgb => doc.setDrawColor(rgb[0], rgb[1], rgb[2])
+            const pageWidth = doc.internal.pageSize.getWidth()
+            const pageHeight = doc.internal.pageSize.getHeight()
+            const marginX = 0.85
+            const marginY = 1
+
+            const coalesceField = (fields, candidates = []) => {
+              for (const key of candidates) {
+                if (Object.prototype.hasOwnProperty.call(fields, key) && fields[key] != null && fields[key] !== '') {
+                  return fields[key]
+                }
+              }
+              return undefined
+            }
+
+            const parseNumeric = value => {
+              if (value == null) return null
+              if (typeof value === 'number') {
+                return Number.isFinite(value) ? value : null
+              }
+              const cleaned = String(value).replace(/[^0-9.+-]/g, '')
+              if (!cleaned.trim()) return null
+              const num = Number(cleaned)
+              return Number.isFinite(num) ? num : null
+            }
+
+            const formatMetricValue = value => {
+              if (typeof value === 'number') {
+                try {
+                  return value.toLocaleString()
+                } catch (error) {
+                  return String(value)
+                }
+              }
+              return value
+            }
+
+            const extractAttachments = value => {
+              const items = []
+              const addItem = (entry, fallbackName = 'Attachment') => {
+                if (!entry) return
+                if (typeof entry === 'string') {
+                  const url = entry
+                  if (/^https?:\/\//i.test(url)) {
+                    items.push({ name: fallbackName, url })
+                  }
+                  return
+                }
+                if (typeof entry === 'object') {
+                  const url = entry.url || entry.href || entry.link
+                  if (!url) return
+                  const name = entry.name || entry.filename || entry.title || fallbackName
+                  items.push({ name, url })
+                }
+              }
+
+              if (Array.isArray(value)) {
+                value.forEach((entry, idx) => addItem(entry, `Attachment ${idx + 1}`))
+              } else if (value) {
+                addItem(value)
+              }
+              return items
+            }
+
+            const useCanvasCards = true
+
+            const coverTitle = this.bannerDetails.title || 'Airtable Manager'
+            const coverSubtitle = this.bannerDetails.subtitle || ''
+            const coverDescription = this.bannerDetails.description || 'Manage Airtable data with streamlined connections, quick insights, and actionable tools.'
+
+            setFillColor(palette.surface)
+            doc.rect(0, 0, pageWidth, pageHeight, 'F')
+
+            const logoDataUrl = await toDataUrl(this.bannerDetails.logoUrl)
+            let coverRendered = false
+            const coverImageUrl = await renderCoverCard({
+              title: coverTitle,
+              subtitle: coverSubtitle,
+              description: coverDescription,
+              logoDataUrl
+            })
+
+            if (coverImageUrl) {
+              const dims = await getImageDimensions(coverImageUrl)
+              if (dims && dims.width && dims.height) {
+                const availableWidth = pageWidth - marginX * 2
+                const aspect = dims.height / dims.width
+                const imageWidth = availableWidth
+                const imageHeight = imageWidth * aspect
+                const offsetY = Math.max((pageHeight - imageHeight) / 2, marginY * 0.6)
+                doc.addImage(coverImageUrl, 'PNG', marginX, offsetY, imageWidth, imageHeight, undefined, 'FAST')
+                coverRendered = true
+              }
+            }
+
+            if (!coverRendered) {
+              let currentY = marginY + 0.4
+
+              if (logoDataUrl) {
+                const logoWidth = Math.min(3.5, pageWidth - marginX * 2)
+                const logoHeight = logoWidth * 0.6
+                const logoX = (pageWidth - logoWidth) / 2
+                doc.addImage(logoDataUrl, 'PNG', logoX, currentY, logoWidth, logoHeight, undefined, 'FAST')
+                currentY += logoHeight + 0.9
+              } else {
+                currentY += 0.8
+              }
+
+              const coverLines = []
+              if (coverTitle) {
+                doc.setFont('helvetica', 'bold')
+                doc.setFontSize(28)
+                coverLines.push({ text: coverTitle.toUpperCase(), size: 28, weight: 'bold', color: palette.text })
+              }
+              if (coverSubtitle) {
+                doc.setFont('helvetica', 'normal')
+                doc.setFontSize(18)
+                coverLines.push({ text: coverSubtitle, size: 18, weight: 'normal', color: palette.muted })
+              }
+              if (coverDescription) {
+                doc.setFont('helvetica', 'normal')
+                doc.setFontSize(12)
+                const wrapped = doc.splitTextToSize(coverDescription, pageWidth - marginX * 2)
+                wrapped.forEach(line => coverLines.push({ text: line, size: 12, weight: 'normal', color: palette.muted }))
+              }
+
+              const totalLineHeight = coverLines.reduce((sum, line) => sum + (line.size / 72 * 1.4), 0)
+              const startY = Math.max((pageHeight - totalLineHeight) / 2, currentY)
+              let lineY = startY
+              coverLines.forEach(line => {
+                doc.setFont('helvetica', line.weight === 'bold' ? 'bold' : 'normal')
+                doc.setFontSize(line.size)
+                setTextColor(line.color)
+                doc.text(line.text, pageWidth / 2, lineY, { align: 'center' })
+                lineY += (line.size / 72) * 1.4
+              })
+            }
+
+            setTextColor(palette.text)
+
+            for (let index = 0; index < records.length; index++) {
+              const rec = records[index]
+              const fields = (rec && rec.fields) || {}
+              doc.addPage()
+
+              setFillColor(palette.surface)
+              doc.rect(0, 0, pageWidth, pageHeight, 'F')
+
+              const recordId = fields.ID || rec.id || `Record ${index + 1}`
+              const milestoneValue = normalizeValue(fields['Milestone Type']) || '—'
+              const deliverableValue = normalizeValue(fields.Deliverable) || '—'
+              const notesValue = normalizeValue(fields.Notes) || 'No notes provided.'
+              const lessonValue = normalizeValue(coalesceField(fields, ['Lesson Learned', 'Lessons Learned', 'Lessons learned', 'Lesson learned'])) || 'No lessons learned recorded.'
+              const metrics = []
+              const registeredVal = parseNumeric(coalesceField(fields, ['Number Registered', 'Registered', 'Total Registered']))
+              const attendedVal = parseNumeric(coalesceField(fields, ['Number Attended', 'Attended', 'Total Attended']))
+              const statesVal = parseNumeric(coalesceField(fields, ['States Engaged', 'Number of States Engaged', 'States engaged']))
+              if (registeredVal != null && registeredVal !== 0) metrics.push({ label: 'Number Registered', value: formatMetricValue(registeredVal) })
+              if (attendedVal != null && attendedVal !== 0) metrics.push({ label: 'Number Attended', value: formatMetricValue(attendedVal) })
+              if (statesVal != null && statesVal !== 0) metrics.push({ label: 'States Engaged', value: formatMetricValue(statesVal) })
+
+              const attachmentsField = coalesceField(fields, ['Attachments', 'Attachment', 'Files', 'File'])
+              const attachments = extractAttachments(attachmentsField)
+
+              let recordRendered = false
+              if (useCanvasCards) {
+                const renderResult = await renderRecordCard({
+                  title: `Record #${recordId}`,
+                  milestone: milestoneValue,
+                  deliverable: deliverableValue,
+                  notes: notesValue,
+                  lessons: lessonValue,
+                  metrics,
+                  attachments
+                })
+
+                if (renderResult && renderResult.cardUrls && renderResult.cardUrls.length > 0) {
+                  const { cardUrls, cardMetadata } = renderResult
+                  
+                  for (let cardIndex = 0; cardIndex < cardUrls.length; cardIndex++) {
+                    if (cardIndex > 0) {
+                      doc.addPage() // Add new page for each additional card
+                      setFillColor(palette.surface)
+                      doc.rect(0, 0, pageWidth, pageHeight, 'F')
+                    }
+                    
+                    const recordImageUrl = cardUrls[cardIndex]
+                    const metadata = cardMetadata[cardIndex]
+                    const dims = await getImageDimensions(recordImageUrl)
+                    
+                    if (dims && dims.width && dims.height) {
+                      const sourceWidthIn = pxToIn(dims.width)
+                      const sourceHeightIn = pxToIn(dims.height)
+                      const maxWidth = pageWidth - marginX * 1.6
+                      const maxHeight = pageHeight - marginY * 2
+                      
+                      // Calculate scaling to fit page
+                      const widthScale = maxWidth / sourceWidthIn
+                      const heightScale = maxHeight / sourceHeightIn
+                      const scale = Math.min(widthScale, heightScale, 1) // Don't scale up
+                      
+                      const imageWidth = sourceWidthIn * scale
+                      const imageHeight = sourceHeightIn * scale
+                      const offsetX = (pageWidth - imageWidth) / 2
+                      const offsetY = marginY
+                      
+                      doc.addImage(recordImageUrl, 'PNG', offsetX, offsetY, imageWidth, imageHeight, undefined, 'FAST')
+                      
+                      // Add clickable text links using jsPDF's textWithLink method
+                      if (metadata && metadata.attachmentPositions && metadata.attachmentPositions.length > 0) {
+                        metadata.attachmentPositions.forEach((position) => {
+                          // Convert pixel positions to PDF coordinates
+                          const linkX = offsetX + (position.left * scale / 96) // Convert pixels to inches
+                          const linkY = offsetY + (position.top * scale / 96) + 0.15 // Convert pixels to inches, adjust for text baseline
+                          
+                          // Add the URL as clickable text directly on the PDF
+                          doc.setFontSize(10)
+                          doc.setTextColor(37, 99, 235) // Blue color for links
+                          doc.textWithLink(position.url, linkX, linkY, { url: position.url })
+                        })
+                      }
+                    }
+                  }
+                  recordRendered = true
+                }
+              }
+
+              if (!recordRendered) {
+                setFillColor(palette.background)
+                doc.rect(0, 0, pageWidth, pageHeight, 'F')
+
+                const cardX = marginX - 0.35
+                const cardY = marginY - 0.5
+                const cardWidth = pageWidth - cardX * 2
+                const cardHeight = pageHeight - cardY - 0.6
+                const cardRadius = 0.35
+                const cardPaddingX = 0.7
+                const cardPaddingY = 0.75
+
+                setFillColor(palette.surface)
+                setDrawColor(palette.border)
+                doc.roundedRect(cardX, cardY, cardWidth, cardHeight, cardRadius, cardRadius, 'FD')
+
+                const contentX = cardX + cardPaddingX
+                const contentWidth = cardWidth - cardPaddingX * 2
+                const columnWidth = contentWidth / 2
+                const lineHeight = 0.22
+                let y = cardY + cardPaddingY
+
+                doc.setFont('helvetica', 'bold')
+                doc.setFontSize(20)
+                setTextColor(palette.text)
+                doc.text(`Record #${recordId}`, contentX, y)
+                y += 0.28
+
+                setFillColor([199, 210, 254])
+                doc.roundedRect(contentX, y, 1.4, 0.12, 0.05, 0.05, 'F')
+                y += 0.4
+
+                const headerHeight = 0.4
+                const milestoneLines = doc.splitTextToSize(milestoneValue, columnWidth - 0.38)
+                const deliverableLines = doc.splitTextToSize(deliverableValue, columnWidth - 0.38)
+                const linesUsed = Math.max(milestoneLines.length, deliverableLines.length)
+                const contentHeight = Math.max(0.6, linesUsed * lineHeight + 0.26)
+
+                setDrawColor(palette.border)
+                setFillColor(palette.surfaceAlt)
+                doc.roundedRect(contentX, y, contentWidth, headerHeight + contentHeight, 0.2, 0.2, 'FD')
+                setFillColor(palette.surfaceAlt)
+                doc.rect(contentX, y, contentWidth, headerHeight, 'F')
+
+                doc.setFont('helvetica', 'bold')
+                doc.setFontSize(11)
+                setTextColor(palette.muted)
+                doc.text('Milestone Type', contentX + 0.22, y + headerHeight / 2 + 0.08)
+                doc.text('Deliverable', contentX + columnWidth + 0.22, y + headerHeight / 2 + 0.08)
+
+                doc.setFont('helvetica', 'normal')
+                doc.setFontSize(12)
+                setTextColor(palette.text)
+                doc.text(milestoneLines, contentX + 0.22, y + headerHeight + 0.28)
+                doc.text(deliverableLines, contentX + columnWidth + 0.22, y + headerHeight + 0.28)
+
+                y += headerHeight + contentHeight + 0.5
+
+                const notesLines = doc.splitTextToSize(notesValue, contentWidth - 0.6)
+                const notesHeight = Math.max(2.2, notesLines.length * lineHeight + 0.85)
+
+                setDrawColor(palette.border)
+                setFillColor(palette.surfaceAlt)
+                doc.roundedRect(contentX, y, contentWidth, notesHeight, 0.22, 0.22, 'FD')
+
+                doc.setFont('helvetica', 'bold')
+                doc.setFontSize(12)
+                setTextColor(palette.muted)
+                doc.text('Notes', contentX + 0.32, y + 0.45)
+
+                doc.setFont('helvetica', 'normal')
+                doc.setFontSize(12)
+                setTextColor(palette.text)
+                doc.text(notesLines, contentX + 0.32, y + 0.82)
+
+                y += notesHeight + 0.5
+
+                const lessonLines = doc.splitTextToSize(lessonValue, contentWidth - 0.6)
+                const lessonHeight = Math.max(2.0, lessonLines.length * lineHeight + 0.8)
+
+                setDrawColor(palette.border)
+                setFillColor(palette.surface)
+                doc.roundedRect(contentX, y, contentWidth, lessonHeight, 0.22, 0.22, 'FD')
+
+                doc.setFont('helvetica', 'bold')
+                doc.setFontSize(12)
+                setTextColor(palette.muted)
+                doc.text('Lessons Learned', contentX + 0.32, y + 0.45)
+
+                doc.setFont('helvetica', 'normal')
+                doc.setFontSize(12)
+                setTextColor(palette.text)
+                doc.text(lessonLines, contentX + 0.32, y + 0.82)
+
+                y += lessonHeight + 0.5
+
+                if (metrics.length) {
+                  const cardsGap = 0.28
+                  const cardsCount = metrics.length
+                  const cardsWidth = (contentWidth - cardsGap * (cardsCount - 1)) / cardsCount
+                  const cardHeight = 1.28
+
+                  for (let i = 0; i < cardsCount; i++) {
+                    const cardMetric = metrics[i]
+                    const cardInnerX = contentX + i * (cardsWidth + cardsGap)
+                    setDrawColor(palette.border)
+                    setFillColor(palette.surfaceAlt)
+                    doc.roundedRect(cardInnerX, y, cardsWidth, cardHeight, 0.2, 0.2, 'FD')
+
+                    doc.setFont('helvetica', 'bold')
+                    doc.setFontSize(11)
+                    setTextColor(palette.muted)
+                    doc.text(cardMetric.label.toUpperCase(), cardInnerX + 0.22, y + 0.42)
+
+                    doc.setFont('helvetica', 'bold')
+                    doc.setFontSize(18)
+                    setTextColor(palette.text)
+                    doc.text(String(cardMetric.value), cardInnerX + 0.22, y + 0.98)
+                  }
+
+                  y += cardHeight + 0.5
+                }
+
+                if (attachments.length) {
+                  const sectionHeight = Math.max(1.3, attachments.length * 0.35 + 0.7)
+                  setDrawColor(palette.border)
+                  setFillColor(palette.surfaceAlt)
+                  doc.roundedRect(contentX, y, contentWidth, sectionHeight, 0.22, 0.22, 'FD')
+
+                  doc.setFont('helvetica', 'bold')
+                  doc.setFontSize(12)
+                  setTextColor(palette.muted)
+                  doc.text('Attachments', contentX + 0.32, y + 0.45)
+
+                  doc.setFont('helvetica', 'normal')
+                  doc.setFontSize(11.5)
+                  setTextColor([29, 78, 216])
+                  let linkY = y + 0.85
+                  attachments.forEach((attachment, idx) => {
+                    const linkLabel = `${idx + 1}. ${attachment.name}`
+                    doc.textWithLink(linkLabel, contentX + 0.32, linkY, { url: attachment.url })
+                    linkY += 0.35
+                  })
+                }
+              }
+            }
+
+            const filename = `${(coverTitle || 'records').trim().replace(/\s+/g, '_').toLowerCase()}_${new Date().toISOString().slice(0, 10)}.pdf`
+            doc.save(filename)
+          } catch (error) {
+            console.error('Failed to generate PDF', error)
+            this.pdfError = 'Unable to generate PDF. Please try again later.'
+          } finally {
+            this.isExportingPdf = false
+          }
+        },
+        async deleteRecord(id) {
+          if (!id) return
+          if (!confirm('Delete this record?')) return
+          this.loading = true
+          try {
+            const url = `${this.apiBase}?action=deleteRecord&baseId=${encodeURIComponent(this.baseId)}&table=${encodeURIComponent(this.tableName)}&id=${encodeURIComponent(id)}`
+            const res = await axios.delete(url)
+            this.notify('Record deleted')
+            await this.loadRecords()
+          } catch (e) {
+            this.notify(this.errMsg(e), 'error')
+          } finally { this.loading = false }
+        },
+        async createRecord() {
+          if (!this.newRecordJson.trim()) { this.notify('Enter JSON for fields', 'error'); return }
+          let fields
+          try { fields = JSON.parse(this.newRecordJson) } catch (e) { this.notify('Invalid JSON', 'error'); return }
+          this.loading = true
+          try {
+            const url = `${this.apiBase}?action=createRecord&baseId=${encodeURIComponent(this.baseId)}&table=${encodeURIComponent(this.tableName)}`
+            await axios.post(url, { fields })
+            this.newRecordJson = ''
+            this.notify('Record created')
+            await this.loadRecords()
+          } catch (e) {
+            this.notify(this.errMsg(e), 'error')
+          } finally { this.loading = false }
+        },
+        errMsg(e) {
+          if (e.response && e.response.data) {
+            const d = e.response.data
+            if (typeof d === 'string') return d
+            if (d.error) return typeof d.error === 'string' ? d.error : (d.error.message || JSON.stringify(d.error))
+          }
+          return e.message || 'Request failed'
+        },
+        async fetchBanner() {
+          if (!this.baseId) {
+            this.bannerError = 'Base ID is missing; unable to load banner.'
+            return
+          }
+
+          try {
+            const params = {
+              action: 'listRecords',
+              baseId: this.baseId,
+              table: this.bannerTableName,
+              pageSize: 1
+            }
+            const res = await axios.get(this.apiBase, { params })
+            const records = res.data && res.data.records ? res.data.records : []
+            if (records.length) {
+              const bannerRecord = records[0] || {}
+              const bannerFields = bannerRecord.fields || {}
+              this.bannerRecordId = bannerRecord.id || ''
+              this.bannerRecordFields = bannerFields
+              this.bannerDetails = this.extractBannerDetails(bannerFields)
+              this.bannerError = ''
+              if (this.bannerEditor.visible && this.bannerTableSchema) {
+                this.prepareBannerEditorFields()
+              }
+            } else {
+              this.bannerDetails = {
+                logoUrl: '',
+                title: '',
+                subtitle: '',
+                description: ''
+              }
+              this.bannerRecordId = ''
+              this.bannerRecordFields = {}
+              this.bannerError = 'Banner content is not configured yet.'
+            }
+          } catch (e) {
+            this.bannerError = this.errMsg(e)
+            this.bannerRecordId = ''
+            this.bannerRecordFields = {}
+          }
+        },
+        async openBannerEditor() {
+          if (!this.baseId) {
+            this.bannerEditor.error = 'Base ID is missing; cannot edit banner.'
+            return
+          }
+
+          this.bannerEditor.visible = true
+          this.bannerEditor.error = ''
+          this.bannerEditor.success = ''
+          this.bannerEditor.loading = true
+
+          try {
+            if (!this.bannerRecordId) {
+              await this.fetchBanner()
+            }
+
+            if (!this.bannerRecordId) {
+              throw new Error('Banner record was not found.')
+            }
+
+            await this.loadBannerSchema()
+            this.prepareBannerEditorFields()
+          } catch (e) {
+            this.bannerEditor.error = this.errMsg(e)
+          } finally {
+            this.bannerEditor.loading = false
+          }
+        },
+        closeBannerEditor() {
+          this.bannerEditor.visible = false
+          this.bannerEditor.loading = false
+          this.bannerEditor.saving = false
+          this.bannerEditor.error = ''
+          this.bannerEditor.success = ''
+          this.bannerEditor.fields = []
+          this.bannerEditor.formValues = {}
+        },
+        async loadBannerSchema(force = false) {
+          if (this.bannerTableSchema && !force) {
+            return this.bannerTableSchema
+          }
+
+          if (!this.baseId) {
+            throw new Error('Base ID is required to load banner schema.')
+          }
+
+          const params = {
+            action: 'listTables',
+            baseId: this.baseId
+          }
+
+          const res = await axios.get(this.apiBase, { params })
+          const tables = res.data && res.data.tables ? res.data.tables : []
+          const targetName = (this.bannerTableName || 'Banner').toLowerCase()
+          let tableSchema = tables.find(table => (table.name || '').toLowerCase() === targetName)
+
+          if (!tableSchema && tables.length === 1) {
+            tableSchema = tables[0]
+          }
+
+          if (!tableSchema) {
+            throw new Error(`Unable to locate the "${this.bannerTableName}" table metadata in Airtable.`)
+          }
+
+          this.bannerTableSchema = tableSchema
+          return tableSchema
+        },
+        prepareBannerEditorFields() {
+          if (!this.bannerTableSchema) {
+            this.bannerEditor.fields = []
+            this.bannerEditor.formValues = {}
+            return
+          }
+
+          const recordFields = this.bannerRecordFields || {}
+          const formValues = {}
+          const configuredFields = []
+
+          for (const rawField of this.bannerTableSchema.fields || []) {
+            const fieldConfig = this.buildBannerFieldConfig(rawField, recordFields)
+            configuredFields.push(fieldConfig)
+            formValues[fieldConfig.name] = this.cloneBannerValue(fieldConfig.initialValue)
+          }
+
+          this.bannerEditor.fields = configuredFields
+          this.bannerEditor.formValues = formValues
+        },
+        buildBannerFieldConfig(rawField, recordFields = {}) {
+          const currentValue = recordFields[rawField.name]
+          const baseConfig = {
+            id: rawField.id || rawField.name,
+            name: rawField.name,
+            type: rawField.type,
+            typeLabel: this.formatBannerFieldType(rawField),
+            description: rawField.description || '',
+            required: Boolean(rawField.options && rawField.options.isRequired),
+            editable: false,
+            readOnlyReason: '',
+            input: 'text',
+            inputAttrs: {},
+            choices: [],
+            initialValue: currentValue,
+            originalValue: currentValue
+          }
+
+          const readOnly = reason => ({
+            ...baseConfig,
+            editable: false,
+            readOnlyReason: reason || 'This field type cannot be edited from this view.'
+          })
+
+          const editable = (input, attrs = {}) => ({
+            ...baseConfig,
+            editable: true,
+            input,
+            inputAttrs: attrs
+          })
+
+          switch (rawField.type) {
+            case 'singleLineText':
+            case 'email':
+            case 'phoneNumber':
+            case 'url':
+              return {
+                ...editable('text', rawField.type === 'url' ? { type: 'url' } : rawField.type === 'email' ? { type: 'email' } : rawField.type === 'phoneNumber' ? { type: 'tel' } : {}),
+                initialValue: typeof currentValue === 'string' ? currentValue : ''
+              }
+            case 'multilineText':
+            case 'richText':
+              return {
+                ...editable('textarea'),
+                initialValue: typeof currentValue === 'string' ? currentValue : ''
+              }
+            case 'number':
+            case 'percent':
+            case 'currency':
+            case 'rating':
+              return {
+                ...editable('number', { step: 'any' }),
+                initialValue: typeof currentValue === 'number' ? currentValue : currentValue || ''
+              }
+            case 'checkbox':
+              return {
+                ...editable('checkbox'),
+                initialValue: Boolean(currentValue)
+              }
+            case 'singleSelect': {
+              const choices = (rawField.options && Array.isArray(rawField.options.choices))
+                ? rawField.options.choices.map(choice => choice && (choice.name || choice)).filter(Boolean)
+                : []
+              return {
+                ...editable('single-select'),
+                choices,
+                initialValue: typeof currentValue === 'string' ? currentValue : ''
+              }
+            }
+            case 'multipleSelects': {
+              const choices = (rawField.options && Array.isArray(rawField.options.choices))
+                ? rawField.options.choices.map(choice => choice && (choice.name || choice)).filter(Boolean)
+                : []
+              return {
+                ...editable('multi-select'),
+                choices,
+                initialValue: Array.isArray(currentValue) ? [...currentValue] : []
+              }
+            }
+            case 'date':
+              return {
+                ...editable('date'),
+                initialValue: typeof currentValue === 'string' ? currentValue.slice(0, 10) : ''
+              }
+            case 'dateTime':
+              return {
+                ...editable('datetime'),
+                initialValue: this.bannerDateTimeToLocal(currentValue)
+              }
+            default: {
+              const nonEditableTypes = new Set([
+                'formula',
+                'rollup',
+                'lookup',
+                'count',
+                'autoNumber',
+                'createdTime',
+                'lastModifiedTime',
+                'createdBy',
+                'lastModifiedBy',
+                'multipleAttachments',
+                'multipleRecordLinks',
+                'barcode',
+                'button',
+                'duration'
+              ])
+
+              if (nonEditableTypes.has(rawField.type)) {
+                return readOnly('This field is managed by Airtable and can be edited here. <a href="https://airtable.com/appAIxASkp5dv39O6/tblFznPQqvKqlT4GD/viwjFzqwIEFZbp5iT?blocks=hide">Go to Airtable</a>')
+              }
+
+              return readOnly()
+            }
+          }
+        },
+        bannerDateTimeToLocal(value) {
+          if (!value) return ''
+          const date = new Date(value)
+          if (Number.isNaN(date.getTime())) return ''
+          const offsetMinutes = date.getTimezoneOffset()
+          const local = new Date(date.getTime() - offsetMinutes * 60000)
+          return local.toISOString().slice(0, 16)
+        },
+        bannerDateTimeToIso(value) {
+          if (!value) return null
+          const date = new Date(value)
+          if (Number.isNaN(date.getTime())) return null
+          return date.toISOString()
+        },
+        cloneBannerValue(value) {
+          if (Array.isArray(value)) {
+            return value.map(entry => (typeof entry === 'object' && entry !== null) ? { ...entry } : entry)
+          }
+          if (value && typeof value === 'object') {
+            return { ...value }
+          }
+          return value
+        },
+        formatBannerFieldType(rawField) {
+          const map = {
+            singleLineText: 'Single line text',
+            multilineText: 'Long text',
+            richText: 'Rich text',
+            number: 'Number',
+            percent: 'Percent',
+            currency: 'Currency',
+            checkbox: 'Checkbox',
+            singleSelect: 'Single select',
+            multipleSelects: 'Multiple select',
+            date: 'Date',
+            dateTime: 'Date & time',
+            email: 'Email',
+            phoneNumber: 'Phone number',
+            url: 'URL',
+            rating: 'Rating'
+          }
+          return map[rawField.type] || (rawField.type ? rawField.type.replace(/([A-Z])/g, ' $1').replace(/^./, c => c.toUpperCase()) : '')
+        },
+        bannerFieldValuesEqual(fieldConfig, newValue, currentValue) {
+          switch (fieldConfig.input) {
+            case 'number': {
+              const a = newValue === '' || newValue === null ? null : Number(newValue)
+              const b = typeof currentValue === 'number' ? currentValue : (currentValue === '' ? null : Number(currentValue))
+              if (Number.isNaN(a) && Number.isNaN(b)) return true
+              return a === b
+            }
+            case 'checkbox':
+              return Boolean(newValue) === Boolean(currentValue)
+            case 'multi-select': {
+              const arrA = Array.isArray(newValue) ? [...newValue] : []
+              const arrB = Array.isArray(currentValue) ? [...currentValue] : []
+              if (arrA.length !== arrB.length) return false
+              return arrA.every((val, idx) => val === arrB[idx])
+            }
+            case 'date':
+              return (newValue || '') === ((currentValue || '').slice ? (currentValue || '').slice(0, 10) : '')
+            case 'datetime': {
+              const iso = newValue ? this.bannerDateTimeToIso(newValue) : null
+              const normalizedCurrent = currentValue ? new Date(currentValue).toISOString() : null
+              return iso === normalizedCurrent
+            }
+            default:
+              return (newValue ?? '') === (currentValue ?? '')
+          }
+        },
+        formatBannerValueForSave(fieldConfig, value) {
+          switch (fieldConfig.input) {
+            case 'number':
+              if (value === '' || value === null || Number.isNaN(Number(value))) return null
+              return Number(value)
+            case 'checkbox':
+              return Boolean(value)
+            case 'multi-select':
+              return Array.isArray(value) ? value.filter(Boolean) : []
+            case 'single-select':
+              return value || null
+            case 'date':
+              return value || null
+            case 'datetime':
+              return this.bannerDateTimeToIso(value)
+            default:
+              return typeof value === 'string' ? value : (value == null ? null : value)
+          }
+        },
+        displayBannerFieldValue(fieldConfig) {
+          const value = fieldConfig.originalValue
+          if (Array.isArray(value)) {
+            if (value.length && typeof value[0] === 'object') {
+              return value.map(item => item && (item.name || item.filename || item.url || JSON.stringify(item))).join(', ')
+            }
+            return value.join(', ')
+          }
+          if (typeof value === 'boolean') return value ? 'True' : 'False'
+          return this.normalizeValue(value) || '—'
+        },
+        async submitBannerEditor() {
+          if (this.bannerEditor.saving || !this.bannerEditor.fields.length) return
+
+          this.bannerEditor.error = ''
+          this.bannerEditor.success = ''
+
+          const updates = {}
+
+          for (const fieldConfig of this.bannerEditor.fields) {
+            if (!fieldConfig.editable) continue
+            const formValue = this.bannerEditor.formValues[fieldConfig.name]
+
+            if (fieldConfig.required) {
+              const isEmpty = (fieldConfig.input === 'multi-select' && (!Array.isArray(formValue) || formValue.length === 0)) ||
+                (fieldConfig.input === 'checkbox' ? false : (formValue === '' || formValue === null || typeof formValue === 'undefined'))
+              if (isEmpty) {
+                this.bannerEditor.error = `${fieldConfig.name} is required.`
+                return
+              }
+            }
+
+            if (fieldConfig.input === 'number' && formValue !== '' && formValue !== null) {
+              const numeric = Number(formValue)
+              if (Number.isNaN(numeric)) {
+                this.bannerEditor.error = `${fieldConfig.name} must be a valid number.`
+                return
+              }
+            }
+
+            const formattedValue = this.formatBannerValueForSave(fieldConfig, formValue)
+            const currentValue = fieldConfig.originalValue
+            if (this.bannerFieldValuesEqual(fieldConfig, formValue, currentValue)) continue
+            updates[fieldConfig.name] = formattedValue
+          }
+
+          if (!Object.keys(updates).length) {
+            this.bannerEditor.success = 'No changes to save.'
+            return
+          }
+
+          this.bannerEditor.saving = true
+          try {
+            const params = {
+              action: 'updateRecord',
+              baseId: this.baseId,
+              table: this.bannerTableName,
+              id: this.bannerRecordId
+            }
+            const res = await axios.patch(this.apiBase, { fields: updates }, { params })
+            const updatedRecord = res.data
+            if (updatedRecord && updatedRecord.fields) {
+              this.bannerRecordFields = updatedRecord.fields
+            } else {
+              this.bannerRecordFields = { ...this.bannerRecordFields, ...updates }
+            }
+            await this.fetchBanner()
+            this.bannerEditor.success = 'Banner updated successfully.'
+            this.prepareBannerEditorFields()
+          } catch (e) {
+            this.bannerEditor.error = this.errMsg(e)
+          } finally {
+            this.bannerEditor.saving = false
+          }
+        },
+        extractBannerDetails(fields) {
+          if (!fields) {
+            return {
+              logoUrl: '',
+              title: '',
+              subtitle: '',
+              description: ''
+            }
+          }
+
+          const logoField = this.getFieldValue(fields, ['Logo', 'Banner Logo', 'Logo Url', 'Image', 'Primary Image'])
+          let logoUrl = ''
+          if (Array.isArray(logoField) && logoField.length) {
+            const first = logoField[0]
+            if (first) {
+              logoUrl = first.url || (first.thumbnails && first.thumbnails.large && first.thumbnails.large.url) || ''
+            }
+          } else if (typeof logoField === 'string') {
+            logoUrl = logoField
+          }
+
+          return {
+            logoUrl,
+            title: this.normalizeValue(this.getFieldValue(fields, ['Title', 'Banner Title', 'Heading', 'Name'])) || '',
+            subtitle: this.normalizeValue(this.getFieldValue(fields, ['Sub-Title', 'Subtitle', 'Tagline'])) || '',
+            description: this.normalizeValue(this.getFieldValue(fields, ['Description', 'Body', 'Summary', 'Details'])) || ''
+          }
+        },
+        normalizeValue(value) {
+          if (value === null || value === undefined) return ''
+          if (Array.isArray(value)) {
+            return value.map(v => this.normalizeValue(v)).join(', ')
+          }
+          if (typeof value === 'object') {
+            if (value.url) {
+              return value.url
+            }
+            return JSON.stringify(value, null, 2)
+          }
+          return String(value)
+        },
+        getFieldValue(fields, candidates = []) {
+          if (!fields) return undefined
+          const normalized = {}
+          Object.entries(fields).forEach(([key, value]) => {
+            const norm = key.replace(/[\s_-]+/g, '').toLowerCase()
+            if (!(norm in normalized)) {
+              normalized[norm] = value
+            }
+          })
+          for (const candidate of candidates) {
+            const norm = String(candidate).replace(/[\s_-]+/g, '').toLowerCase()
+            if (norm in normalized) {
+              return normalized[norm]
+            }
+          }
+          return undefined
+        }
+      },
+      async mounted() {
+        await this.loadRecords()
+        await this.fetchBanner()
+      }
+    }).mount('#app')
+  </script>
+</body>
+</html>
