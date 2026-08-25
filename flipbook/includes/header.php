@@ -30,6 +30,11 @@ $csrfToken = flipbook_csrf_token();
             <div class="navbar-actions">
                 <?php if ($admin = flipbook_current_admin()): ?>
                     <span class="text-sm" style="color:var(--gray-600);"><?= htmlspecialchars($admin['name'], ENT_QUOTES, 'UTF-8') ?></span>
+                    <?php if (($admin['application_count'] ?? 1) > 1): ?>
+                        <a href="<?= htmlspecialchars(FLIPBOOK_HUB_BASE_URL, ENT_QUOTES, 'UTF-8') ?>" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-grip"></i> All applications
+                        </a>
+                    <?php endif; ?>
                 <?php endif; ?>
                 <a href="upload.php" class="btn btn-primary btn-sm">
                     <i class="fas fa-plus"></i> New Flipbook

@@ -35,6 +35,28 @@ class AuthenticationTest extends TestCase
         ]);
     }
 
+    public function test_root_starts_hub_authorization_without_an_intermediate_login_redirect(): void
+    {
+        $response = $this->get('/');
+        $location = $response->headers->get('Location');
+        parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
+
+        $response->assertRedirectContains('https://hub.test/apps/sso/authorize');
+        $this->assertSame('hub_grant_review', $query['client_id']);
+        $this->assertSame('/apps/grant-review/auth/hub/callback', $query['redirect_uri']);
+        $this->assertSame(hash('sha256', $query['state']), session('hub_sso_state_hash'));
+    }
+
+    public function test_root_sends_authenticated_users_directly_to_their_role_dashboard(): void
+    {
+        $user = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($user)
+            ->withSession(['hub_authenticated_at' => now()->timestamp])
+            ->get('/')
+            ->assertRedirect(route('admin.dashboard', absolute: false));
+    }
+
     public function test_login_redirects_to_hub_with_state_and_exact_callback(): void
     {
         $response = $this->get('/login');
@@ -94,6 +116,8 @@ class AuthenticationTest extends TestCase
         $this->assertSame('active', $user->status);
         $this->assertNull($user->password_hash);
         $this->assertNull($user->invite_token_hash);
+        $this->assertSame(1, session('hub_application_count'));
+        $this->assertSame('https://hub.test/apps/sso/logout?application=grant-review&signature=test', session('hub_logout_url'));
     }
 
     public function test_callback_provisions_a_missing_local_user(): void
@@ -225,21 +249,42 @@ class AuthenticationTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
-    public function test_legacy_user_provisioning_is_blocked_when_sso_is_enabled(): void
+    public function test_legacy_user_provisioning_and_deletion_are_blocked_when_sso_is_enabled(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
+        $target = User::factory()->create();
 
         $this->actingAs($admin)
             ->withSession(['hub_authenticated_at' => now()->timestamp])
             ->get('/admin/users')
             ->assertOk()
-            ->assertSee('Add Users in App Hub')
-            ->assertSee('https://hub.test/apps/admin/users/import');
+            ->assertSee('Manage users in App Hub')
+            ->assertSee('https://hub.test/apps/admin/users')
+            ->assertSee('App Hub manages accounts and application access')
+            ->assertDontSee('aria-label="Delete '.$target->full_name.'"', false);
         $this->actingAs($admin)
             ->withSession(['hub_authenticated_at' => now()->timestamp])
             ->get('/admin/users/create')
             ->assertMethodNotAllowed();
+        $this->actingAs($admin)
+            ->withSession(['hub_authenticated_at' => now()->timestamp])
+            ->delete(route('admin.users.destroy', $target, false))
+            ->assertMethodNotAllowed();
+        $this->assertDatabaseHas('users', ['id' => $target->id]);
         $this->get('/set-password')->assertMethodNotAllowed();
+    }
+
+    public function test_local_user_deletion_remains_available_when_sso_is_disabled(): void
+    {
+        config()->set('hub.enabled', false);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $target = User::factory()->create();
+
+        $this->actingAs($admin)
+            ->delete(route('admin.users.destroy', $target, false))
+            ->assertRedirect(route('admin.users.index', absolute: false));
+
+        $this->assertDatabaseMissing('users', ['id' => $target->id]);
     }
 
     public function test_stale_hub_sessions_are_forced_to_reauthenticate(): void
@@ -254,14 +299,55 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_logout_destroys_local_session_and_returns_to_hub(): void
+    public function test_all_applications_link_is_only_shown_to_multi_app_users(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)
+            ->withSession([
+                'hub_authenticated_at' => now()->timestamp,
+                'hub_application_count' => 2,
+            ])
+            ->get('/admin')
+            ->assertOk()
+            ->assertSee('All applications')
+            ->assertSee('https://hub.test/apps');
+
+        $this->actingAs($admin)
+            ->withSession([
+                'hub_authenticated_at' => now()->timestamp,
+                'hub_application_count' => 1,
+            ])
+            ->get('/admin')
+            ->assertOk()
+            ->assertDontSee('All applications');
+    }
+
+    public function test_logout_destroys_local_session_and_continues_to_signed_hub_logout(): void
+    {
+        $user = User::factory()->create();
+        $logoutUrl = 'https://hub.test/apps/sso/logout?application=grant-review&signature=test';
+
+        $this->actingAs($user)
+            ->withSession([
+                'hub_authenticated_at' => now()->timestamp,
+                'hub_logout_url' => $logoutUrl,
+            ])
+            ->post('/logout')
+            ->assertRedirect($logoutUrl);
+
+        $this->assertGuest();
+        $this->assertNull(session('hub_logout_url'));
+    }
+
+    public function test_logout_rejects_an_untrusted_hub_logout_url(): void
     {
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->withSession(['hub_authenticated_at' => now()->timestamp])
+            ->withSession(['hub_logout_url' => 'https://attacker.example/logout'])
             ->post('/logout')
-            ->assertRedirect('https://hub.test/apps');
+            ->assertRedirect(route('login'));
 
         $this->assertGuest();
     }
@@ -318,6 +404,8 @@ class AuthenticationTest extends TestCase
             'name' => 'Hub User',
             'application' => 'grant-review',
             'role' => 'reviewer',
+            'application_count' => 1,
+            'logout_url' => 'https://hub.test/apps/sso/logout?application=grant-review&signature=test',
         ], $overrides);
     }
 }

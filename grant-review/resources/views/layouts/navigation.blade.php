@@ -34,6 +34,11 @@
                     </x-slot>
 
                     <x-slot name="content">
+                        @if (config('hub.enabled') && session('hub_application_count', 1) > 1)
+                            <x-dropdown-link :href="config('hub.base_url')">
+                                {{ __('All applications') }}
+                            </x-dropdown-link>
+                        @endif
                         <x-dropdown-link :href="route('profile.edit')">
                             {{ __('Profile') }}
                         </x-dropdown-link>
@@ -80,6 +85,11 @@
             </div>
 
             <div class="mt-3 space-y-1">
+                @if (config('hub.enabled') && session('hub_application_count', 1) > 1)
+                    <x-responsive-nav-link :href="config('hub.base_url')">
+                        {{ __('All applications') }}
+                    </x-responsive-nav-link>
+                @endif
                 <x-responsive-nav-link :href="route('profile.edit')">
                     {{ __('Profile') }}
                 </x-responsive-nav-link>

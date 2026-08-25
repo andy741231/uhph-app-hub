@@ -23,7 +23,7 @@
 @else
     <div class="launcher">
         @foreach ($applications as $application)
-            <a class="launcher-tile" href="{{ route('applications.launch', $application) }}" title="Open {{ $application->name }}">
+            <a class="launcher-tile" href="{{ $application->launchUrl() }}" title="Open {{ $application->name }}">
                 <span class="app-icon {{ $application->iconColorClass() }}" role="img" aria-label="{{ $application->name }} icon">
                     <span class="app-icon-letter" aria-hidden="true">{{ $application->iconInitial() }}</span>
                     <img class="app-icon-image" src="{{ $application->iconUrl() }}" alt="" loading="lazy" onerror="this.remove()">

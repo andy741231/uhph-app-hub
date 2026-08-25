@@ -60,11 +60,15 @@ if (!is_array($identity)
     || ($identity['token_type'] ?? null) !== 'hub_identity'
     || ($identity['application'] ?? null) !== 'flipbook'
     || ($identity['role'] ?? null) !== 'admin'
-    || !isset($identity['subject'], $identity['email'], $identity['name'])
+    || !isset($identity['subject'], $identity['email'], $identity['name'], $identity['application_count'], $identity['logout_url'])
     || preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', (string)$identity['subject']) !== 1
     || filter_var($identity['email'], FILTER_VALIDATE_EMAIL) === false
     || !is_string($identity['name'])
-    || trim($identity['name']) === '') {
+    || trim($identity['name']) === ''
+    || !is_int($identity['application_count'])
+    || $identity['application_count'] < 1
+    || !is_string($identity['logout_url'])
+    || !flipbook_is_safe_hub_logout_url($identity['logout_url'])) {
     http_response_code(502);
     exit;
 }
@@ -75,6 +79,8 @@ $_SESSION['flipbook_admin'] = [
     'email' => strtolower(trim($identity['email'])),
     'name' => trim($identity['name']),
     'role' => 'admin',
+    'application_count' => $identity['application_count'],
+    'logout_url' => $identity['logout_url'],
     'authenticated_at' => time(),
 ];
 flipbook_csrf_token();

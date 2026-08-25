@@ -13,8 +13,13 @@ class HubIdentityService implements MapsHubIdentity
     {
         return DB::transaction(function () use ($identity): User {
             $email = strtolower(trim($identity['email']));
-            $bySubject = User::where('sso_sub', $identity['subject'])->lockForUpdate()->first();
-            $byEmail = User::where('email', $email)->lockForUpdate()->first();
+            $users = User::query()
+                ->where('sso_sub', $identity['subject'])
+                ->orWhere('email', $email)
+                ->lockForUpdate()
+                ->get();
+            $bySubject = $users->firstWhere('sso_sub', $identity['subject']);
+            $byEmail = $users->firstWhere('email', $email);
 
             if ($bySubject && $byEmail && ! $bySubject->is($byEmail)) {
                 throw new ConflictHttpException('The Hub identity conflicts with an existing Grant Review account.');
@@ -48,7 +53,9 @@ class HubIdentityService implements MapsHubIdentity
                 $user->password_hash = null;
             }
 
-            $user->save();
+            if ($user->isDirty()) {
+                $user->save();
+            }
 
             return $user;
         });

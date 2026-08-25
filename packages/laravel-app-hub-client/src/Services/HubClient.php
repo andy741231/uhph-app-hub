@@ -56,10 +56,28 @@ class HubClient
             'name' => ['required', 'string', 'max:255'],
             'application' => ['required', Rule::in([config('hub.application_key')])],
             'role' => ['required', Rule::in(config('hub.roles', []))],
+            'application_count' => ['required', 'integer', 'min:1'],
+            'logout_url' => ['required', 'url', 'max:2048'],
         ]);
         abort_if($identity->fails(), 502);
+        $validated = $identity->validated();
+        abort_unless($this->isSafeLogoutUrl($validated['logout_url']), 502);
 
-        return $identity->validated();
+        return $validated;
+    }
+
+    public function isSafeLogoutUrl(string $url): bool
+    {
+        $base = parse_url((string) config('hub.base_url'));
+        $candidate = parse_url($url);
+
+        return is_array($base)
+            && is_array($candidate)
+            && ($candidate['scheme'] ?? null) === ($base['scheme'] ?? null)
+            && ($candidate['host'] ?? null) === ($base['host'] ?? null)
+            && ($candidate['port'] ?? null) === ($base['port'] ?? null)
+            && ($candidate['path'] ?? null) === rtrim((string) ($base['path'] ?? ''), '/').'/sso/logout'
+            && filled($candidate['query'] ?? null);
     }
 
     public function configured(): bool

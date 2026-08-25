@@ -50,6 +50,20 @@ function flipbook_hub_is_configured(): bool
         && str_starts_with(FLIPBOOK_HUB_BASE_URL, 'https://');
 }
 
+function flipbook_is_safe_hub_logout_url(string $url): bool
+{
+    $base = parse_url(FLIPBOOK_HUB_BASE_URL);
+    $candidate = parse_url($url);
+
+    return is_array($base)
+        && is_array($candidate)
+        && ($candidate['scheme'] ?? null) === ($base['scheme'] ?? null)
+        && ($candidate['host'] ?? null) === ($base['host'] ?? null)
+        && ($candidate['port'] ?? null) === ($base['port'] ?? null)
+        && ($candidate['path'] ?? null) === rtrim((string)($base['path'] ?? ''), '/') . '/sso/logout'
+        && !empty($candidate['query']);
+}
+
 function flipbook_is_admin(): bool
 {
     if (!FLIPBOOK_HUB_SSO_ENABLED) {

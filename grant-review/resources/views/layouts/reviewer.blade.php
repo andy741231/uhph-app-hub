@@ -39,6 +39,12 @@
                         </svg>
                     </button>
                     <div x-show="open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-uh-border py-1 z-50" style="display: none;">
+                        @if (config('hub.enabled') && session('hub_application_count', 1) > 1)
+                            <a href="{{ config('hub.base_url') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-uh-muted transition-colors">
+                                <x-heroicon-o-squares-2x2 class="w-4 h-4 text-gray-400" />
+                                All applications
+                            </a>
+                        @endif
                         <a href="{{ route('profile.edit') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-uh-muted transition-colors">
                             <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>

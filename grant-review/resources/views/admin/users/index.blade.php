@@ -8,11 +8,9 @@
         <p class="text-sm text-gray-500 mt-1">Manage submitters, reviewers, and admins</p>
     </div>
     @if(config('hub.enabled'))
-        <a href="{{ config('hub.base_url') }}/admin/users/import" class="btn-primary">
-            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
-            </svg>
-            Add Users in App Hub
+        <a href="{{ config('hub.base_url') }}/admin/users" class="btn-primary">
+            <x-heroicon-o-users class="w-4 h-4 mr-1.5" />
+            Manage users in App Hub
         </a>
     @else
         <a href="{{ route('admin.users.create') }}" class="btn-primary">
@@ -23,6 +21,12 @@
         </a>
     @endif
 </div>
+
+@if(config('hub.enabled'))
+    <div class="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+        App Hub manages accounts and application access. Use this page for Grant Review profiles and round assignments; use App Hub to revoke Grant Review access or delete an account.
+    </div>
+@endif
 
 {{-- Search & filter bar --}}
 <div class="card p-4 mb-4">
@@ -124,7 +128,7 @@
                                     </svg>
                                     Edit
                                 </a>
-                                @if ($user->id !== auth()->id())
+                                @if (! config('hub.enabled') && $user->id !== auth()->id())
                                     <form action="{{ route('admin.users.destroy', $user) }}" method="POST"
                                           onsubmit="return confirm('Delete user {{ $user->full_name }}? This cannot be undone.');">
                                         @csrf
@@ -139,7 +143,7 @@
                                         </button>
                                     </form>
                                 @endif
-                                @if ($user->status === 'invited')
+                                @if (! config('hub.enabled') && $user->status === 'invited')
                                     <form action="{{ route('admin.users.resend-invite', $user) }}" method="POST">
                                         @csrf
                                         <button type="submit"

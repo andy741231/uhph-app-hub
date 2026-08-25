@@ -32,6 +32,9 @@ expect(FLIPBOOK_HUB_CALLBACK_URI === '/apps/flipbook/auth/callback.php', 'Callba
 expect(flipbook_is_safe_app_path('/apps/flipbook/editor.php?id=1'), 'An internal Flipbook return path should be accepted.');
 expect(! flipbook_is_safe_app_path('/apps/../phpmyadmin'), 'Traversal paths must be rejected.');
 expect(! flipbook_is_safe_app_path('https://example.com'), 'Absolute external URLs must be rejected.');
+expect(flipbook_is_safe_hub_logout_url('https://hub.test/apps/sso/logout?application=flipbook&signature=test'), 'Signed Hub logout URLs should be accepted.');
+expect(! flipbook_is_safe_hub_logout_url('https://attacker.example/apps/sso/logout?signature=test'), 'Cross-origin logout URLs must be rejected.');
+expect(! flipbook_is_safe_hub_logout_url('https://hub.test/apps/dashboard'), 'Non-logout Hub URLs must be rejected.');
 
 flipbook_auth_start_session();
 $_SESSION['flipbook_csrf_token'] = 'known-csrf-token';
@@ -52,6 +55,14 @@ foreach ($mutationApis as $file) {
     expect(str_contains($source, 'flipbook_require_api_admin();'), "$file must enforce administrator access for mutations.");
     expect(str_contains($source, 'flipbook_require_csrf();'), "$file must enforce CSRF protection for mutations.");
 }
+
+$header = file_get_contents($root.'/includes/header.php');
+$callback = file_get_contents($root.'/auth/callback.php');
+$logout = file_get_contents($root.'/auth/logout.php');
+expect(str_contains($header, 'All applications'), 'The authenticated header should offer the app launcher to multi-app users.');
+expect(str_contains($callback, "'application_count'"), 'The callback must retain the assigned application count.');
+expect(str_contains($callback, "'logout_url'"), 'The callback must retain the signed Hub logout URL.');
+expect(str_contains($logout, 'flipbook_is_safe_hub_logout_url'), 'Logout must only redirect to a trusted Hub logout URL.');
 
 $viewer = file_get_contents($root.'/viewer.php');
 $viewerJs = file_get_contents($root.'/assets/js/viewer.js');

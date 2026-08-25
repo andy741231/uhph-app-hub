@@ -51,6 +51,29 @@ class ApplicationAuthorizationTest extends TestCase
             ->assertDontSee($disabled->name);
     }
 
+    public function test_dashboard_links_configured_sso_applications_directly_to_their_entry_path(): void
+    {
+        $user = User::factory()->create();
+        $application = Application::create([
+            'key' => 'grant-review',
+            'name' => 'Grant Review',
+            'path' => '/apps/grant-review',
+            'callback_url' => '/apps/grant-review/auth/hub/callback',
+            'client_id' => 'hub_grant_review',
+            'client_secret_hash' => hash('sha256', 'test-client-secret'),
+        ]);
+        $user->applications()->attach($application, [
+            'granted_by' => $user->id,
+            'granted_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertSee('href="/apps/grant-review"', false)
+            ->assertDontSee('href="'.route('applications.launch', $application).'"', false);
+    }
+
     public function test_assigned_users_can_launch_an_enabled_application(): void
     {
         $user = User::factory()->create();

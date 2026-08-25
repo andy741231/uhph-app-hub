@@ -17,8 +17,20 @@ class SsoAuthorizationCodeTest extends TestCase
     {
         $application = $this->application();
 
-        $this->get($this->authorizationUrl($application))
-            ->assertRedirect(route('login'));
+        $authorizationUrl = $this->authorizationUrl($application);
+
+        $this->get($authorizationUrl)
+            ->assertRedirect(route('login', ['application' => $application->key]));
+
+        $this->assertSame(url($authorizationUrl), session('url.intended'));
+        $this->assertNull(session('login_application_name'));
+        $this->get(route('login', ['application' => $application->key]))
+            ->assertOk()
+            ->assertSee('Sign in to Grant Review');
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('Sign in to App Hub')
+            ->assertDontSee('Sign in to Grant Review');
     }
 
     public function test_assigned_users_receive_a_short_lived_one_time_code(): void
@@ -93,14 +105,71 @@ class SsoAuthorizationCodeTest extends TestCase
                 'name' => $user->name,
                 'application' => $application->key,
                 'role' => 'reviewer',
+                'application_count' => 1,
             ]);
 
+        $this->assertStringStartsWith(route('sso.logout'), $response->json('logout_url'));
         $this->assertArrayNotHasKey('password', $response->json());
         $this->assertNotNull(AuthorizationCode::firstOrFail()->consumed_at);
 
         $this->exchange($application, 'test-client-secret', $code)
             ->assertBadRequest()
             ->assertJson(['error' => 'invalid_grant']);
+    }
+
+    public function test_signed_sso_logout_ends_the_hub_session_and_returns_to_contextual_login(): void
+    {
+        $user = User::factory()->create();
+        $application = $this->application();
+        $this->assign($user, $application, 'reviewer');
+        $code = $this->issueCode($user, $application);
+        $logoutUrl = $this->exchange($application, 'test-client-secret', $code)->json('logout_url');
+
+        $this->actingAs($user)->get($logoutUrl)
+            ->assertRedirect(route('login', ['application' => $application->key]))
+            ->assertSessionHas('status', 'You have been signed out.');
+
+        $this->assertGuest();
+        $this->assertSame('https://localhost'.$application->path, session('url.intended'));
+        $this->assertNull(session('login_application_name'));
+        $this->get(route('login', ['application' => $application->key]))
+            ->assertOk()
+            ->assertSee('Sign in to Grant Review');
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('Sign in to App Hub')
+            ->assertDontSee('Sign in to Grant Review');
+        $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password',
+        ])->assertRedirect('https://localhost/apps/grant-review');
+    }
+
+    public function test_unsigned_sso_logout_is_rejected_without_ending_the_session(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get('/sso/logout?application=grant-review')->assertForbidden();
+        $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_identity_reports_all_enabled_application_assignments(): void
+    {
+        $user = User::factory()->create();
+        $application = $this->application();
+        $second = Application::create([
+            'key' => 'flipbook',
+            'name' => 'Flipbook',
+            'path' => '/apps/flipbook',
+            'roles' => ['admin'],
+        ]);
+        $this->assign($user, $application, 'reviewer');
+        $this->assign($user, $second, 'admin');
+        $code = $this->issueCode($user, $application);
+
+        $this->exchange($application, 'test-client-secret', $code)
+            ->assertOk()
+            ->assertJson(['application_count' => 2]);
     }
 
     public function test_invalid_client_credentials_do_not_consume_the_code(): void

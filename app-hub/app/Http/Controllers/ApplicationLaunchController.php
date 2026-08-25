@@ -19,8 +19,7 @@ class ApplicationLaunchController extends Controller
         $reason = match (true) {
             ! $application->enabled => 'disabled',
             ! $assignment => 'not_assigned',
-            preg_match('#^/apps/[A-Za-z0-9_~-]+(?:/[A-Za-z0-9._~-]+)*$#', $application->path) !== 1
-                || preg_match('#(?:^|/)\.{1,2}(?:/|$)#', $application->path) === 1 => 'invalid_path',
+            ! $application->hasSafePath() => 'invalid_path',
             default => null,
         };
         $this->audit($request, $application, $reason === null, $reason);

@@ -28,7 +28,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('users', [UserController::class, 'store'])->middleware('hub-sso-disabled')->name('users.store');
     Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
     Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
-    Route::delete('users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    Route::delete('users/{user}', [UserController::class, 'destroy'])->middleware('hub-sso-disabled')->name('users.destroy');
     Route::post('users/import', [UserController::class, 'import'])->middleware('hub-sso-disabled')->name('users.import');
     Route::post('users/{user}/resend-invite', [UserController::class, 'resendInvite'])->middleware('hub-sso-disabled')->name('users.resend-invite');
     Route::get('review-assignments', [ReviewAssignmentController::class, 'index'])->name('review-assignments.index');

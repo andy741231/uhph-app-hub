@@ -5,8 +5,8 @@
 @section('content')
 <div class="card login-card">
     <p class="eyebrow">Secure application access</p>
-    <h1>Sign in to App Hub</h1>
-    <p class="lede">Use your administrator-provided account to access your assigned applications.</p>
+    <h1>Sign in to {{ $loginApplication?->name ?? 'App Hub' }}</h1>
+    <p class="lede">Use your administrator-provided account to access {{ $loginApplication?->name ?? 'your assigned applications' }}.</p>
 
     @if (session('status'))
         <div class="alert alert-success" role="status">{{ session('status') }}</div>
@@ -16,7 +16,7 @@
         <div class="alert alert-error" role="alert">We could not sign you in. Check your details and try again.</div>
     @endif
 
-    <form method="POST" action="{{ route('login') }}">
+    <form method="POST" action="{{ route('login', $loginApplication ? ['application' => $loginApplication->key] : []) }}">
         @csrf
         <div class="field">
             <label class="label" for="email">Email address</label>

@@ -8,6 +8,7 @@ use App\Models\ApplicationLaunchAudit;
 use App\Models\AuthorizationCode;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class AuthorizationController extends Controller
@@ -34,6 +35,20 @@ class AuthorizationController extends Controller
             && $this->isSafeCallback($application->callback_url),
             400,
         );
+
+        if (! $request->user()) {
+            $request->session()->put('url.intended', $request->fullUrl());
+
+            return redirect()->route('login', ['application' => $application->key]);
+        }
+
+        if (! $request->user()->isActive()) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')->with('status', 'Your account is not active. Contact an administrator.');
+        }
 
         $assignment = $request->user()
             ->applications()

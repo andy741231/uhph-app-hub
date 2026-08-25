@@ -10,11 +10,16 @@ use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\SetPasswordController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Sso\AuthorizationController;
+use App\Http\Controllers\Sso\LogoutController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => auth()->check()
     ? redirect()->route('dashboard')
     : redirect()->route('login'));
+Route::get('/sso/logout', LogoutController::class)->middleware('signed')->name('sso.logout');
+Route::get('/sso/authorize', AuthorizationController::class)
+    ->middleware('throttle:30,1')
+    ->name('sso.authorize');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -26,9 +31,6 @@ Route::middleware('guest')->group(function () {
 Route::middleware(['auth', 'active'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/launch/{application}', ApplicationLaunchController::class)->name('applications.launch');
-    Route::get('/sso/authorize', AuthorizationController::class)
-        ->middleware('throttle:30,1')
-        ->name('sso.authorize');
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {

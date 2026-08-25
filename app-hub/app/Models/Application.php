@@ -58,6 +58,24 @@ class Application extends Model
         return $this->hasMany(AuthorizationCode::class);
     }
 
+    public function launchUrl(): string
+    {
+        return $this->hasSsoCredentials() && $this->hasSafePath()
+            ? $this->path
+            : route('applications.launch', $this);
+    }
+
+    public function hasSsoCredentials(): bool
+    {
+        return filled($this->client_id) && filled($this->client_secret_hash) && filled($this->callback_url);
+    }
+
+    public function hasSafePath(): bool
+    {
+        return preg_match('#^/apps/[A-Za-z0-9_~-]+(?:/[A-Za-z0-9._~-]+)*$#', $this->path) === 1
+            && preg_match('#(?:^|/)\.{1,2}(?:/|$)#', $this->path) !== 1;
+    }
+
     public function iconUrl(): string
     {
         return rtrim($this->path, '/').'/favicon.ico';

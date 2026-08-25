@@ -8,6 +8,7 @@ use App\Models\AuthorizationCode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Validator;
 
 class TokenController extends Controller
@@ -60,9 +61,10 @@ class TokenController extends Controller
                 return null;
             }
 
-            $assignment = $user->applications()
-                ->where('applications.id', $application->id)
-                ->first();
+            $assignments = $user->applications()
+                ->where('enabled', true)
+                ->get();
+            $assignment = $assignments->firstWhere('id', $application->id);
 
             if (! $assignment) {
                 return null;
@@ -77,6 +79,8 @@ class TokenController extends Controller
                 'name' => $user->name,
                 'application' => $application->key,
                 'role' => $assignment->pivot->role,
+                'application_count' => $assignments->count(),
+                'logout_url' => URL::signedRoute('sso.logout', ['application' => $application->key]),
             ];
         });
 

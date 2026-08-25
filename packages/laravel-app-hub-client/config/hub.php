@@ -19,5 +19,7 @@ return [
     'login_route' => 'login',
     'state_session_key' => 'hub_sso_state_hash',
     'authenticated_at_session_key' => 'hub_authenticated_at',
+    'application_count_session_key' => 'hub_application_count',
+    'logout_url_session_key' => 'hub_logout_url',
     'emergency_authenticated_session_key' => 'emergency_authenticated',
 ];

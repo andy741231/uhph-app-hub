@@ -11,6 +11,11 @@ if (!flipbook_csrf_is_valid($_POST['csrf_token'] ?? null)) {
     http_response_code(419);
     exit;
 }
+$admin = flipbook_current_admin();
+$logoutUrl = is_array($admin) && is_string($admin['logout_url'] ?? null) ? $admin['logout_url'] : '';
 flipbook_destroy_session();
-header('Location: ' . (FLIPBOOK_HUB_SSO_ENABLED ? FLIPBOOK_HUB_BASE_URL : BASE_PATH . '/index.php'), true, 302);
+$destination = FLIPBOOK_HUB_SSO_ENABLED && flipbook_is_safe_hub_logout_url($logoutUrl)
+    ? $logoutUrl
+    : BASE_PATH . '/auth/login.php';
+header('Location: ' . $destination, true, 302);
 exit;

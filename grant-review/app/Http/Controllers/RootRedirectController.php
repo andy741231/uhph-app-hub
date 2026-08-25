@@ -2,28 +2,30 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Route;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Uh\AppHub\Contracts\DeterminesLoginDestination;
+use Uh\AppHub\Services\HubClient;
 
 class RootRedirectController extends Controller
 {
     /**
-     * Redirect the root URL to the login page.
+     * Send authenticated users to their dashboard and start SSO directly for guests.
      *
-     * Uses route() helper so the generated URL includes the app's base path
-     * (e.g. /apps/grant-review/login), not just /login at the domain root.
      * This is a controller (not a closure) so it is compatible with
      * `php artisan route:cache`.
      */
-    public function __invoke()
-    {
-        // TEMP DIAGNOSTIC
-        $loginUrl = route('login');
-        file_put_contents(
-            storage_path('logs/root-redirect-debug.log'),
-            date('Y-m-d H:i:s') . " loginUrl=" . $loginUrl . " isGuest=" . (auth()->guest() ? 'yes' : 'no') . "\n",
-            FILE_APPEND
-        );
+    public function __invoke(
+        Request $request,
+        HubClient $hub,
+        DeterminesLoginDestination $destinations,
+    ): RedirectResponse {
+        if ($request->user()) {
+            return redirect($destinations->destination($request->user()));
+        }
 
-        return redirect()->route('login');
+        return config('hub.enabled')
+            ? $hub->authorizationRedirect($request)
+            : redirect()->route('login');
     }
 }

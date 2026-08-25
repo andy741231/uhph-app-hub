@@ -25,6 +25,8 @@ BASE_PATH_OVERRIDE=/apps/flipbook
 
 Never commit or log `FLIPBOOK_HUB_CLIENT_SECRET`. The client must have the Flipbook `admin` role. When SSO is enabled, administrator sessions reauthorize through the Hub every 15 minutes by default.
 
+The SSO callback stores the Hub-issued application count and signed logout URL in the Flipbook administrator session. “All applications” appears only for users assigned to multiple enabled Hub apps and returns to the launcher without ending either session. “Sign Out” destroys the Flipbook session, follows only a validated signed Hub logout URL, destroys the Hub session, and shows the Flipbook-context login screen.
+
 ## Access boundaries
 
 Public:
