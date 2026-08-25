@@ -5,8 +5,12 @@ use Illuminate\Http\Request;
 
 define('LARAVEL_START', microtime(true));
 
-$_SERVER['HTTPS'] = 'on';
-$_SERVER['SERVER_PORT'] = '443';
+// IIS terminates TLS upstream and forwards plain HTTP, so force HTTPS
+// server vars unless explicitly running through the local development router.
+if (($_SERVER['UHPH_LOCAL_DEV'] ?? '') !== '1') {
+    $_SERVER['HTTPS'] = 'on';
+    $_SERVER['SERVER_PORT'] = '443';
+}
 
 // IIS fix: when the app root is accessed without a trailing slash
 // (e.g. /apps/grant-review), IIS sets REQUEST_URI (and UNENCODED_URL) to

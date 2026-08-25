@@ -1,0 +1,41 @@
+- generic [active] [ref=f2e1]:
+  - navigation [ref=f2e2]:
+    - generic [ref=f2e3]:
+      - link " Flipbook" [ref=f2e4] [cursor=pointer]:
+        - /url: index.php
+        - generic [ref=f2e5]: 
+        - generic [ref=f2e6]: Flipbook
+      - generic [ref=f2e7]:
+        - generic [ref=f2e8]: M Chan
+        - link " All applications" [ref=f2e9] [cursor=pointer]:
+          - /url: http://localhost:8000/apps
+          - generic [ref=f2e10]: 
+          - text: All applications
+        - link "+ New Flipbook" [ref=f2e11] [cursor=pointer]:
+          - /url: upload.php
+          - generic [ref=f2e12]: +
+          - text: New Flipbook
+        - button "Sign Out" [ref=f2e14] [cursor=pointer]
+  - main [ref=f2e15]:
+    - heading "My Flipbooks" [level=1] [ref=f2e17]
+    - generic [ref=f2e19]:
+      - generic [ref=f2e20] [cursor=pointer]:
+        - generic [ref=f2e21]: 
+        - generic [ref=f2e23]:
+          - button "" [ref=f2e24]
+          - button "" [ref=f2e26]
+          - button "" [ref=f2e28]
+        - generic [ref=f2e30]:
+          - heading "2026 RCMI Final Report" [level=3] [ref=f2e31]
+          - paragraph [ref=f2e32]: 34 pages · Jul 17, 2026
+      - generic [ref=f2e33] [cursor=pointer]:
+        - generic [ref=f2e34]: 
+        - generic [ref=f2e36]:
+          - button "" [ref=f2e37]
+          - button "" [ref=f2e39]
+          - button "" [ref=f2e41]
+        - generic [ref=f2e43]:
+          - heading "2026 CTPH Annual Report" [level=3] [ref=f2e44]
+          - paragraph [ref=f2e45]: 44 pages · May 7, 2026
+  - contentinfo [ref=f2e46]:
+    - paragraph [ref=f2e47]: © 2026 Flipbook — v1.0.0

@@ -92,6 +92,7 @@ define('ALLOWED_EXTENSIONS', ['pdf']);
 define('APP_NAME', 'Flipbook');
 define('APP_VERSION', '1.0.0');
 
+define('FLIPBOOK_LOCAL_DEV', filter_var(getenv('FLIPBOOK_LOCAL_DEV') ?: 'false', FILTER_VALIDATE_BOOLEAN));
 define('FLIPBOOK_HUB_SSO_ENABLED', filter_var(getenv('FLIPBOOK_HUB_SSO_ENABLED') ?: 'false', FILTER_VALIDATE_BOOLEAN));
 define('FLIPBOOK_HUB_BASE_URL', rtrim(getenv('FLIPBOOK_HUB_URL') ?: 'https://localhost/apps', '/'));
 define('FLIPBOOK_HUB_AUTHORIZE_URL', FLIPBOOK_HUB_BASE_URL . '/sso/authorize');

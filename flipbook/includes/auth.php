@@ -8,6 +8,11 @@ function flipbook_is_https(): bool
         || (int)($_SERVER['SERVER_PORT'] ?? 0) === 443;
 }
 
+function flipbook_is_local_development(): bool
+{
+    return FLIPBOOK_LOCAL_DEV;
+}
+
 function flipbook_auth_start_session(): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) {
@@ -19,7 +24,7 @@ function flipbook_auth_start_session(): void
     session_set_cookie_params([
         'lifetime' => 0,
         'path' => BASE_PATH ?: '/',
-        'secure' => FLIPBOOK_HUB_SSO_ENABLED || flipbook_is_https(),
+        'secure' => flipbook_is_https() || (FLIPBOOK_HUB_SSO_ENABLED && ! flipbook_is_local_development()),
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
@@ -44,10 +49,12 @@ function flipbook_is_safe_app_path(string $url): bool
 
 function flipbook_hub_is_configured(): bool
 {
+    $scheme = parse_url(FLIPBOOK_HUB_BASE_URL, PHP_URL_SCHEME);
+
     return FLIPBOOK_HUB_CLIENT_ID !== ''
         && FLIPBOOK_HUB_CLIENT_SECRET !== ''
         && FLIPBOOK_HUB_CALLBACK_URI !== ''
-        && str_starts_with(FLIPBOOK_HUB_BASE_URL, 'https://');
+        && ($scheme === 'https' || ($scheme === 'http' && flipbook_is_local_development()));
 }
 
 function flipbook_is_safe_hub_logout_url(string $url): bool

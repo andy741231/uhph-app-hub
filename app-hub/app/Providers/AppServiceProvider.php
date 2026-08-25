@@ -23,7 +23,10 @@ class AppServiceProvider extends ServiceProvider
         // IIS terminates TLS upstream and forwards plain HTTP to PHP without
         // X-Forwarded-Proto, so Laravel would generate http:// URLs for forms,
         // redirects, and assets. The Hub is only reachable over HTTPS, so
-        // force the scheme here.
-        URL::forceScheme('https');
+        // force the scheme here. Skipped locally so plain HTTP development
+        // works correctly while production and test behavior stays unchanged.
+        if (! app()->environment('local')) {
+            URL::forceScheme('https');
+        }
     }
 }

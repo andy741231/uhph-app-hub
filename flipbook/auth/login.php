@@ -7,7 +7,7 @@ if (!FLIPBOOK_HUB_SSO_ENABLED) {
     exit;
 }
 
-if (!flipbook_is_https() || !flipbook_hub_is_configured()) {
+if ((!flipbook_is_https() && !flipbook_is_local_development()) || !flipbook_hub_is_configured()) {
     http_response_code(503);
     echo 'Flipbook Hub authentication is not configured.';
     exit;

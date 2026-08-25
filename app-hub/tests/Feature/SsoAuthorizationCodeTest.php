@@ -186,6 +186,67 @@ class SsoAuthorizationCodeTest extends TestCase
         $this->assertNull(AuthorizationCode::firstOrFail()->consumed_at);
     }
 
+    public function test_scoped_local_client_secret_can_exchange_a_code_in_the_local_environment(): void
+    {
+        app()->detectEnvironment(fn (): string => 'local');
+        config([
+            'hub.local_client.application_keys' => ['grant-review'],
+            'hub.local_client.secret' => 'local-client-secret',
+        ]);
+        $user = User::factory()->create();
+        $application = $this->application();
+        $this->assign($user, $application, 'reviewer');
+        $code = $this->issueCode($user, $application);
+
+        $this->exchange($application, 'local-client-secret', $code)
+            ->assertOk()
+            ->assertJson([
+                'application' => 'grant-review',
+                'role' => 'reviewer',
+            ]);
+    }
+
+    public function test_local_client_secret_is_rejected_outside_the_local_environment(): void
+    {
+        config([
+            'hub.local_client.application_keys' => ['grant-review'],
+            'hub.local_client.secret' => 'local-client-secret',
+        ]);
+        $user = User::factory()->create();
+        $application = $this->application();
+        $this->assign($user, $application, 'reviewer');
+        $code = $this->issueCode($user, $application);
+
+        $this->exchange($application, 'local-client-secret', $code)
+            ->assertUnauthorized()
+            ->assertJson(['error' => 'invalid_client']);
+    }
+
+    public function test_local_client_secret_is_rejected_for_another_application(): void
+    {
+        app()->detectEnvironment(fn (): string => 'local');
+        config([
+            'hub.local_client.application_keys' => ['grant-review'],
+            'hub.local_client.secret' => 'local-client-secret',
+        ]);
+        $user = User::factory()->create();
+        $application = Application::create([
+            'key' => 'flipbook',
+            'name' => 'Flipbook',
+            'path' => '/apps/flipbook',
+            'callback_url' => '/apps/flipbook/auth/callback.php',
+            'client_id' => 'hub_flipbook',
+            'client_secret_hash' => hash('sha256', 'registered-flipbook-secret'),
+            'roles' => ['admin'],
+        ]);
+        $this->assign($user, $application, 'admin');
+        $code = $this->issueCode($user, $application);
+
+        $this->exchange($application, 'local-client-secret', $code)
+            ->assertUnauthorized()
+            ->assertJson(['error' => 'invalid_client']);
+    }
+
     public function test_expired_codes_are_rejected(): void
     {
         $user = User::factory()->create();

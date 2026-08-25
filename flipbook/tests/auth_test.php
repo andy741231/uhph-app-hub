@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+putenv('FLIPBOOK_LOCAL_DEV=true');
 putenv('FLIPBOOK_HUB_SSO_ENABLED=true');
 putenv('FLIPBOOK_HUB_URL=https://hub.test/apps');
 putenv('FLIPBOOK_HUB_CLIENT_ID=hub_flipbook');
@@ -29,6 +30,8 @@ function expect(bool $condition, string $message): void
 expect(FLIPBOOK_HUB_SSO_ENABLED === true, 'Hub SSO should be enabled from the environment.');
 expect(FLIPBOOK_HUB_BASE_URL === 'https://hub.test/apps', 'Hub URL should be normalized.');
 expect(FLIPBOOK_HUB_CALLBACK_URI === '/apps/flipbook/auth/callback.php', 'Callback should match the registered path.');
+expect(flipbook_is_local_development(), 'The explicit local development flag should be recognized.');
+expect(flipbook_hub_is_configured(), 'Hub SSO should be configured.');
 expect(flipbook_is_safe_app_path('/apps/flipbook/editor.php?id=1'), 'An internal Flipbook return path should be accepted.');
 expect(! flipbook_is_safe_app_path('/apps/../phpmyadmin'), 'Traversal paths must be rejected.');
 expect(! flipbook_is_safe_app_path('https://example.com'), 'Absolute external URLs must be rejected.');

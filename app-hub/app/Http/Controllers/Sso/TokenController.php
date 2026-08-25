@@ -23,8 +23,14 @@ class TokenController extends Controller
         $application = $clientId ? Application::where('client_id', $clientId)->first() : null;
         $providedHash = hash('sha256', (string) $clientSecret);
         $expectedHash = $application?->client_secret_hash ?? str_repeat('0', 64);
+        $registeredSecretValid = hash_equals($expectedHash, $providedHash);
+        $localSecret = (string) config('hub.local_client.secret');
+        $localSecretValid = app()->environment('local')
+            && filled($localSecret)
+            && in_array((string) $application?->key, config('hub.local_client.application_keys', []), true)
+            && hash_equals(hash('sha256', $localSecret), $providedHash);
 
-        if (! $clientSecret || ! hash_equals($expectedHash, $providedHash) || ! $application?->enabled) {
+        if (! $clientSecret || (! $registeredSecretValid && ! $localSecretValid) || ! $application?->enabled) {
             return $this->error('invalid_client', 'Client authentication failed.', 401)
                 ->header('WWW-Authenticate', 'Basic realm="App Hub SSO"');
         }
