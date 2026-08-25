@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CompleteProfileRequest;
 use App\Http\Requests\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,6 +12,20 @@ use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
+    public function complete(Request $request): View
+    {
+        return view('profile.complete', [
+            'user' => $request->user(),
+        ]);
+    }
+
+    public function completeUpdate(CompleteProfileRequest $request): RedirectResponse
+    {
+        $request->user()->update($request->validated());
+
+        return Redirect::route('dashboard')->with('status', 'profile-completed');
+    }
+
     /**
      * Display the user's profile form.
      */

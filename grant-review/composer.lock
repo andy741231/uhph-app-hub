@@ -6033,7 +6033,7 @@
             "license": [
                 "proprietary"
             ],
-            "description": "Reusable Laravel client for the transitional App Hub authorization-code flow.",
+            "description": "Reusable Laravel client for the transitional UHPH App Hub authorization-code flow.",
             "transport-options": {
                 "relative": true
             }

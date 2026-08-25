@@ -6,7 +6,7 @@
  * Every Grant Review page header (guest, admin, reviewer, submitter) presents
  * the logo as a white heroicons v2 "trophy" icon (24x24 outline, stroke 1.5)
  * on a red rounded square. This script rasterizes that exact outline icon
- * white on the same red rounded square used by the App Hub and Flipbook
+ * white on the same red rounded square used by the UHPH App Hub and Flipbook
  * favicons, so the whole /apps suite sits together consistently in tabs.
  *
  * The trophy path data below is the heroicons v2 outline "trophy" from
@@ -437,7 +437,7 @@ function fillSubpaths(GdImage $im, array $subpaths, int $color): void
     }
 }
 
-/** Red rounded square (matching the App Hub / Flipbook favicons) with the white trophy. */
+/** Red rounded square (matching the UHPH App Hub / Flipbook favicons) with the white trophy. */
 function drawIcon(int $size, string $iconPath): GdImage
 {
     $ss = 4; // supersample factor for anti-aliasing

@@ -90,7 +90,7 @@
                 <x-heroicon-o-sparkles class="w-5 h-5" />
             </div>
             <div>
-                <p class="text-2xl font-bold text-uh-fg">{{ $user->investigator_type === 'early_stage' ? 'ESI' : ($user->investigator_type === 'new' ? 'NI' : '—') }}</p>
+                <p class="text-2xl font-bold text-uh-fg">{{ $user->investigator_type === 'pi' ? 'PI' : ($user->investigator_type === 'other' ? 'Other' : '—') }}</p>
                 <p class="text-xs text-gray-500">Investigator Type</p>
             </div>
         </div>
@@ -115,7 +115,9 @@
                     ['label' => 'Department', 'value' => $user->department, 'icon' => 'o-building-office-2'],
                     ['label' => 'Title', 'value' => $user->title, 'icon' => 'o-briefcase'],
                     ['label' => 'PeopleSoft ID', 'value' => $user->peoplesoft_id, 'icon' => 'o-identification'],
-                    ['label' => 'Investigator Type', 'value' => $user->investigator_type === 'early_stage' ? 'Early-Stage Investigator' : ($user->investigator_type === 'new' ? 'New Investigator' : null), 'icon' => 'o-sparkles'],
+                    ['label' => 'Investigator Type', 'value' => $user->investigator_type === 'pi' ? 'PI' : ($user->investigator_type === 'other' ? 'Other' : null), 'icon' => 'o-sparkles'],
+                    ['label' => 'Early-Stage Investigator', 'value' => $user->early_stage_investigator ? 'Yes' : 'No', 'icon' => 'o-sparkles'],
+                    ['label' => 'New Investigator', 'value' => $user->new_investigator ? 'Yes' : 'No', 'icon' => 'o-sparkles'],
                 ];
             @endphp
             @foreach ($profileFields as $field)

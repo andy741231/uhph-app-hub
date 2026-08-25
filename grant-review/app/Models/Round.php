@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\RoundFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -9,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Round extends Model
 {
-    /** @use HasFactory<\Database\Factories\RoundFactory> */
+    /** @use HasFactory<RoundFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -36,6 +37,11 @@ class Round extends Model
     public function submissions(): HasMany
     {
         return $this->hasMany(Submission::class);
+    }
+
+    public function conflictOfInterestDeclarations(): HasMany
+    {
+        return $this->hasMany(ConflictOfInterestDeclaration::class);
     }
 
     public function isOpen(): bool

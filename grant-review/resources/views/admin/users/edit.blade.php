@@ -4,7 +4,7 @@
 @section('content')
 <div class="mb-6">
     <h1 class="text-2xl font-bold text-uh-fg">Edit User</h1>
-    <p class="text-sm text-gray-500 mt-1">{{ config('hub.enabled') ? 'Update profile and round invitations. Role and access are managed in App Hub.' : 'Update profile, role, status, and round invitations' }}</p>
+    <p class="text-sm text-gray-500 mt-1">{{ config('hub.enabled') ? 'Update the Grant Review role, profile, and round invitations. Identity status remains managed by UHPH App Hub.' : 'Update profile, role, status, and round invitations' }}</p>
 </div>
 
 <div class="card p-6 max-w-2xl">
@@ -31,7 +31,7 @@
 
         <div>
             <label for="email" class="label">Email</label>
-            <input type="email" id="email" name="email" value="{{ old('email', $user->email) }}" required class="input">
+            <input type="email" id="email" name="email" value="{{ old('email', $user->email) }}" required class="input" @readonly(config('hub.enabled'))>
             @error('email')
                 <p class="text-sm text-uh-red mt-1">{{ $message }}</p>
             @enderror
@@ -41,9 +41,17 @@
         <x-users.partials.profile-fields :user="$user" />
 
         @if(config('hub.enabled'))
-            <div class="grid grid-cols-2 gap-4 rounded-md border border-uh-border bg-gray-50 p-4">
-                <div><span class="label">Role</span><span class="badge-gray">{{ ucfirst($user->role) }}</span></div>
-                <div><span class="label">Status</span><span class="badge-gray">{{ ucfirst($user->status) }}</span></div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="role" class="label">Grant Review Role</label>
+                    <select id="role" name="role" class="input">
+                        <option value="submitter" {{ old('role', $user->role) === 'submitter' ? 'selected' : '' }}>Submitter</option>
+                        <option value="reviewer" {{ old('role', $user->role) === 'reviewer' ? 'selected' : '' }}>Reviewer</option>
+                        <option value="admin" {{ old('role', $user->role) === 'admin' ? 'selected' : '' }}>Admin</option>
+                    </select>
+                    @error('role')<p class="text-sm text-uh-red mt-1">{{ $message }}</p>@enderror
+                </div>
+                <div><span class="label">Identity Status</span><span class="badge-gray">{{ ucfirst($user->status) }}</span></div>
             </div>
         @else
             <div class="grid grid-cols-2 gap-4">

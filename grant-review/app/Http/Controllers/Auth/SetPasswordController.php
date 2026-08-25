@@ -48,6 +48,8 @@ class SetPasswordController extends Controller
             'title' => $request->title,
             'peoplesoft_id' => $request->peoplesoft_id,
             'investigator_type' => $request->investigator_type,
+            'early_stage_investigator' => $request->boolean('early_stage_investigator'),
+            'new_investigator' => $request->boolean('new_investigator'),
         ]);
 
         auth()->login($user);

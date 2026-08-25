@@ -163,13 +163,13 @@
                         <div class="flex items-center gap-3 shrink-0">
                             <span class="badge-green text-xs">Submitted</span>
                             @if ($review['score'] !== null)
-                                <span class="text-lg font-bold text-uh-red">{{ number_format($review['score'], 2) }}</span>
+                                <span class="text-lg font-bold text-uh-red">{{ $review['score'] }}<span class="text-xs text-gray-500">/9</span></span>
                             @endif
                         </div>
                     </div>
                     @if ($review['comments'])
                         <div class="mt-3 bg-uh-muted rounded-md p-3">
-                            <p class="text-xs text-gray-500 mb-1">Comments</p>
+                            <p class="text-xs text-gray-500 mb-1">Overall Impact</p>
                             <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ $review['comments'] }}</p>
                         </div>
                     @endif

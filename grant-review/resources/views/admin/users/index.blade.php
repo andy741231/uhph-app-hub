@@ -7,30 +7,31 @@
         <h1 class="text-2xl font-bold text-uh-fg">Users</h1>
         <p class="text-sm text-gray-500 mt-1">Manage submitters, reviewers, and admins</p>
     </div>
-    @if(config('hub.enabled'))
-        <a href="{{ config('hub.base_url') }}/admin/users" class="btn-primary">
-            <x-heroicon-o-users class="w-4 h-4 mr-1.5" />
-            Manage users in App Hub
-        </a>
-    @else
+    <div class="flex items-center gap-3">
+        @if(config('hub.enabled'))
+            <a href="{{ route('admin.users.index', ['archived' => $showArchived ? null : 1]) }}" class="btn-secondary">
+                {{ $showArchived ? 'Active Users' : 'Archived Users' }}
+            </a>
+        @endif
         <a href="{{ route('admin.users.create') }}" class="btn-primary">
             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
             </svg>
             Add User
         </a>
-    @endif
+    </div>
 </div>
 
 @if(config('hub.enabled'))
     <div class="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-        App Hub manages accounts and application access. Use this page for Grant Review profiles and round assignments; use App Hub to revoke Grant Review access or delete an account.
+        UHPH App Hub manages identities and access. This page synchronizes Grant Review assignments from UHPH App Hub; revoked or deleted identities are archived locally so submissions, reviews, and decision history remain intact.
     </div>
 @endif
 
 {{-- Search & filter bar --}}
 <div class="card p-4 mb-4">
     <form method="GET" action="{{ route('admin.users.index') }}" class="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        @if($showArchived)<input type="hidden" name="archived" value="1">@endif
         <div class="flex-1 w-full sm:w-auto">
             <div class="relative">
                 <svg class="w-4 h-4 absolute left-3 top-2.5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
@@ -74,7 +75,7 @@
                                 $isSorted = $sort === $col;
                                 $nextDir = $isSorted && $direction === 'asc' ? 'desc' : 'asc';
                             @endphp
-                            <a href="{{ route('admin.users.index', array_filter(['search' => $search, 'role' => $role, 'sort' => $col, 'direction' => $nextDir])) }}"
+                            <a href="{{ route('admin.users.index', array_filter(['archived' => $showArchived ? 1 : null, 'search' => $search, 'role' => $role, 'sort' => $col, 'direction' => $nextDir])) }}"
                                class="inline-flex items-center gap-1 hover:text-uh-red {{ $isSorted ? 'text-uh-red' : '' }}">
                                 {{ $label }}
                                 @if ($isSorted)
@@ -128,6 +129,31 @@
                                     </svg>
                                     Edit
                                 </a>
+                                @if (config('hub.enabled') && ! $showArchived && $user->id !== auth()->id())
+                                    <form action="{{ route('admin.users.revoke', $user) }}" method="POST"
+                                          onsubmit="return confirm('Revoke Grant Review access for {{ $user->full_name }}? Historical records will be preserved.');">
+                                        @csrf
+                                        <button type="submit"
+                                                class="text-uh-brick hover:underline text-sm inline-flex items-center gap-1 font-medium"
+                                                aria-label="Revoke access for {{ $user->full_name }}">
+                                            Revoke Access
+                                        </button>
+                                    </form>
+                                @endif
+                                @if (config('hub.enabled') && $showArchived && is_string($user->sso_sub))
+                                    <form action="{{ route('admin.users.restore', $user) }}" method="POST"
+                                          onsubmit="return confirm('Restore Grant Review access for {{ $user->full_name }}? They will be re-assigned with their previous role ({{ ucfirst($user->role) }}).');">
+                                        @csrf
+                                        <button type="submit"
+                                                class="text-uh-red hover:underline text-sm inline-flex items-center gap-1 font-medium"
+                                                aria-label="Restore access for {{ $user->full_name }}">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                                            </svg>
+                                            Restore Access
+                                        </button>
+                                    </form>
+                                @endif
                                 @if (! config('hub.enabled') && $user->id !== auth()->id())
                                     <form action="{{ route('admin.users.destroy', $user) }}" method="POST"
                                           onsubmit="return confirm('Delete user {{ $user->full_name }}? This cannot be undone.');">

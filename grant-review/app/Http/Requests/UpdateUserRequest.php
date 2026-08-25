@@ -27,13 +27,15 @@ class UpdateUserRequest extends FormRequest
         $rules = array_merge($this->profileRules(), [
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
+            'email' => config('hub.enabled')
+                ? ['required', 'email', Rule::in([$this->route('user')->email])]
+                : ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($userId)],
             'round_ids' => ['sometimes', 'array'],
             'round_ids.*' => ['exists:rounds,id'],
         ]);
 
+        $rules['role'] = ['required', 'in:admin,submitter,reviewer'];
         if (! config('hub.enabled')) {
-            $rules['role'] = ['required', 'in:admin,submitter,reviewer'];
             $rules['status'] = ['required', 'in:invited,active,disabled'];
         }
 

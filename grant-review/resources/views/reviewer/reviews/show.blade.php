@@ -114,7 +114,11 @@
                 <div>
                     <h2 class="text-lg font-bold text-uh-fg">Score & Evaluation</h2>
                     <p class="text-xs text-gray-500 mt-0.5">
-                        Enter numeric score (0–100) and qualitative evaluation
+                        @if ($submission->status === 'decided')
+                            This proposal has been decided — your review is locked.
+                        @else
+                            NIH simplified review framework — score each criterion 1 (exceptional) to 9 (very poor)
+                        @endif
                     </p>
                 </div>
             </div>
@@ -130,7 +134,7 @@
                         </div>
                         <div>
                             <p class="text-sm font-bold text-green-800">
-                                Latest submission: {{ number_format((float) $review->score, 2) }} / 100
+                                Latest submission: Overall Impact {{ $review->score ?? '—' }} / 9
                             </p>
                             <p class="text-xs text-green-700 mt-0.5">
                                 Submitted {{ $review->submitted_at->format('M j, Y g:i A') }}
@@ -144,67 +148,186 @@
                 </div>
             @endif
 
-            {{-- Active Review Form (always editable) --}}
-            <form id="reviewerEvaluationForm"
-                  action="{{ route('reviewer.reviews.save', $review) }}"
-                  method="POST"
-                  class="space-y-5">
-                @csrf
-
-                {{-- Score Input with Dynamic Tier Feedback --}}
-                <div>
-                    <div class="flex items-center justify-between mb-1.5">
-                        <label for="scoreInput" class="label mb-0">
-                            Overall Score <span class="req">*</span>
-                        </label>
-                        <span id="scoreTierBadge" class="text-xs font-semibold px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 border border-gray-200 transition-all">
-                            Enter 0–100
-                        </span>
-                    </div>
-
-                    <div class="relative rounded-lg shadow-xs">
-                        <input type="number"
-                               id="scoreInput"
-                               name="score"
-                               value="{{ old('score', $review->score) }}"
-                               min="0"
-                               max="100"
-                               step="0.01"
-                               required
-                               class="input text-lg font-bold text-uh-fg pr-14 py-2.5"
-                               placeholder="85.00"
-                               aria-describedby="score-helpers">
-                        <div class="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-sm font-bold text-gray-400">
-                            / 100
+            @if ($submission->status === 'decided')
+                {{-- Read-only view: submission has been decided, review is locked --}}
+                <div class="space-y-5">
+                    <div class="bg-uh-muted border border-uh-border rounded-xl p-4 flex items-start gap-3">
+                        <svg class="w-5 h-5 text-uh-slate shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/>
+                        </svg>
+                        <div>
+                            <p class="text-sm font-bold text-uh-fg">Review locked</p>
+                            <p class="text-xs text-gray-600 mt-1 leading-relaxed">
+                                A decision has been recorded for this proposal. Your submitted review is preserved below and remains visible to administrators, but it can no longer be edited.
+                            </p>
                         </div>
                     </div>
 
-                    {{-- Quick Score Preset Chips --}}
-                    <div id="score-helpers" class="flex items-center gap-1.5 mt-2 flex-wrap">
-                        <span class="text-xs text-gray-400 font-medium mr-1">Presets:</span>
-                        <button type="button" onclick="setScore(60)" class="text-xs px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-colors cursor-pointer">60 (Fair)</button>
-                        <button type="button" onclick="setScore(75)" class="text-xs px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-colors cursor-pointer">75 (Good)</button>
-                        <button type="button" onclick="setScore(85)" class="text-xs px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-colors cursor-pointer">85 (Very Good)</button>
-                        <button type="button" onclick="setScore(95)" class="text-xs px-2 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-colors cursor-pointer">95 (Exceptional)</button>
+                    @include('reviewer.reviews.partials.review-read-only', ['review' => $review])
+                </div>
+            @else
+            {{-- Active Review Form (editable while submission is undecided) --}}
+            <form id="reviewerEvaluationForm"
+                  action="{{ route('reviewer.reviews.save', $review) }}"
+                  method="POST"
+                  class="space-y-6">
+                @csrf
+
+                {{-- 1. Overall Impact --}}
+                <fieldset class="space-y-3">
+                    <legend class="text-sm font-bold text-uh-fg">
+                        <a href="https://grants.nih.gov/policy-and-compliance/policy-topics/peer-review/simplifying-review/framework#overallimpact"
+                           target="_blank" rel="noopener"
+                           class="text-uh-red hover:underline">Overall Impact</a>
+                        <span class="req">*</span>
+                    </legend>
+                    <p class="text-xs text-gray-600 leading-relaxed">
+                        Reviewers provide an overall impact score to reflect their assessment of the likelihood for the project to exert a sustained, powerful influence on the research field(s) involved, in consideration of the following review criteria and additional review criteria (as applicable for the project proposed). An application does not need to be strong in all categories to be judged likely to have major scientific impact.
+                    </p>
+                    <div class="flex items-center gap-1.5 flex-wrap" role="radiogroup" aria-label="Overall Impact Score (1–9)">
+                        @for($i = 1; $i <= 9; $i++)
+                            <label class="cursor-pointer">
+                                <input type="radio" name="score" value="{{ $i }}" class="sr-only peer"
+                                    {{ (int) old('score', $review->score) === $i ? 'checked' : '' }} required>
+                                <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-uh-border bg-white text-sm font-bold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red hover:border-uh-red hover:bg-uh-muted">{{ $i }}</span>
+                            </label>
+                        @endfor
                     </div>
+                    @error('score') <p class="text-sm text-uh-red">{{ $message }}</p> @enderror
+                    <div>
+                        <label for="comments" class="label mb-1">Overall Impact Comment</label>
+                        <textarea id="comments" name="comments" rows="4"
+                            class="input text-sm leading-relaxed"
+                            placeholder="Summarize your overall assessment of the project's potential impact...">{{ old('comments', $review->comments) }}</textarea>
+                    </div>
+                </fieldset>
+
+                {{-- 2. Review Criteria --}}
+                <div class="border-t border-uh-border pt-5 space-y-5">
+                    <h3 class="text-sm font-bold text-uh-fg">
+                        <a href="https://grants.nih.gov/policy-and-compliance/policy-topics/peer-review/simplifying-review/framework#review-criteria-within-the-simplified-framework"
+                           target="_blank" rel="noopener"
+                           class="text-uh-red hover:underline">Review Criteria</a>
+                    </h3>
+
+                    {{-- Factor 1: Importance of the Research --}}
+                    <fieldset class="space-y-3">
+                        <legend class="text-sm font-semibold text-uh-fg">
+                            Factor 1 — Importance of the Research
+                            <span class="text-xs font-normal text-gray-500">(Significance, Innovation)</span>
+                            <span class="req">*</span>
+                        </legend>
+                        <div class="flex items-center gap-1.5 flex-wrap" role="radiogroup" aria-label="Factor 1 Score (1–9)">
+                            @for($i = 1; $i <= 9; $i++)
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="factor1_score" value="{{ $i }}" class="sr-only peer"
+                                        {{ (int) old('factor1_score', $review->factor1_score) === $i ? 'checked' : '' }} required>
+                                    <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-uh-border bg-white text-sm font-bold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red hover:border-uh-red hover:bg-uh-muted">{{ $i }}</span>
+                                </label>
+                            @endfor
+                        </div>
+                        @error('factor1_score') <p class="text-sm text-uh-red">{{ $message }}</p> @enderror
+                        <textarea name="factor1_comments" rows="3"
+                            class="input text-sm leading-relaxed"
+                            placeholder="Comment on significance and innovation...">{{ old('factor1_comments', $review->factor1_comments) }}</textarea>
+                    </fieldset>
+
+                    {{-- Factor 2: Rigor and Feasibility --}}
+                    <fieldset class="space-y-3">
+                        <legend class="text-sm font-semibold text-uh-fg">
+                            Factor 2 — Rigor and Feasibility
+                            <span class="text-xs font-normal text-gray-500">(Approach)</span>
+                            <span class="req">*</span>
+                        </legend>
+                        <div class="flex items-center gap-1.5 flex-wrap" role="radiogroup" aria-label="Factor 2 Score (1–9)">
+                            @for($i = 1; $i <= 9; $i++)
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="factor2_score" value="{{ $i }}" class="sr-only peer"
+                                        {{ (int) old('factor2_score', $review->factor2_score) === $i ? 'checked' : '' }} required>
+                                    <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-uh-border bg-white text-sm font-bold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red hover:border-uh-red hover:bg-uh-muted">{{ $i }}</span>
+                                </label>
+                            @endfor
+                        </div>
+                        @error('factor2_score') <p class="text-sm text-uh-red">{{ $message }}</p> @enderror
+                        <textarea name="factor2_comments" rows="3"
+                            class="input text-sm leading-relaxed"
+                            placeholder="Comment on rigor and feasibility of the approach...">{{ old('factor2_comments', $review->factor2_comments) }}</textarea>
+                    </fieldset>
+
+                    {{-- Factor 3: Expertise and Resources --}}
+                    <fieldset class="space-y-3">
+                        <legend class="text-sm font-semibold text-uh-fg">
+                            Factor 3 — Expertise and Resources
+                            <span class="text-xs font-normal text-gray-500">(Investigator, Environment)</span>
+                            <span class="req">*</span>
+                        </legend>
+                        <div class="flex items-center gap-3">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="factor3_sufficient" value="1" class="sr-only peer"
+                                    {{ old('factor3_sufficient', $review->factor3_sufficient) === true || old('factor3_sufficient') === '1' ? 'checked' : '' }} required>
+                                <span class="inline-flex items-center px-3 py-1.5 rounded-lg border border-uh-border bg-white text-sm font-semibold text-uh-fg transition-all peer-checked:bg-uh-green peer-checked:text-white peer-checked:border-uh-green hover:border-uh-green">Sufficient</span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="factor3_sufficient" value="0" class="sr-only peer"
+                                    {{ old('factor3_sufficient', $review->factor3_sufficient) === false || old('factor3_sufficient') === '0' ? 'checked' : '' }}>
+                                <span class="inline-flex items-center px-3 py-1.5 rounded-lg border border-uh-border bg-white text-sm font-semibold text-uh-fg transition-all peer-checked:bg-red-600 peer-checked:text-white peer-checked:border-red-600 hover:border-red-600">Not Sufficient</span>
+                            </label>
+                        </div>
+                        @error('factor3_sufficient') <p class="text-sm text-uh-red">{{ $message }}</p> @enderror
+                        <textarea name="factor3_comments" rows="3"
+                            class="input text-sm leading-relaxed"
+                            placeholder="If not sufficient, explain what is lacking in expertise or resources...">{{ old('factor3_comments', $review->factor3_comments) }}</textarea>
+                        @error('factor3_comments') <p class="text-sm text-uh-red">{{ $message }}</p> @enderror
+                    </fieldset>
                 </div>
 
-                {{-- Qualitative Feedback Comments --}}
-                <div>
-                    <div class="flex items-center justify-between mb-1.5">
-                        <label for="reviewComments" class="label mb-0">
-                            Comments & Evaluation <span class="text-gray-400 font-normal text-xs">(optional)</span>
-                        </label>
-                        <span id="charCount" class="text-xs text-gray-400 font-mono">0 chars</span>
-                    </div>
-                    <textarea id="reviewComments"
-                              name="comments"
-                              rows="6"
-                              class="input text-sm leading-relaxed"
-                              placeholder="Provide constructive feedback, noting strengths, methodology validity, budget feasibility, and areas for improvement...">{{ old('comments', $review->comments) }}</textarea>
-                    <p class="text-xs text-gray-500 mt-1.5">
-                        Tip: Submitters receive your feedback with anonymized attribution (e.g. "Reviewer 1").
-                    </p>
+                {{-- 3. Additional Review Criteria --}}
+                <div class="border-t border-uh-border pt-5 space-y-5">
+                    <h3 class="text-sm font-bold text-uh-fg">Additional Review Criteria</h3>
+
+                    @php
+                        $additionalCriteria = [
+                            'additional_human_subjects' => [
+                                'label' => 'Human Subject Protections',
+                                'href' => 'https://grants.nih.gov/grants/peer/guidelines_general/Guidelines_for_the_Review_of_the_Human_Subjects.pdf',
+                            ],
+                            'additional_vertebrate_animals' => [
+                                'label' => 'Vertebrate Animal Protections',
+                                'href' => 'https://grants.nih.gov/sites/default/files/VASchecklist.pdf',
+                            ],
+                            'additional_biohazards' => [
+                                'label' => 'Biohazards',
+                                'href' => 'https://grants.nih.gov/policy-and-compliance/policy-topics/peer-review/simplifying-review/framework#overallimpact',
+                            ],
+                            'additional_resubmission' => [
+                                'label' => 'Resubmission / Renewal / Revisions',
+                                'href' => 'https://grants.nih.gov/policy-and-compliance/policy-topics/peer-review/simplifying-review/framework#overallimpact',
+                            ],
+                        ];
+                    @endphp
+
+                    @foreach ($additionalCriteria as $field => $criterion)
+                        <fieldset class="space-y-3">
+                            <legend class="text-sm font-semibold text-uh-fg">
+                                <a href="{{ $criterion['href'] }}" target="_blank" rel="noopener"
+                                   class="text-uh-red hover:underline">{{ $criterion['label'] }}</a>
+                                <span class="req">*</span>
+                            </legend>
+                            <div class="flex items-center gap-3">
+                                @foreach (['yes' => 'Yes', 'no' => 'No', 'na' => 'N/A'] as $val => $label)
+                                    <label class="cursor-pointer">
+                                        <input type="radio" name="{{ $field }}" value="{{ $val }}" class="sr-only peer"
+                                            {{ old($field, $review->$field) === $val ? 'checked' : '' }} required>
+                                        <span class="inline-flex items-center px-3 py-1.5 rounded-lg border border-uh-border bg-white text-sm font-semibold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red hover:border-uh-red">{{ $label }}</span>
+                                    </label>
+                                @endforeach
+                            </div>
+                            @error($field) <p class="text-sm text-uh-red">{{ $message }}</p> @enderror
+                            <textarea name="{{ $field }}_comments" rows="2"
+                                class="input text-sm leading-relaxed"
+                                placeholder="Comment (optional)...">{{ old($field . '_comments', $review->{$field . '_comments'}) }}</textarea>
+                        </fieldset>
+                    @endforeach
                 </div>
 
                 {{-- Actions Bar --}}
@@ -227,6 +350,7 @@
                     </button>
                 </div>
             </form>
+            @endif
         </div>
 
         {{-- Other Reviewers' Submitted Reviews (anonymized) --}}
@@ -254,7 +378,7 @@
                                 </div>
                                 @if ($peerReview['score'] !== null)
                                     <span class="text-2xl font-black text-uh-red leading-none">
-                                        {{ number_format($peerReview['score'], 2) }}
+                                        {{ $peerReview['score'] }}<span class="text-xs text-gray-400 font-semibold">/9</span>
                                     </span>
                                 @else
                                     <span class="text-xs text-gray-400">No score</span>
@@ -332,56 +456,8 @@
 
 {{-- Interactive Client-side Script --}}
 <script>
-    function setScore(val) {
-        const input = document.getElementById('scoreInput');
-        if (input) {
-            input.value = Number(val).toFixed(2);
-            updateScoreTier(val);
-        }
-    }
-
-    function updateScoreTier(score) {
-        const badge = document.getElementById('scoreTierBadge');
-        if (!badge) return;
-
-        const s = parseFloat(score);
-        if (isNaN(s) || score === '') {
-            badge.textContent = 'Enter 0–100';
-            badge.className = 'text-xs font-semibold px-2 py-0.5 rounded-md bg-gray-100 text-gray-600 border border-gray-200';
-        } else if (s >= 90) {
-            badge.textContent = 'Exceptional (90–100)';
-            badge.className = 'text-xs font-bold px-2 py-0.5 rounded-md bg-green-100 text-green-800 border border-green-300';
-        } else if (s >= 75) {
-            badge.textContent = 'Very Good (75–89)';
-            badge.className = 'text-xs font-semibold px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 border border-blue-300';
-        } else if (s >= 60) {
-            badge.textContent = 'Fair / Average (60–74)';
-            badge.className = 'text-xs font-semibold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-300';
-        } else {
-            badge.textContent = 'Needs Improvement (<60)';
-            badge.className = 'text-xs font-semibold px-2 py-0.5 rounded-md bg-red-100 text-red-800 border border-red-300';
-        }
-    }
-
-    // Initialize character counter & score updates
+    // Form Submit confirmation handling (validates form first!)
     document.addEventListener('DOMContentLoaded', () => {
-        const scoreInput = document.getElementById('scoreInput');
-        if (scoreInput) {
-            updateScoreTier(scoreInput.value);
-            scoreInput.addEventListener('input', (e) => updateScoreTier(e.target.value));
-        }
-
-        const comments = document.getElementById('reviewComments');
-        const charCount = document.getElementById('charCount');
-        if (comments && charCount) {
-            const updateChar = () => {
-                charCount.textContent = comments.value.length + ' chars';
-            };
-            updateChar();
-            comments.addEventListener('input', updateChar);
-        }
-
-        // Form Submit confirmation handling (validates form first!)
         const form = document.getElementById('reviewerEvaluationForm');
         if (form) {
             form.addEventListener('submit', function(e) {

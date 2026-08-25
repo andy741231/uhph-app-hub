@@ -39,22 +39,46 @@
 <div>
     <label for="peoplesoft_id" class="label">PeopleSoft ID{!! $reqMark !!}</label>
     <input type="text" id="peoplesoft_id" name="peoplesoft_id" value="{{ old('peoplesoft_id', $user?->peoplesoft_id) }}"
-        class="input" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="6-digit number" {{ $reqAttr }}>
-    <p class="text-xs text-gray-500 mt-1">Enter your 6-digit PeopleSoft ID.</p>
+        class="input" inputmode="numeric" pattern="[0-9]{7,20}" minlength="7" maxlength="20" placeholder="7+ digit number" {{ $reqAttr }}>
+    <p class="text-xs text-gray-500 mt-1">Enter your 7-digit (or longer) PeopleSoft ID.</p>
     @error('peoplesoft_id')
         <p class="text-sm text-uh-red mt-1">{{ $message }}</p>
     @enderror
 </div>
 
-{{-- Investigator Type --}}
+{{-- Type of Investigator --}}
 <div>
-    <label for="investigator_type" class="label">Investigator Type{!! $reqMark !!}</label>
+    <label for="investigator_type" class="label">Type of Investigator{!! $reqMark !!}</label>
     <select id="investigator_type" name="investigator_type" class="input" {{ $reqAttr }}>
         <option value="">Select...</option>
-        <option value="early_stage" {{ old('investigator_type', $user?->investigator_type) === 'early_stage' ? 'selected' : '' }}>Early-Stage Investigator</option>
-        <option value="new" {{ old('investigator_type', $user?->investigator_type) === 'new' ? 'selected' : '' }}>New Investigator</option>
+        <option value="pi" {{ old('investigator_type', $user?->investigator_type) === 'pi' ? 'selected' : '' }}>PI</option>
+        <option value="other" {{ old('investigator_type', $user?->investigator_type) === 'other' ? 'selected' : '' }}>Other</option>
     </select>
     @error('investigator_type')
         <p class="text-sm text-uh-red mt-1">{{ $message }}</p>
     @enderror
+</div>
+
+{{-- Early-Stage Investigator checkbox --}}
+<div class="flex items-start gap-3 pt-1">
+    <input type="hidden" name="early_stage_investigator" value="0">
+    <input type="checkbox" id="early_stage_investigator" name="early_stage_investigator" value="1"
+        class="mt-1 w-4 h-4 rounded border-gray-300 text-uh-red focus:ring-uh-red"
+        @checked(old('early_stage_investigator', $user?->early_stage_investigator ?? false))>
+    <div>
+        <label for="early_stage_investigator" class="text-sm font-medium text-uh-fg cursor-pointer">Early-Stage Investigator</label>
+        <p class="text-xs text-gray-500">Check if you are an early-stage investigator.</p>
+    </div>
+</div>
+
+{{-- New Investigator checkbox --}}
+<div class="flex items-start gap-3">
+    <input type="hidden" name="new_investigator" value="0">
+    <input type="checkbox" id="new_investigator" name="new_investigator" value="1"
+        class="mt-1 w-4 h-4 rounded border-gray-300 text-uh-red focus:ring-uh-red"
+        @checked(old('new_investigator', $user?->new_investigator ?? false))>
+    <div>
+        <label for="new_investigator" class="text-sm font-medium text-uh-fg cursor-pointer">New Investigator</label>
+        <p class="text-xs text-gray-500">Check if you are a new investigator.</p>
+    </div>
 </div>

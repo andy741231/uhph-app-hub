@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Factories\SubmissionFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Submission extends Model
 {
-    /** @use HasFactory<\Database\Factories\SubmissionFactory> */
+    /** @use HasFactory<SubmissionFactory> */
     use HasFactory;
 
     protected $fillable = [
@@ -50,5 +51,10 @@ class Submission extends Model
     public function decision(): HasOne
     {
         return $this->hasOne(Decision::class);
+    }
+
+    public function conflictOfInterestEntries(): HasMany
+    {
+        return $this->hasMany(ConflictOfInterestEntry::class);
     }
 }

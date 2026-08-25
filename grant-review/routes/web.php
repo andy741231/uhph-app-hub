@@ -1,18 +1,21 @@
 <?php
 
+use App\Http\Controllers\Admin\ConflictOfInterestController as AdminConflictOfInterestController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DecisionController;
-use App\Http\Controllers\Admin\RoundController;
 use App\Http\Controllers\Admin\ReviewAssignmentController;
 use App\Http\Controllers\Admin\ReviewResultsController;
+use App\Http\Controllers\Admin\RoundController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\SetPasswordController;
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\Submitter\SubmissionController;
+use App\Http\Controllers\Reviewer\ConflictOfInterestController;
 use App\Http\Controllers\Reviewer\DashboardController as ReviewerDashboardController;
+use App\Http\Controllers\RootRedirectController;
+use App\Http\Controllers\Submitter\SubmissionController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', \App\Http\Controllers\RootRedirectController::class);
+Route::get('/', RootRedirectController::class);
 
 // Invite set-password (guest-accessible)
 Route::get('/set-password', [SetPasswordController::class, 'create'])->middleware('hub-sso-disabled')->name('password.set');
@@ -23,17 +26,20 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::resource('rounds', RoundController::class)->except(['show']);
     Route::get('users', [UserController::class, 'index'])->name('users.index');
-    Route::get('users/create', [UserController::class, 'create'])->middleware('hub-sso-disabled')->name('users.create');
+    Route::get('users/create', [UserController::class, 'create'])->name('users.create');
     Route::get('users/{user}', [UserController::class, 'show'])->name('users.show');
-    Route::post('users', [UserController::class, 'store'])->middleware('hub-sso-disabled')->name('users.store');
+    Route::post('users', [UserController::class, 'store'])->name('users.store');
     Route::get('users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
     Route::put('users/{user}', [UserController::class, 'update'])->name('users.update');
+    Route::post('users/{user}/revoke', [UserController::class, 'revoke'])->name('users.revoke');
+    Route::post('users/{user}/restore', [UserController::class, 'restore'])->name('users.restore');
     Route::delete('users/{user}', [UserController::class, 'destroy'])->middleware('hub-sso-disabled')->name('users.destroy');
     Route::post('users/import', [UserController::class, 'import'])->middleware('hub-sso-disabled')->name('users.import');
     Route::post('users/{user}/resend-invite', [UserController::class, 'resendInvite'])->middleware('hub-sso-disabled')->name('users.resend-invite');
     Route::get('review-assignments', [ReviewAssignmentController::class, 'index'])->name('review-assignments.index');
     Route::put('review-assignments/{submission}', [ReviewAssignmentController::class, 'update'])->name('review-assignments.update');
     Route::get('review-results', [ReviewResultsController::class, 'index'])->name('review-results.index');
+    Route::get('conflicts', [AdminConflictOfInterestController::class, 'index'])->name('conflicts.index');
     Route::get('review-results/export', [ReviewResultsController::class, 'exportCsv'])->name('review-results.export');
     Route::get('review-results/export/{roundId}', [ReviewResultsController::class, 'exportCsv'])->name('review-results.export.round');
     Route::get('review-results/{submission}/reviews/{review}/timeline', [ReviewResultsController::class, 'reviewTimeline'])->name('review-results.timeline')->whereNumber(['submission', 'review']);
@@ -59,6 +65,8 @@ Route::middleware(['auth', 'role:reviewer'])->prefix('reviewer')->name('reviewer
     Route::get('reviews/{review}/timeline', [ReviewerDashboardController::class, 'timeline'])->name('reviews.timeline');
     Route::post('reviews/{review}/save', [ReviewerDashboardController::class, 'save'])->name('reviews.save');
     Route::post('reviews/{review}/submit', [ReviewerDashboardController::class, 'submit'])->name('reviews.submit');
+    Route::get('conflicts/{round}', [ConflictOfInterestController::class, 'create'])->name('conflicts.create')->whereNumber('round');
+    Route::post('conflicts/{round}', [ConflictOfInterestController::class, 'store'])->name('conflicts.store')->whereNumber('round');
 });
 
 // PDF download — authorization enforced per-request via SubmissionPolicy (admin,
@@ -86,6 +94,8 @@ Route::get('/dashboard', function () {
 })->middleware(['auth'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/complete-profile', [ProfileController::class, 'complete'])->name('profile.complete');
+    Route::patch('/complete-profile', [ProfileController::class, 'completeUpdate'])->name('profile.complete.update');
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');

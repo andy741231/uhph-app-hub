@@ -31,6 +31,8 @@ final class ReviewerSubmissionView
 
     public readonly ?string $submitterDepartment;
 
+    public readonly string $status;
+
     private function __construct(Submission $submission, bool $blind)
     {
         $this->id = $submission->id;
@@ -40,6 +42,7 @@ final class ReviewerSubmissionView
             ? (string) $submission->amount_requested
             : null;
         $this->roundName = $submission->round->name;
+        $this->status = $submission->status;
 
         // The only fields blind review withholds. Everything else about
         // the submission's own content is always visible to an assigned

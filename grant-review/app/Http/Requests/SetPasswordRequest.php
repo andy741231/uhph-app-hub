@@ -22,8 +22,10 @@ class SetPasswordRequest extends FormRequest
             'phone' => ['required', 'string', 'max:20'],
             'department' => ['required', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
-            'peoplesoft_id' => ['required', 'string', 'size:6'],
-            'investigator_type' => ['required', 'in:early_stage,new'],
+            'peoplesoft_id' => ['required', 'regex:/^\d{7,20}$/'],
+            'investigator_type' => ['required', 'in:pi,other'],
+            'early_stage_investigator' => ['boolean'],
+            'new_investigator' => ['boolean'],
         ];
 
         return array_merge($requiredProfile, [

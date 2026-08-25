@@ -22,6 +22,7 @@ class AuthenticationTest extends TestCase
             'base_url' => 'https://hub.test/apps',
             'authorize_url' => 'https://hub.test/apps/sso/authorize',
             'token_url' => 'https://hub.test/apps/sso/token',
+            'logout_continue_url' => 'https://hub.test/apps/sso/logout/continue',
             'client_id' => 'hub_grant_review',
             'client_secret' => 'test-client-secret',
             'callback_uri' => '/apps/grant-review/auth/hub/callback',
@@ -118,6 +119,38 @@ class AuthenticationTest extends TestCase
         $this->assertNull($user->invite_token_hash);
         $this->assertSame(1, session('hub_application_count'));
         $this->assertSame('https://hub.test/apps/sso/logout?application=grant-review&signature=test', session('hub_logout_url'));
+        $this->assertSame('encrypted-actor-token', session('hub_actor_token'));
+    }
+
+    public function test_callback_relinks_a_disabled_profile_when_the_hub_identity_was_recreated(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'recreated@example.edu',
+            'role' => 'reviewer',
+            'status' => 'disabled',
+            'sso_sub' => '550e8400-e29b-41d4-a716-446655440010',
+        ]);
+        $newSubject = '550e8400-e29b-41d4-a716-446655440011';
+        $state = Str::random(64);
+        Http::fake([
+            'https://hub.test/apps/sso/token' => Http::response($this->identity([
+                'subject' => $newSubject,
+                'email' => $user->email,
+                'role' => 'submitter',
+            ])),
+        ]);
+
+        $this->withSession(['hub_sso_state_hash' => hash('sha256', $state)])
+            ->get('/auth/hub/callback?'.http_build_query(['code' => 'valid-code', 'state' => $state]))
+            ->assertRedirect(route('submitter.submissions.index', absolute: false));
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'sso_sub' => $newSubject,
+            'role' => 'submitter',
+            'status' => 'active',
+        ]);
     }
 
     public function test_callback_provisions_a_missing_local_user(): void
@@ -249,7 +282,7 @@ class AuthenticationTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
-    public function test_legacy_user_provisioning_and_deletion_are_blocked_when_sso_is_enabled(): void
+    public function test_scoped_user_provisioning_is_available_but_deletion_is_blocked_when_sso_is_enabled(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
         $target = User::factory()->create();
@@ -258,14 +291,13 @@ class AuthenticationTest extends TestCase
             ->withSession(['hub_authenticated_at' => now()->timestamp])
             ->get('/admin/users')
             ->assertOk()
-            ->assertSee('Manage users in App Hub')
-            ->assertSee('https://hub.test/apps/admin/users')
-            ->assertSee('App Hub manages accounts and application access')
+            ->assertSee('Add User')
+            ->assertSee('UHPH App Hub manages identities and access')
             ->assertDontSee('aria-label="Delete '.$target->full_name.'"', false);
         $this->actingAs($admin)
             ->withSession(['hub_authenticated_at' => now()->timestamp])
             ->get('/admin/users/create')
-            ->assertMethodNotAllowed();
+            ->assertOk();
         $this->actingAs($admin)
             ->withSession(['hub_authenticated_at' => now()->timestamp])
             ->delete(route('admin.users.destroy', $target, false))
@@ -352,6 +384,43 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_global_logout_validates_with_the_hub_before_destroying_the_local_session(): void
+    {
+        $user = User::factory()->create();
+        $token = Str::random(64);
+        Http::fake([
+            'https://hub.test/apps/sso/logout/continue' => Http::response([
+                'next_url' => 'https://hub.test/apps/flipbook/auth/hub-logout.php?logout_token='.$token,
+            ]),
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['hub_authenticated_at' => now()->timestamp])
+            ->get('/auth/hub/logout?'.http_build_query(['logout_token' => $token]))
+            ->assertRedirect('https://hub.test/apps/flipbook/auth/hub-logout.php?logout_token='.$token)
+            ->assertHeader('Cache-Control', 'no-store, private');
+
+        Http::assertSent(fn ($request): bool => $request->url() === 'https://hub.test/apps/sso/logout/continue'
+            && $request['application'] === 'grant-review'
+            && $request['logout_token'] === $token);
+        $this->assertGuest();
+    }
+
+    public function test_global_logout_does_not_destroy_the_session_when_hub_validation_fails(): void
+    {
+        $user = User::factory()->create();
+        Http::fake([
+            'https://hub.test/apps/sso/logout/continue' => Http::response(['error' => 'invalid_logout_token'], 400),
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['hub_authenticated_at' => now()->timestamp])
+            ->get('/auth/hub/logout?logout_token='.Str::random(64))
+            ->assertStatus(502);
+
+        $this->assertAuthenticatedAs($user);
+    }
+
     public function test_emergency_login_allows_only_active_administrators(): void
     {
         $admin = User::factory()->create([
@@ -406,6 +475,7 @@ class AuthenticationTest extends TestCase
             'role' => 'reviewer',
             'application_count' => 1,
             'logout_url' => 'https://hub.test/apps/sso/logout?application=grant-review&signature=test',
+            'actor_token' => 'encrypted-actor-token',
         ], $overrides);
     }
 }

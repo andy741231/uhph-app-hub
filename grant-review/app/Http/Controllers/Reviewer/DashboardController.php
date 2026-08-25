@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Reviewer;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreReviewRequest;
+use App\Models\ConflictOfInterestDeclaration;
 use App\Models\Review;
 use App\Models\ReviewAssignment;
 use App\Models\ReviewRevision;
@@ -20,8 +21,14 @@ class DashboardController extends Controller
      * Submissions are rendered through ReviewerSubmissionView to
      * enforce blind-review hiding. No raw Submission models (with
      * their `submitter` relation) are passed to the view.
+     *
+     * First-time gate: reviewers must complete a conflict-of-interest
+     * declaration for every round they have assignments in before they
+     * can access the dashboard. Re-declaring is allowed via the COI page
+     * itself, but the dashboard only blocks entry when no declaration
+     * exists at all for a round.
      */
-    public function index(): View
+    public function index(): View|RedirectResponse
     {
         $assignments = ReviewAssignment::with([
             'submission.round',
@@ -30,14 +37,31 @@ class DashboardController extends Controller
         ])
             ->where('reviewer_id', auth()->id())
             ->latest('assigned_at')
-            ->get()
-            ->map(function (ReviewAssignment $assignment): array {
-                return [
-                    'submission' => ReviewerSubmissionView::for($assignment->submission),
-                    'review' => $assignment->review,
-                    'assignment' => $assignment,
-                ];
-            });
+            ->get();
+
+        $declaredRoundIds = ConflictOfInterestDeclaration::query()
+            ->where('reviewer_id', auth()->id())
+            ->pluck('round_id');
+
+        // Assignments are ordered by latest first, so the first round
+        // without a declaration is the most recently assigned one.
+        foreach ($assignments as $assignment) {
+            $round = $assignment->submission?->round;
+            if ($round && ! $declaredRoundIds->contains($round->id)) {
+                return redirect()->route('reviewer.conflicts.create', [
+                    'round' => $round->id,
+                    'return_to' => route('reviewer.dashboard', [], false),
+                ]);
+            }
+        }
+
+        $assignments = $assignments->map(function (ReviewAssignment $assignment): array {
+            return [
+                'submission' => ReviewerSubmissionView::for($assignment->submission),
+                'review' => $assignment->review,
+                'assignment' => $assignment,
+            ];
+        });
 
         return view('reviewer.dashboard', compact('assignments'));
     }
@@ -54,11 +78,28 @@ class DashboardController extends Controller
      * as "Reviewer 1", "Reviewer 2", etc. — the current reviewer's own
      * review is excluded from this list.
      */
-    public function show(Review $review): View
+    public function show(Request $request, Review $review): View|RedirectResponse
     {
         $this->authorize('view', $review);
 
         $review->load(['reviewAssignment.submission.round', 'reviewAssignment.submission.submitter']);
+
+        // First-time gate: reviewers must complete a conflict-of-interest
+        // declaration for the round before they can open any review in it.
+        // Re-declaring is allowed via the COI page itself, but the review
+        // page only blocks entry when no declaration exists at all.
+        $roundId = $review->reviewAssignment->submission->round_id;
+        $hasDeclared = ConflictOfInterestDeclaration::query()
+            ->where('reviewer_id', $request->user()->id)
+            ->where('round_id', $roundId)
+            ->exists();
+
+        if (! $hasDeclared) {
+            return redirect()->route('reviewer.conflicts.create', [
+                'round' => $roundId,
+                'return_to' => route('reviewer.reviews.show', $review, false),
+            ]);
+        }
 
         $submission = ReviewerSubmissionView::for($review->reviewAssignment->submission);
 
@@ -76,7 +117,7 @@ class DashboardController extends Controller
             ->values()
             ->map(function ($r, $i) {
                 return [
-                    'label' => 'Reviewer ' . ($i + 1),
+                    'label' => 'Reviewer '.($i + 1),
                     'score' => $r->score !== null ? (float) $r->score : null,
                     'comments' => $r->comments,
                     'submitted_at' => $r->submitted_at,
@@ -141,6 +182,20 @@ class DashboardController extends Controller
             'review_id' => $review->id,
             'score' => $data['score'] ?? null,
             'comments' => $data['comments'] ?? null,
+            'factor1_score' => $data['factor1_score'] ?? null,
+            'factor1_comments' => $data['factor1_comments'] ?? null,
+            'factor2_score' => $data['factor2_score'] ?? null,
+            'factor2_comments' => $data['factor2_comments'] ?? null,
+            'factor3_sufficient' => $data['factor3_sufficient'] ?? null,
+            'factor3_comments' => $data['factor3_comments'] ?? null,
+            'additional_human_subjects' => $data['additional_human_subjects'] ?? null,
+            'additional_human_subjects_comments' => $data['additional_human_subjects_comments'] ?? null,
+            'additional_vertebrate_animals' => $data['additional_vertebrate_animals'] ?? null,
+            'additional_vertebrate_animals_comments' => $data['additional_vertebrate_animals_comments'] ?? null,
+            'additional_biohazards' => $data['additional_biohazards'] ?? null,
+            'additional_biohazards_comments' => $data['additional_biohazards_comments'] ?? null,
+            'additional_resubmission' => $data['additional_resubmission'] ?? null,
+            'additional_resubmission_comments' => $data['additional_resubmission_comments'] ?? null,
             'submitted_at' => $now,
         ]);
 

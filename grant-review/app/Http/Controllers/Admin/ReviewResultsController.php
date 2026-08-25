@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ConflictOfInterestDeclaration;
 use App\Models\Review;
 use App\Models\Round;
 use App\Models\Submission;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReviewResultsController extends Controller
 {
@@ -67,7 +68,16 @@ class ReviewResultsController extends Controller
             'max' => $scores->isNotEmpty() ? round((float) $scores->max(), 2) : null,
         ];
 
-        return view('admin.review-results.show', compact('submission', 'assignments', 'stats'));
+        // Conflict-of-interest declarations for this round, keyed by reviewer
+        // and then by submission id, so admins can see which reviewers flagged
+        // a conflict on this specific proposal (and why).
+        $coiByReviewer = ConflictOfInterestDeclaration::query()
+            ->with('entries')
+            ->where('round_id', $submission->round_id)
+            ->get()
+            ->keyBy('reviewer_id');
+
+        return view('admin.review-results.show', compact('submission', 'assignments', 'stats', 'coiByReviewer'));
     }
 
     /**
@@ -85,7 +95,7 @@ class ReviewResultsController extends Controller
         return view('admin.review-results.timeline', compact('submission', 'review', 'revisions'));
     }
 
-    public function exportCsv(?int $roundId = null): \Symfony\Component\HttpFoundation\StreamedResponse
+    public function exportCsv(?int $roundId = null): StreamedResponse
     {
         $query = Submission::with([
             'round',
@@ -163,12 +173,12 @@ class ReviewResultsController extends Controller
 
         $round = $roundId ? Round::find($roundId) : null;
         $filename = $round
-            ? 'round-results-' . Str::slug($round->name) . '.csv'
+            ? 'round-results-'.Str::slug($round->name).'.csv'
             : 'round-results-all.csv';
 
         return response()->stream($callback, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 

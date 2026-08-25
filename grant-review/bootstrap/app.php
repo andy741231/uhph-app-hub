@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureEmergencyLoginAllowed;
 use App\Http\Middleware\EnsureHubSessionIsFresh;
 use App\Http\Middleware\EnsureHubSsoIsDisabled;
+use App\Http\Middleware\EnsureProfileIsComplete;
 use App\Http\Middleware\EnsureRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -17,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             EnsureHubSessionIsFresh::class,
+            EnsureProfileIsComplete::class,
         ]);
         $middleware->alias([
             'role' => EnsureRole::class,

@@ -10,16 +10,28 @@ use App\Mail\InviteUser;
 use App\Models\Round;
 use App\Models\RoundInvitation;
 use App\Models\User;
+use App\Services\HubIdentityService;
+use App\Services\HubUserReconciler;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
+use Uh\AppHub\Services\HubClient;
 
 class UserController extends Controller
 {
-    public function index(Request $request): View
-    {
+    public function index(
+        Request $request,
+        HubClient $hub,
+        HubIdentityService $identities,
+        HubUserReconciler $reconciler,
+    ): View {
+        if (config('hub.enabled') && $request->session()->has(config('hub.actor_token_session_key', 'hub_actor_token'))) {
+            $reconciler->reconcile($request, $hub, $identities);
+        }
+        $showArchived = $request->boolean('archived');
         $search = trim($request->get('search', ''));
         $role = $request->get('role', '');
         $sort = $request->get('sort', 'created_at');
@@ -34,6 +46,9 @@ class UserController extends Controller
         }
 
         $query = User::query();
+        if (config('hub.enabled')) {
+            $query->where('status', $showArchived ? 'disabled' : 'active');
+        }
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
@@ -51,7 +66,7 @@ class UserController extends Controller
         $users = $query->orderBy($sort, $direction)->paginate(50)->withQueryString();
         $rounds = Round::orderBy('name')->get();
 
-        return view('admin.users.index', compact('users', 'rounds', 'search', 'role', 'sort', 'direction'));
+        return view('admin.users.index', compact('users', 'rounds', 'search', 'role', 'sort', 'direction', 'showArchived'));
     }
 
     public function create(): View
@@ -61,8 +76,32 @@ class UserController extends Controller
         return view('admin.users.create', compact('rounds'));
     }
 
-    public function store(StoreUserRequest $request): RedirectResponse
-    {
+    public function store(
+        StoreUserRequest $request,
+        HubClient $hub,
+        HubIdentityService $identities,
+    ): RedirectResponse {
+        if (config('hub.enabled')) {
+            $identity = $hub->manageUser(
+                (string) $request->session()->get(config('hub.actor_token_session_key', 'hub_actor_token')),
+                [
+                    'name' => trim($request->first_name.' '.$request->last_name),
+                    'email' => $request->email,
+                    'role' => $request->role,
+                ],
+            );
+            $user = $identities->resolve($identity);
+            $this->syncRoundInvitations($user, $request->input('round_ids', []));
+            $message = $identity['created']
+                ? "User {$user->email} created in UHPH App Hub and assigned to Grant Review."
+                : "Existing UHPH App Hub user {$user->email} assigned to Grant Review.";
+            if ($identity['created'] && ! $identity['invitation_sent']) {
+                $message .= ' The UHPH App Hub invitation could not be sent.';
+            }
+
+            return redirect()->route('admin.users.index')->with('status', $message);
+        }
+
         $user = User::create([
             'email' => $request->email,
             'first_name' => $request->first_name,
@@ -184,9 +223,29 @@ class UserController extends Controller
         return view('admin.users.show', compact('user', 'rounds', 'submissions', 'reviewAssignments'));
     }
 
-    public function update(UpdateUserRequest $request, User $user): RedirectResponse
-    {
+    public function update(
+        UpdateUserRequest $request,
+        User $user,
+        HubClient $hub,
+        HubIdentityService $identities,
+    ): RedirectResponse {
         $data = $request->validated();
+
+        if (config('hub.enabled')) {
+            $identity = $hub->manageUser(
+                (string) $request->session()->get(config('hub.actor_token_session_key', 'hub_actor_token')),
+                [
+                    'subject' => $user->sso_sub,
+                    'name' => $user->full_name,
+                    'email' => $user->email,
+                    'role' => $data['role'],
+                ],
+            );
+            $user = $identities->resolve($identity);
+            $data['email'] = $identity['email'];
+            $data['role'] = $identity['role'];
+            $data['status'] = 'active';
+        }
 
         // Sync round invitations if checkboxes were submitted
         if (array_key_exists('round_ids', $data)) {
@@ -212,6 +271,46 @@ class UserController extends Controller
             ->with('status', "User {$user->full_name} updated.");
     }
 
+    public function revoke(Request $request, User $user, HubClient $hub): RedirectResponse
+    {
+        if ($user->id === $request->user()->id) {
+            return back()->withErrors(['user' => 'You cannot revoke your own Grant Review access.']);
+        }
+        abort_unless(config('hub.enabled') && is_string($user->sso_sub), 404);
+        $hub->revokeManagedUser(
+            (string) $request->session()->get(config('hub.actor_token_session_key', 'hub_actor_token')),
+            $user->sso_sub,
+        );
+        $user->update(['status' => 'disabled']);
+        DB::table('sessions')->where('user_id', $user->id)->delete();
+
+        return redirect()->route('admin.users.index')
+            ->with('status', "Grant Review access revoked for {$user->full_name}. Historical records were preserved.");
+    }
+
+    public function restore(
+        Request $request,
+        User $user,
+        HubClient $hub,
+        HubIdentityService $identities,
+    ): RedirectResponse {
+        abort_unless(config('hub.enabled') && is_string($user->sso_sub), 404);
+        abort_if($user->status === 'active', 409, 'User is already active.');
+
+        $identity = $hub->manageUser(
+            (string) $request->session()->get(config('hub.actor_token_session_key', 'hub_actor_token')),
+            [
+                'name' => $user->full_name,
+                'email' => $user->email,
+                'role' => $user->role,
+            ],
+        );
+        $identities->restore($user, $identity);
+
+        return redirect()->route('admin.users.index')
+            ->with('status', "Grant Review access restored for {$user->full_name}.");
+    }
+
     public function destroy(Request $request, User $user): RedirectResponse
     {
         if ($user->id === $request->user()->id) {
@@ -223,6 +322,21 @@ class UserController extends Controller
 
         return redirect()->route('admin.users.index')
             ->with('status', "User {$name} deleted.");
+    }
+
+    private function syncRoundInvitations(User $user, array $roundIds): void
+    {
+        $currentIds = $user->roundsInvitedTo()->pluck('rounds.id')->toArray();
+        RoundInvitation::where('user_id', $user->id)
+            ->whereIn('round_id', array_diff($currentIds, $roundIds))
+            ->delete();
+
+        foreach (array_diff($roundIds, $currentIds) as $roundId) {
+            RoundInvitation::firstOrCreate([
+                'round_id' => $roundId,
+                'user_id' => $user->id,
+            ]);
+        }
     }
 
     private function sendInviteEmail(User $user, string $token): void

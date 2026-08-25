@@ -27,6 +27,8 @@ class User extends Authenticatable
         'title',
         'peoplesoft_id',
         'investigator_type',
+        'early_stage_investigator',
+        'new_investigator',
         'role',
         'status',
         'invite_token_hash',
@@ -44,7 +46,18 @@ class User extends Authenticatable
     {
         return [
             'invite_expires_at' => 'datetime',
+            'early_stage_investigator' => 'boolean',
+            'new_investigator' => 'boolean',
         ];
+    }
+
+    public function hasCompleteProfile(): bool
+    {
+        return filled($this->phone)
+            && filled($this->department)
+            && filled($this->title)
+            && preg_match('/^\d{7,20}$/', (string) $this->peoplesoft_id) === 1
+            && in_array($this->investigator_type, ['pi', 'other'], true);
     }
 
     public function roundsInvitedTo(): BelongsToMany
@@ -66,6 +79,11 @@ class User extends Authenticatable
     public function decisionsMade(): HasMany
     {
         return $this->hasMany(Decision::class, 'decided_by');
+    }
+
+    public function conflictOfInterestDeclarations(): HasMany
+    {
+        return $this->hasMany(ConflictOfInterestDeclaration::class, 'reviewer_id');
     }
 
     public function isAdmin(): bool

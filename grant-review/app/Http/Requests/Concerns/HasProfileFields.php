@@ -19,16 +19,18 @@ trait HasProfileFields
             'phone' => ['nullable', 'string', 'max:20'],
             'department' => ['nullable', 'string', 'max:255'],
             'title' => ['nullable', 'string', 'max:255'],
-            'peoplesoft_id' => ['nullable', 'string', 'size:6'],
-            'investigator_type' => ['nullable', 'in:early_stage,new'],
+            'peoplesoft_id' => ['nullable', 'regex:/^\d{7,20}$/'],
+            'investigator_type' => ['nullable', 'in:pi,other'],
+            'early_stage_investigator' => ['boolean'],
+            'new_investigator' => ['boolean'],
         ];
     }
 
     protected function profileMessages(): array
     {
         return [
-            'peoplesoft_id.size' => 'PeopleSoft ID must be exactly 6 digits.',
-            'investigator_type.in' => 'Please select Early-Stage Investigator or New Investigator.',
+            'peoplesoft_id.regex' => 'PeopleSoft ID must contain 7 to 20 digits.',
+            'investigator_type.in' => 'Please select PI or Other.',
         ];
     }
 }

@@ -7,6 +7,8 @@ return [
     'base_url' => $baseUrl,
     'authorize_url' => $baseUrl.'/sso/authorize',
     'token_url' => $baseUrl.'/sso/token',
+    'logout_continue_url' => $baseUrl.'/sso/logout/continue',
+    'managed_users_url' => $baseUrl.'/sso/managed-users',
     'client_id' => env('HUB_CLIENT_ID'),
     'client_secret' => env('HUB_CLIENT_SECRET'),
     'callback_uri' => env('HUB_CALLBACK_URI', '/apps/grant-review/auth/hub/callback'),

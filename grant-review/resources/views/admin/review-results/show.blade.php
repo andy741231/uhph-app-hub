@@ -231,7 +231,11 @@
             {{-- Reviews list --}}
             <div class="divide-y divide-uh-border">
                 @forelse ($assignments as $assignment)
-                    @php $review = $assignment->review; @endphp
+                    @php
+                        $review = $assignment->review;
+                        $coiDeclaration = $coiByReviewer->get($assignment->reviewer_id);
+                        $coiEntry = $coiDeclaration?->entries->firstWhere('submission_id', $submission->id);
+                    @endphp
                     <div class="px-5 py-4 hover:bg-gray-50/50 transition-colors">
                         <div class="flex items-start justify-between gap-4">
                             <div class="flex items-start gap-3 min-w-0">
@@ -252,6 +256,14 @@
                             </div>
 
                             <div class="flex items-center gap-3 shrink-0">
+                                @if ($coiEntry)
+                                    <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-md bg-amber-100 text-amber-800 border border-amber-300" title="Reviewer declared a conflict of interest on this proposal">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+                                        </svg>
+                                        COI
+                                    </span>
+                                @endif
                                 @if ($review?->submitted_at)
                                     <span class="badge-green text-xs">Submitted</span>
                                 @elseif ($review && ($review->score !== null || $review->comments))
@@ -260,14 +272,23 @@
                                     <span class="badge-gray text-xs">Not started</span>
                                 @endif
                                 @if ($review?->score !== null)
-                                    <span class="text-2xl font-black text-uh-red leading-none">{{ number_format((float) $review->score, 2) }}</span>
+                                    <span class="text-2xl font-black text-uh-red leading-none">{{ $review->score }}<span class="text-xs text-gray-400">/9</span></span>
                                 @endif
                             </div>
                         </div>
 
+                        @if ($coiEntry)
+                            <div class="mt-3 ml-13 bg-amber-50 rounded-lg p-3.5 border border-amber-200">
+                                <p class="text-xs font-semibold text-amber-800 uppercase tracking-wider mb-1.5">Conflict of interest</p>
+                                <p class="text-sm text-amber-900 whitespace-pre-wrap leading-relaxed">
+                                    {{ $coiEntry->description ?? 'No description provided.' }}
+                                </p>
+                            </div>
+                        @endif
+
                         @if ($review?->comments)
                             <div class="mt-3 ml-13 bg-uh-muted rounded-lg p-3.5 border border-uh-border">
-                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Comments</p>
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Overall Impact</p>
                                 <p class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{{ $review->comments }}</p>
                             </div>
                         @endif

@@ -25,7 +25,10 @@ class HubIdentityService implements MapsHubIdentity
                 throw new ConflictHttpException('The Hub identity conflicts with an existing Grant Review account.');
             }
 
-            if (! $bySubject && $byEmail?->sso_sub && ! hash_equals($byEmail->sso_sub, $identity['subject'])) {
+            if (! $bySubject
+                && $byEmail?->sso_sub
+                && $byEmail->status !== 'disabled'
+                && ! hash_equals($byEmail->sso_sub, $identity['subject'])) {
                 throw new ConflictHttpException('The email address is linked to a different Hub identity.');
             }
 
@@ -40,25 +43,55 @@ class HubIdentityService implements MapsHubIdentity
                 ]);
             }
 
-            $user->email = $email;
-            $user->first_name = $user->first_name ?: $firstName;
-            $user->last_name = $user->last_name ?: $lastName;
-            $user->sso_sub = $identity['subject'];
-            $user->role = $identity['role'];
-            $user->status = 'active';
-            $user->invite_token_hash = null;
-            $user->invite_expires_at = null;
-
-            if ($identity['role'] !== 'admin') {
-                $user->password_hash = null;
-            }
-
-            if ($user->isDirty()) {
-                $user->save();
-            }
-
-            return $user;
+            return $this->apply($user, $identity, $email);
         });
+    }
+
+    public function restore(User $profile, array $identity): User
+    {
+        return DB::transaction(function () use ($profile, $identity): User {
+            $profile = User::lockForUpdate()->findOrFail($profile->id);
+            $email = strtolower(trim($identity['email']));
+
+            if ($profile->status !== 'disabled' || strtolower($profile->email) !== $email) {
+                throw new ConflictHttpException('The Hub identity does not match the archived Grant Review profile.');
+            }
+
+            $subjectOwner = User::query()
+                ->where('sso_sub', $identity['subject'])
+                ->whereKeyNot($profile->id)
+                ->lockForUpdate()
+                ->exists();
+
+            if ($subjectOwner) {
+                throw new ConflictHttpException('The Hub identity is linked to a different Grant Review account.');
+            }
+
+            return $this->apply($profile, $identity, $email);
+        });
+    }
+
+    private function apply(User $user, array $identity, string $email): User
+    {
+        [$firstName, $lastName] = $this->splitName($identity['name']);
+        $user->email = $email;
+        $user->first_name = $user->first_name ?: $firstName;
+        $user->last_name = $user->last_name ?: $lastName;
+        $user->sso_sub = $identity['subject'];
+        $user->role = $identity['role'];
+        $user->status = 'active';
+        $user->invite_token_hash = null;
+        $user->invite_expires_at = null;
+
+        if ($identity['role'] !== 'admin') {
+            $user->password_hash = null;
+        }
+
+        if ($user->isDirty()) {
+            $user->save();
+        }
+
+        return $user;
     }
 
     private function splitName(string $name): array

@@ -34,6 +34,7 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::get('auth/hub/callback', [HubSessionController::class, 'callback'])->name('hub.callback');
+Route::get('auth/hub/logout', [HubSessionController::class, 'globalDestroy'])->name('hub.logout');
 
 Route::middleware('auth')->group(function () {
     Route::get('confirm-password', [ConfirmablePasswordController::class, 'show'])

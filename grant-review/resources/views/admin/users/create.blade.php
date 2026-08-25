@@ -7,7 +7,7 @@
     <p class="text-sm text-gray-500 mt-1">Invite a single user or bulk import submitters via CSV</p>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div class="grid grid-cols-1 {{ config('hub.enabled') ? '' : 'lg:grid-cols-2' }} gap-6">
     {{-- Single user form --}}
     <div class="card p-6">
         <h2 class="text-lg font-bold text-uh-fg mb-4 flex items-center gap-2">
@@ -80,6 +80,7 @@
         </form>
     </div>
 
+    @unless(config('hub.enabled'))
     {{-- CSV bulk import --}}
     <div class="card p-6">
         <h2 class="text-lg font-bold text-uh-fg mb-4 flex items-center gap-2">
@@ -124,5 +125,6 @@
             </div>
         </form>
     </div>
+    @endunless
 </div>
 @endsection

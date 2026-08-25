@@ -2,12 +2,17 @@
 
 namespace App\Models;
 
+use Database\Factories\ReviewAssignmentFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ReviewAssignment extends Model
 {
+    /** @use HasFactory<ReviewAssignmentFactory> */
+    use HasFactory;
+
     public $timestamps = false;
 
     protected $fillable = [

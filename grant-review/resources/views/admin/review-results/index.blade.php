@@ -97,8 +97,8 @@
                         </td>
                         <td>
                             @if ($item['average'] !== null)
-                                <span class="font-bold text-uh-fg">{{ number_format($item['average'], 2) }}</span>
-                                <span class="text-xs text-gray-500">/ 100</span>
+                                <span class="font-bold text-uh-fg">{{ number_format($item['average'], 1) }}</span>
+                                <span class="text-xs text-gray-500">/ 9</span>
                             @else
                                 <span class="text-sm text-gray-400">—</span>
                             @endif
@@ -126,10 +126,10 @@
                                     <input type="hidden" name="submission_id" value="{{ $submission->id }}">
                                     <label class="block text-xs font-medium text-gray-700" for="outcome-{{ $submission->id }}">Outcome</label>
                                     <select id="outcome-{{ $submission->id }}" name="outcome" required class="input text-sm py-1.5">
-                                        <option value="funded" {{ $submission->decision?->outcome === 'funded' ? 'selected' : '' }}>Funded</option>
+                                        <option value="funded" {{ $submission->decision?->outcome === 'funded' ? 'selected' : '' }}>Recommended for funding</option>
                                         <option value="not_funded" {{ $submission->decision?->outcome === 'not_funded' ? 'selected' : '' }}>Not funded</option>
                                     </select>
-                                    <label class="block text-xs font-medium text-gray-700" for="amount-{{ $submission->id }}">Amount awarded</label>
+                                    <label class="block text-xs font-medium text-gray-700" for="amount-{{ $submission->id }}">Amount recommended</label>
                                     <input id="amount-{{ $submission->id }}" type="number" name="amount_awarded" min="0" step="0.01" value="{{ $submission->decision?->amount_awarded }}" class="input text-sm py-1.5" placeholder="0.00">
                                     <button type="submit" class="btn-primary text-xs w-full">Save decision</button>
                                 </form>
