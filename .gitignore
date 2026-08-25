@@ -29,6 +29,10 @@ Thumbs.db
 .devin/.cache/
 .windsurf/.cache/
 
+# ===== MCP / browser automation snapshots =====
+.playwright-mcp/
+.puppeteer-mcp/
+
 # ===== OS / misc =====
 -old/
 
