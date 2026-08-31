@@ -6,7 +6,7 @@
  * The navbar logo is the Font Awesome 6.5.1 "book-open" glyph (unicode f518)
  * in UH red. This script renders that exact glyph (path data below, from
  * @fortawesome/free-solid-svg-icons 6.5.1) white on the same red rounded
- * square used by the App Hub favicon, so the two sit together consistently
+ * square used by the UHPH App Hub favicon, so the two sit together consistently
  * in browser tabs.
  *
  * Writes favicon.png (64x64) and favicon.ico (16/32/48/64) into the flipbook
@@ -298,7 +298,7 @@ function fillSubpaths(GdImage $im, array $subpaths, int $color): void
     }
 }
 
-/** Red rounded square (matching the App Hub favicon) with the white book glyph. */
+/** Red rounded square (matching the UHPH App Hub favicon) with the white book glyph. */
 function drawIcon(int $size, string $iconPath): GdImage
 {
     $ss = 4; // supersample factor for anti-aliasing
@@ -310,7 +310,7 @@ function drawIcon(int $size, string $iconPath): GdImage
     $transparent = imagecolorallocatealpha($im, 0, 0, 0, 127);
     imagefilledrectangle($im, 0, 0, $canvasSize, $canvasSize, $transparent);
 
-    // Vertical red gradient (Cougar red -> dark red), same as the App Hub mark.
+    // Vertical red gradient (Cougar red -> dark red), same as the UHPH App Hub mark.
     for ($y = 0; $y < $canvasSize; $y++) {
         $t = $y / max(1, $canvasSize - 1);
         $color = imagecolorallocate(

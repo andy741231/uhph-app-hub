@@ -16,7 +16,7 @@ class StoreSubmissionRequest extends FormRequest
         return [
             'round_id' => ['required', 'exists:rounds,id'],
             'title' => ['required', 'string', 'max:500'],
-            'abstract' => ['required', 'string'],
+            'abstract' => ['required', 'string', 'max:65000'],
             'amount_requested' => ['required', 'numeric', 'min:0', 'max:9999999999.99'],
             'pdf' => ['required', 'file', 'mimes:pdf', 'max:20480'], // 20MB max
         ];

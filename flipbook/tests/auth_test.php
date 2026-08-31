@@ -38,6 +38,8 @@ expect(! flipbook_is_safe_app_path('https://example.com'), 'Absolute external UR
 expect(flipbook_is_safe_hub_logout_url('https://hub.test/apps/sso/logout?application=flipbook&signature=test'), 'Signed Hub logout URLs should be accepted.');
 expect(! flipbook_is_safe_hub_logout_url('https://attacker.example/apps/sso/logout?signature=test'), 'Cross-origin logout URLs must be rejected.');
 expect(! flipbook_is_safe_hub_logout_url('https://hub.test/apps/dashboard'), 'Non-logout Hub URLs must be rejected.');
+expect(flipbook_is_safe_hub_navigation_url('https://hub.test/apps/grant-review/auth/hub/logout?logout_token=test'), 'Same-origin Hub logout navigation should be accepted.');
+expect(! flipbook_is_safe_hub_navigation_url('https://attacker.example/apps/login'), 'Cross-origin Hub navigation must be rejected.');
 
 flipbook_auth_start_session();
 $_SESSION['flipbook_csrf_token'] = 'known-csrf-token';
@@ -62,10 +64,13 @@ foreach ($mutationApis as $file) {
 $header = file_get_contents($root.'/includes/header.php');
 $callback = file_get_contents($root.'/auth/callback.php');
 $logout = file_get_contents($root.'/auth/logout.php');
+$globalLogout = file_get_contents($root.'/auth/hub-logout.php');
 expect(str_contains($header, 'All applications'), 'The authenticated header should offer the app launcher to multi-app users.');
 expect(str_contains($callback, "'application_count'"), 'The callback must retain the assigned application count.');
 expect(str_contains($callback, "'logout_url'"), 'The callback must retain the signed Hub logout URL.');
 expect(str_contains($logout, 'flipbook_is_safe_hub_logout_url'), 'Logout must only redirect to a trusted Hub logout URL.');
+expect(str_contains($globalLogout, 'FLIPBOOK_HUB_LOGOUT_CONTINUE_URL'), 'Global logout must validate its token with the Hub.');
+expect(str_contains($globalLogout, 'flipbook_destroy_session'), 'Global logout must destroy the Flipbook session.');
 
 $viewer = file_get_contents($root.'/viewer.php');
 $viewerJs = file_get_contents($root.'/assets/js/viewer.js');

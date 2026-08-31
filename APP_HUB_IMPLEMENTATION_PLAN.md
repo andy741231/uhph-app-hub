@@ -1,4 +1,4 @@
-# Transitional App Hub Implementation Plan
+# Transitional UHPH App Hub Implementation Plan
 
 ## Status
 
@@ -6,7 +6,7 @@ Implementation is complete through Phase 9 (Verification). Phase 10 transitional
 
 ## Confirmed Decisions
 
-- Build a dedicated Laravel App Hub.
+- Build a dedicated Laravel UHPH App Hub.
 - Serve the main login and authorized application dashboard from `/apps`.
 - Hub accounts are created by administrators only.
 - Protect Flipbook administration while keeping public viewers and embeds accessible.

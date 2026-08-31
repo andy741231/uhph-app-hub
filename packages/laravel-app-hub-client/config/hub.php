@@ -7,6 +7,8 @@ return [
     'base_url' => $baseUrl,
     'authorize_url' => $baseUrl.'/sso/authorize',
     'token_url' => $baseUrl.'/sso/token',
+    'logout_continue_url' => $baseUrl.'/sso/logout/continue',
+    'managed_users_url' => $baseUrl.'/sso/managed-users',
     'client_id' => env('HUB_CLIENT_ID'),
     'client_secret' => env('HUB_CLIENT_SECRET'),
     'callback_uri' => env('HUB_CALLBACK_URI'),
@@ -21,5 +23,6 @@ return [
     'authenticated_at_session_key' => 'hub_authenticated_at',
     'application_count_session_key' => 'hub_application_count',
     'logout_url_session_key' => 'hub_logout_url',
+    'actor_token_session_key' => 'hub_actor_token',
     'emergency_authenticated_session_key' => 'emergency_authenticated',
 ];

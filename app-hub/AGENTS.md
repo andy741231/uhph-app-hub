@@ -1,4 +1,4 @@
-# App Hub Project Instructions
+# UHPH App Hub Project Instructions
 
 ## Deployment
 
@@ -6,7 +6,7 @@
 - `E:\apps\index.php` is the public front controller bridge.
 - `E:\apps\web.config` rewrites only non-physical Hub routes and must continue preserving existing physical application directories.
 - The `app-hub` source directory must remain blocked from direct HTTP access.
-- The production environment must set `APP_URL` to the full `/apps` URL and `SESSION_PATH=/apps`.
+- The production environment must set `APP_URL` to the full `/apps` URL, `SESSION_COOKIE=uhph_app_hub_session`, and `SESSION_PATH=/apps`. The dedicated cookie name avoids CSRF failures caused by legacy root-path `app-hub-session` cookies.
 - Hub static assets are served from physical files at the `E:\apps` root (e.g. `favicon.png`, `favicon.ico`), not from `app-hub/public`, because the bridge rewrites only non-physical requests.
 - Regenerate and redeploy the Hub favicon with `php E:/apps/app-hub/scripts/generate-favicon.php` (requires GD); it writes `app-hub/public` and copies to the served `E:\apps` root.
 
@@ -54,13 +54,15 @@ Create an administrator interactively so the password is not exposed in shell hi
 composer exec --working-dir="E:/apps/app-hub" -- php artisan hub:create-admin
 ```
 
-All App Hub password creation and reset flows require at least 8 characters containing letters and numbers.
+All UHPH App Hub password creation and reset flows require at least 8 characters containing letters and numbers. Completing a valid set-password invitation authenticates the user, regenerates the session, and launches their application automatically when they have exactly one enabled assignment; users with zero or multiple enabled assignments continue to the Hub dashboard.
 
 The dashboard at `/apps/dashboard` renders assigned applications as a mobile-style launcher. Each tile shows the application favicon from `{path}/favicon.ico` when available; otherwise a deterministic gradient tile with the application initials (`Application::iconInitial()`, `iconColorClass()`, `iconUrl()`) is used. Application icon data lives on the model, so adding a real favicon at an application's registered path is all that is needed to override the default tile.
 
 Administrators can batch-create users and application assignments at `/apps/admin/users/import`. Download the example CSV from that page and keep the exact `name,email,application,role` header. Imports accept up to 1,000 institutional-email rows, validate the complete file before writing, preserve existing account credentials and Hub administrator permissions, and send set-password invitations only to newly created users. Grant Review round assignments remain managed within Grant Review.
 
-The one-time `scripts/import-grant-review-users.php` cross-database migration imports missing legacy Grant Review users and assignments into App Hub without overwriting existing Hub users or sending email. It runs as a dry run by default and requires `--live`; the explicit legacy password exception is accepted only through stdin and is never stored in the script. Existing compatible bcrypt hashes are copied directly. Grant Review application admins remain ordinary Hub users with the `grant-review` application role `admin`; they are not granted global Hub administrator privileges.
+Application administrators are distinct from global Hub administrators: `users.is_admin` controls `/apps/admin/*`, while `application_user.role=admin` permits scoped management only for that assigned application. SSO identity responses include a short-lived encrypted `actor_token`; a client must present both its application credentials and that actor token to `GET`, `PUT`, or `DELETE /apps/sso/managed-users`. The Hub rechecks the actor's current assignment, exposes only the authenticated application's assignment list, permits only its registered roles, never grants global administrator status, prevents self-demotion/self-revocation, sends UHPH App Hub invitations for new identities, and records changes in `application_admin_audits`. Clients reconcile local profiles from the GET response and archive rather than physically delete historical records. Existing client sessions must reauthenticate after deploying this protocol change.
+
+The one-time `scripts/import-grant-review-users.php` cross-database migration imports missing legacy Grant Review users and assignments into UHPH App Hub without overwriting existing Hub users or sending email. It runs as a dry run by default and requires `--live`; the explicit legacy password exception is accepted only through stdin and is never stored in the script. Existing compatible bcrypt hashes are copied directly. Grant Review application admins remain ordinary Hub users with the `grant-review` application role `admin`; they are not granted global Hub administrator privileges.
 
 Administrators can delete a single user from the user edit page (`DELETE /apps/admin/users/{user}`) or batch-delete up to 1,000 users from the users index (`DELETE /apps/admin/users/bulk`). Deletion cascades application assignments and pending SSO authorization codes, nulls the user reference on retained login/launch audit rows, and clears active sessions. Administrators cannot delete their own account, and the bulk endpoint rejects selections that include the acting administrator. Both endpoints require confirmation prompts in the UI.
 
@@ -69,8 +71,8 @@ Administrators can delete a single user from the user edit page (`DELETE /apps/a
 - Browser authorization endpoint: `GET /apps/sso/authorize`.
 - Server-to-server exchange endpoint: `POST /apps/sso/token` with HTTP Basic client authentication.
 - Signed browser logout endpoint: `GET /apps/sso/logout`; its URL is issued in the identity response and must not be constructed by clients.
-- Identity responses include `application_count` and `logout_url`. Clients store both in their local session, show “All applications” only when the count is greater than one, and use the signed URL after clearing the local session so Sign out also clears the Hub session.
-- Direct app authorization and coordinated logout redirect to `/apps/login?application={key}`. The login controller validates the key against an enabled registered application and uses it only for that request's heading; never persist the application label in the session, so a later direct `/apps/login` visit always says App Hub. The intended post-login destination remains an absolute origin-plus-path URL in the session. Do not store the registered `/apps/...` path alone because Laravel will prefix the Hub's `/apps` `APP_URL` and produce `/apps/apps/...`.
+- Identity responses include `application_count` and `logout_url`. Clients store both in their local session, show “All applications” only when the count is greater than one, and use the signed URL after clearing the local session. The Hub then coordinates immediate browser logout through every enabled application's validated `frontchannel_logout_path`; each client validates the opaque, two-minute, single-use transaction with `POST /apps/sso/logout/continue` before clearing its own session.
+- Direct app authorization and coordinated global logout redirect to `/apps/login?application={key}`. The login controller validates the key against an enabled registered application and uses it only for that request's heading; never persist the application label in the session, so a later direct `/apps/login` visit always says UHPH App Hub. The intended post-login destination remains an absolute origin-plus-path URL in the session. Do not store the registered `/apps/...` path alone because Laravel will prefix the Hub's `/apps` `APP_URL` and produce `/apps/apps/...`.
 - Callback paths must exactly match the registered internal `/apps/...` path.
 - Client secrets are displayed only once when generated or rotated and must never be committed or logged.
 - Authorization codes are stored only as SHA-256 hashes, expire after 60 seconds by default, and are single-use.

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Auth;
 
 class LogoutController extends Controller
 {
-    public function __invoke(Request $request): RedirectResponse
+    public function __invoke(Request $request, GlobalLogout $logout): RedirectResponse
     {
         $application = Application::where('key', $request->string('application')->toString())
             ->where('enabled', true)
@@ -26,7 +26,8 @@ class LogoutController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         $request->session()->put('url.intended', $request->getSchemeAndHttpHost().$application->path);
+        $request->session()->flash('status', 'You have been signed out of all applications.');
 
-        return redirect()->route('login', ['application' => $application->key])->with('status', 'You have been signed out.');
+        return $logout->start($request, $application);
     }
 }

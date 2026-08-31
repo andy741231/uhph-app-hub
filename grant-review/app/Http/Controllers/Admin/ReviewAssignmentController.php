@@ -4,12 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AssignReviewersRequest;
+use App\Mail\ReviewerAssigned;
 use App\Models\Review;
 use App\Models\ReviewAssignment;
 use App\Models\Submission;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -53,7 +55,9 @@ class ReviewAssignmentController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($submission, $reviewers): void {
+        $newlyAssigned = collect();
+
+        DB::transaction(function () use ($submission, $reviewers, &$newlyAssigned): void {
             $current = $submission->reviewAssignments()->with('review')->get()->keyBy('reviewer_id');
             $selected = $reviewers->flip();
 
@@ -81,6 +85,8 @@ class ReviewAssignmentController extends Controller
                     Review::create([
                         'review_assignment_id' => $assignment->id,
                     ]);
+
+                    $newlyAssigned->push($reviewerId);
                 }
             }
 
@@ -88,6 +94,15 @@ class ReviewAssignmentController extends Controller
                 'status' => $reviewers->isNotEmpty() ? 'under_review' : 'submitted',
             ]);
         });
+
+        // Notify newly assigned reviewers
+        $submission->load('round', 'submitter');
+        $newReviewers = User::whereIn('id', $newlyAssigned)->get();
+        foreach ($newReviewers as $reviewer) {
+            if ($reviewer->wantsEmail('notify_reviewer_assigned')) {
+                Mail::to($reviewer)->send(new ReviewerAssigned($reviewer, $submission));
+            }
+        }
 
         return redirect()
             ->route('admin.review-assignments.index')

@@ -16,6 +16,7 @@ class Application extends Model
         'name',
         'path',
         'callback_url',
+        'frontchannel_logout_path',
         'client_id',
         'client_secret_hash',
         'roles',
@@ -74,6 +75,13 @@ class Application extends Model
     {
         return preg_match('#^/apps/[A-Za-z0-9_~-]+(?:/[A-Za-z0-9._~-]+)*$#', $this->path) === 1
             && preg_match('#(?:^|/)\.{1,2}(?:/|$)#', $this->path) !== 1;
+    }
+
+    public function hasSafeFrontchannelLogoutPath(): bool
+    {
+        return is_string($this->frontchannel_logout_path)
+            && preg_match('#^/apps/[A-Za-z0-9_~-]+(?:/[A-Za-z0-9._~-]+)*$#', $this->frontchannel_logout_path) === 1
+            && preg_match('#(?:^|/)\.{1,2}(?:/|$)#', $this->frontchannel_logout_path) !== 1;
     }
 
     public function iconUrl(): string

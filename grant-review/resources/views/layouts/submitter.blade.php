@@ -7,6 +7,7 @@
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     <title>@yield('title', 'My Submissions') — UH Grants Portal</title>
+    @include('layouts.partials.fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-uh-bg text-uh-fg min-h-screen">
@@ -46,17 +47,17 @@
                             </a>
                         @endif
                         <a href="{{ route('profile.edit') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-uh-muted transition-colors">
-                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
-                            </svg>
+                            <x-heroicon-o-user class="w-4 h-4 text-gray-400" />
                             My Profile
+                        </a>
+                        <a href="{{ route('settings.edit') }}" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-uh-muted transition-colors">
+                            <x-heroicon-o-cog-6-tooth class="w-4 h-4 text-gray-400" />
+                            Settings
                         </a>
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
                             <button type="submit" class="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-uh-muted transition-colors cursor-pointer">
-                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"/>
-                                </svg>
+                                <x-heroicon-o-arrow-left-on-rectangle class="w-4 h-4 text-gray-400" />
                                 Sign out
                             </button>
                         </form>
@@ -70,14 +71,13 @@
     <nav class="sm:hidden bg-white border-b border-uh-border px-4 py-2 flex gap-4 text-sm" aria-label="Mobile navigation">
         <a href="{{ route('submitter.submissions.index') }}" class="{{ request()->routeIs('submitter.submissions.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">My submissions</a>
         <a href="{{ route('profile.edit') }}" class="{{ request()->routeIs('profile.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Profile</a>
+        <a href="{{ route('settings.edit') }}" class="{{ request()->routeIs('settings.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Settings</a>
     </nav>
 
     <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         @if (session('status'))
             <div role="alert" class="mb-6 flex items-start gap-3 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
-                <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m9 12.75 2.25 2.25L15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                </svg>
+                <x-heroicon-o-check-circle class="w-5 h-5 flex-shrink-0 mt-0.5" />
                 <span class="text-sm">{{ session('status') }}</span>
             </div>
         @endif

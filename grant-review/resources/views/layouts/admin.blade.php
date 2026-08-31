@@ -7,6 +7,7 @@
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     <title>@yield('title', 'Dashboard') — UH Grants Portal</title>
+    @include('layouts.partials.fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-uh-bg text-uh-fg min-h-screen">
@@ -62,15 +63,15 @@
                     <x-heroicon-o-exclamation-triangle class="w-5 h-5" />
                     Conflicts of interest
                 </a>
+                <a href="{{ route('settings.edit') }}"
+                   class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150
+                          {{ request()->routeIs('settings.*') ? 'bg-white/20 text-white font-semibold' : 'text-white/85 hover:text-white hover:bg-white/10' }}">
+                    <x-heroicon-o-cog-6-tooth class="w-5 h-5" />
+                    Settings
+                </a>
             </nav>
 
             <div class="px-3 py-4 border-t border-white/15">
-                @if (config('hub.enabled') && session('hub_application_count', 1) > 1)
-                    <a href="{{ config('hub.base_url') }}" class="flex items-center gap-2 px-3 py-2 mb-1 rounded-md text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors duration-150">
-                        <x-heroicon-o-squares-2x2 class="w-4 h-4" />
-                        All applications
-                    </a>
-                @endif
                 <a href="{{ route('profile.edit') }}" class="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-white/10 transition-colors cursor-pointer">
                     <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold text-white">
                         {{ strtoupper(substr(auth()->user()->first_name, 0, 1)) }}
@@ -80,6 +81,12 @@
                         <div class="text-xs text-white/75 truncate">{{ auth()->user()->email }}</div>
                     </div>
                 </a>
+                @if (config('hub.enabled') && session('hub_application_count', 1) > 1)
+                    <a href="{{ config('hub.base_url') }}" class="flex items-center gap-2 px-3 py-2 mb-1 rounded-md text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors duration-150">
+                        <x-heroicon-o-squares-2x2 class="w-4 h-4" />
+                        All applications
+                    </a>
+                @endif
                 <form method="POST" action="{{ route('logout') }}" class="mt-2">
                     @csrf
                     <button type="submit" class="flex items-center gap-2 w-full px-3 py-2 rounded-md text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors duration-150">
@@ -117,24 +124,21 @@
                 <a href="{{ route('admin.review-assignments.index') }}" class="{{ request()->routeIs('admin.review-assignments.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Assignments</a>
                 <a href="{{ route('admin.review-results.index') }}" class="{{ request()->routeIs('admin.review-results.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Results</a>
                 <a href="{{ route('admin.conflicts.index') }}" class="{{ request()->routeIs('admin.conflicts.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">COI</a>
+                <a href="{{ route('settings.edit') }}" class="{{ request()->routeIs('settings.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Settings</a>
             </nav>
 
             {{-- Page content --}}
             <main class="flex-1 p-6 md:p-8 max-w-7xl mx-auto w-full">
                 @if (session('status'))
                     <div role="alert" class="mb-6 flex items-start gap-3 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
-                        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                        </svg>
+                        <x-heroicon-o-check-circle class="w-5 h-5 flex-shrink-0 mt-0.5" />
                         <span class="text-sm">{{ session('status') }}</span>
                     </div>
                 @endif
 
                 @if ($errors->any())
                     <div role="alert" class="mb-6 flex items-start gap-3 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
-                        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
-                        </svg>
+                        <x-heroicon-o-exclamation-triangle class="w-5 h-5 flex-shrink-0 mt-0.5" />
                         <div class="text-sm">
                             <ul class="list-disc pl-4 space-y-0.5">
                                 @foreach ($errors->all() as $error)

@@ -5,7 +5,7 @@
 @section('content')
 <div class="card login-card">
     <p class="eyebrow">Secure application access</p>
-    <h1>Sign in to {{ $loginApplication?->name ?? 'App Hub' }}</h1>
+    <h1>Sign in to {{ $loginApplication?->name ?? 'UHPH App Hub' }}</h1>
     <p class="lede">Use your administrator-provided account to access {{ $loginApplication?->name ?? 'your assigned applications' }}.</p>
 
     @if (session('status'))
@@ -44,5 +44,5 @@
         <button class="button button-primary" type="submit">Sign in</button>
     </form>
 </div>
-<p class="support">Need an account or cannot sign in? Contact your App Hub administrator.</p>
+<p class="support">Need an account or cannot sign in? Contact your UHPH App Hub administrator.</p>
 @endsection

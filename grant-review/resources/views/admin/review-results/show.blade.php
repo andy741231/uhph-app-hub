@@ -7,9 +7,7 @@
     <a href="{{ route('admin.review-results.index') }}"
        class="inline-flex items-center gap-2 text-sm font-semibold text-uh-slate hover:text-uh-red transition-colors group mb-4">
         <span class="w-7 h-7 rounded-full bg-white border border-uh-border flex items-center justify-center text-gray-500 group-hover:border-uh-red group-hover:text-uh-red transition-all shadow-xs" aria-hidden="true">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
-            </svg>
+            <x-heroicon-o-arrow-left class="w-4 h-4" />
         </span>
         Back to Review Results
     </a>
@@ -27,9 +25,7 @@
                 <div class="flex flex-wrap items-center gap-y-1 gap-x-4 mt-2 text-sm text-gray-600">
                     @php $submitter = $submission->submitter; @endphp
                     <span class="inline-flex items-center gap-1 font-medium text-uh-fg">
-                        <svg class="w-4 h-4 text-uh-slate" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"/>
-                        </svg>
+                        <x-heroicon-o-user class="w-4 h-4 text-uh-slate" />
                         {{ $submitter->full_name }}
                         @if ($submitter->department)
                             <span class="text-gray-400 font-normal">({{ $submitter->department }})</span>
@@ -37,9 +33,7 @@
                     </span>
                     <span class="text-gray-400">·</span>
                     <span class="inline-flex items-center gap-1">
-                        <svg class="w-4 h-4 text-uh-slate" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
-                        </svg>
+                        <x-heroicon-o-calendar class="w-4 h-4 text-uh-slate" />
                         {{ $submission->round->name }}
                     </span>
                     @if ($submission->submitted_at)
@@ -60,9 +54,7 @@
                 @endif
                 <a href="{{ route('submissions.pdf', $submission) }}" target="_blank" rel="noopener"
                    class="btn-secondary text-xs py-2 px-3 inline-flex items-center gap-1.5 shadow-xs">
-                    <svg class="w-4 h-4 text-uh-red" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V8.25c0-.621-.504-1.125-1.125-1.125H10.5V2.25Z"/>
-                    </svg>
+                    <x-heroicon-o-document-text class="w-4 h-4 text-uh-red" />
                     View PDF
                 </a>
             </div>
@@ -75,18 +67,14 @@
     <div class="card p-5 shadow-xs">
         <div class="flex items-center justify-between">
             <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Assigned</p>
-            <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a9.127 9.127 0 0 1 5.185-9.166 9.127 9.127 0 0 1 5.185 9.166l-.001.107a9.127 9.127 0 0 1-5.185 9.166 9.127 9.127 0 0 1-5.185-9.166Z"/>
-            </svg>
+            <x-heroicon-o-users class="w-5 h-5 text-gray-300" />
         </div>
         <p class="text-3xl font-black text-uh-fg mt-2">{{ $stats['assigned'] }}</p>
     </div>
     <div class="card p-5 shadow-xs">
         <div class="flex items-center justify-between">
             <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Completed</p>
-            <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
-            </svg>
+            <x-heroicon-o-check class="w-5 h-5 text-gray-300" />
         </div>
         <p class="text-3xl font-black text-uh-fg mt-2">{{ $stats['completed'] }}</p>
         @if ($stats['assigned'] > 0)
@@ -96,9 +84,7 @@
     <div class="card p-5 shadow-xs border-l-4 border-l-uh-red">
         <div class="flex items-center justify-between">
             <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Average</p>
-            <svg class="w-5 h-5 text-uh-red/40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125 9 9l4.5 3.375L21 6m0 0v4.5M21 6h-4.5M3 19.5h18"/>
-            </svg>
+            <x-heroicon-o-chart-bar class="w-5 h-5 text-uh-red/40" />
         </div>
         <p class="text-3xl font-black text-uh-red mt-2">
             {{ $stats['average'] !== null ? number_format($stats['average'], 2) : '—' }}
@@ -107,9 +93,7 @@
     <div class="card p-5 shadow-xs">
         <div class="flex items-center justify-between">
             <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Range</p>
-            <svg class="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v18m13.5-4.5L16.5 21m0 0L12 16.5m4.5 4.5v-18"/>
-            </svg>
+            <x-heroicon-o-arrows-up-down class="w-5 h-5 text-gray-300" />
         </div>
         <p class="text-3xl font-black text-uh-fg mt-2">
             @if ($stats['min'] !== null)
@@ -130,9 +114,7 @@
         {{-- Proposal Info Card --}}
         <div class="card p-5 shadow-xs">
             <h2 class="text-sm font-bold uppercase tracking-wider text-uh-fg mb-4 flex items-center gap-1.5">
-                <svg class="w-4 h-4 text-uh-red" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V8.25c0-.621-.504-1.125-1.125-1.125H10.5V2.25Z"/>
-                </svg>
+                <x-heroicon-o-document-text class="w-4 h-4 text-uh-red" />
                 Proposal Details
             </h2>
             <div class="space-y-3 text-sm">
@@ -174,9 +156,7 @@
         @if ($submission->decision)
             <div class="card p-5 shadow-xs border-l-4 {{ $submission->decision->outcome === 'funded' ? 'border-l-uh-green' : 'border-l-gray-400' }}">
                 <h2 class="text-sm font-bold uppercase tracking-wider text-uh-fg mb-4 flex items-center gap-1.5">
-                    <svg class="w-4 h-4 {{ $submission->decision->outcome === 'funded' ? 'text-uh-green' : 'text-gray-400' }}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                    </svg>
+                    <x-heroicon-o-check-circle class="w-4 h-4 {{ $submission->decision->outcome === 'funded' ? 'text-uh-green' : 'text-gray-400' }}" />
                     Decision
                 </h2>
                 <div class="space-y-3 text-sm">
@@ -258,9 +238,7 @@
                             <div class="flex items-center gap-3 shrink-0">
                                 @if ($coiEntry)
                                     <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-md bg-amber-100 text-amber-800 border border-amber-300" title="Reviewer declared a conflict of interest on this proposal">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
-                                        </svg>
+                                        <x-heroicon-o-exclamation-triangle class="w-3.5 h-3.5" />
                                         COI
                                     </span>
                                 @endif
@@ -270,9 +248,6 @@
                                     <span class="badge-yellow text-xs">Draft</span>
                                 @else
                                     <span class="badge-gray text-xs">Not started</span>
-                                @endif
-                                @if ($review?->score !== null)
-                                    <span class="text-2xl font-black text-uh-red leading-none">{{ $review->score }}<span class="text-xs text-gray-400">/9</span></span>
                                 @endif
                             </div>
                         </div>
@@ -288,9 +263,18 @@
 
                         @if ($review?->comments)
                             <div class="mt-3 ml-13 bg-uh-muted rounded-lg p-3.5 border border-uh-border">
-                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Overall Impact</p>
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Overall Impact</p>
+                                    @if ($review?->score !== null)
+                                        <span class="text-lg font-black text-uh-red leading-none">{{ $review->score }}<span class="text-xs text-gray-400">/9</span></span>
+                                    @endif
+                                </div>
                                 <p class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{{ $review->comments }}</p>
                             </div>
+                        @endif
+
+                        @if ($review)
+                            @include('reviews.partials.structured-review-summary', ['review' => $review, 'showOverall' => false])
                         @endif
 
                         @if ($review && $review->revisions()->exists())
@@ -298,9 +282,7 @@
                                 <a href="{{ route('admin.review-results.timeline', [$submission, $review]) }}"
                                    class="text-xs text-uh-red hover:underline font-semibold inline-flex items-center gap-1 cursor-pointer"
                                    title="View submission history">
-                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                                    </svg>
+                                    <x-heroicon-o-clock class="w-3.5 h-3.5" />
                                     View timeline ({{ $review->revisions()->count() }})
                                 </a>
                             </div>
@@ -308,9 +290,7 @@
                     </div>
                 @empty
                     <div class="px-5 py-12 text-center">
-                        <svg class="w-12 h-12 mx-auto text-gray-200 mb-3" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a9.127 9.127 0 0 1 5.185-9.166 9.127 9.127 0 0 1 5.185 9.166l-.001.107a9.127 9.127 0 0 1-5.185 9.166 9.127 9.127 0 0 1-5.185-9.166Z"/>
-                        </svg>
+                        <x-heroicon-o-users class="w-12 h-12 mx-auto text-gray-200 mb-3" />
                         <p class="font-medium text-gray-700">No reviewers assigned</p>
                         <p class="text-sm text-gray-500 mt-1">Assign reviewers from the Assign Reviewers page.</p>
                     </div>

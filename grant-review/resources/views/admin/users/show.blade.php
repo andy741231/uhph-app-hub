@@ -140,6 +140,31 @@
                 </div>
             @endforeach
         </dl>
+
+        {{-- Key Personnel --}}
+        @if (filled($user->key_personnel))
+            <div class="mt-5 pt-5 border-t border-uh-border">
+                <h3 class="text-sm font-bold text-uh-fg mb-3 flex items-center gap-2">
+                    <x-heroicon-o-users class="w-4 h-4 text-uh-red" />
+                    Key Personnel
+                </h3>
+                <div class="space-y-2">
+                    @foreach ($user->key_personnel as $person)
+                        @if (filled($person['title'] ?? null) || filled($person['name'] ?? null))
+                            <div class="flex items-center gap-3 rounded-lg border border-uh-border bg-uh-muted/50 px-4 py-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-uh-red/10 flex items-center justify-center text-uh-red shrink-0">
+                                    <x-heroicon-o-user class="w-4 h-4" />
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-medium text-uh-fg">{{ $person['name'] ?? '—' }}</p>
+                                    <p class="text-xs text-gray-500">{{ $person['title'] ?? '—' }}</p>
+                                </div>
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+            </div>
+        @endif
     </div>
 
     {{-- Sidebar --}}

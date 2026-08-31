@@ -21,6 +21,9 @@ class CompleteProfileRequest extends FormRequest
             'investigator_type' => ['required', 'in:pi,other'],
             'early_stage_investigator' => ['required', 'boolean'],
             'new_investigator' => ['required', 'boolean'],
+            'key_personnel' => ['nullable', 'array'],
+            'key_personnel.*.title' => ['nullable', 'string', 'max:255'],
+            'key_personnel.*.name' => ['nullable', 'string', 'max:255'],
         ];
     }
 

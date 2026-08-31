@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Sso;
 
 use App\Http\Controllers\Controller;
-use App\Models\Application;
 use App\Models\AuthorizationCode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,26 +12,21 @@ use Illuminate\Support\Facades\Validator;
 
 class TokenController extends Controller
 {
-    public function __invoke(Request $request): JsonResponse
-    {
+    public function __invoke(
+        Request $request,
+        ApplicationClientAuthenticator $clients,
+        ApplicationActorToken $actorTokens,
+    ): JsonResponse {
+
         if (app()->isProduction() && ! $request->secure()) {
             return $this->error('invalid_request', 'HTTPS is required.', 400);
         }
 
-        [$clientId, $clientSecret] = $this->basicCredentials($request);
-        $application = $clientId ? Application::where('client_id', $clientId)->first() : null;
-        $providedHash = hash('sha256', (string) $clientSecret);
-        $expectedHash = $application?->client_secret_hash ?? str_repeat('0', 64);
-        $registeredSecretValid = hash_equals($expectedHash, $providedHash);
-        $localSecret = (string) config('hub.local_client.secret');
-        $localSecretValid = app()->environment('local')
-            && filled($localSecret)
-            && in_array((string) $application?->key, config('hub.local_client.application_keys', []), true)
-            && hash_equals(hash('sha256', $localSecret), $providedHash);
+        $application = $clients->authenticate($request);
 
-        if (! $clientSecret || (! $registeredSecretValid && ! $localSecretValid) || ! $application?->enabled) {
+        if (! $application) {
             return $this->error('invalid_client', 'Client authentication failed.', 401)
-                ->header('WWW-Authenticate', 'Basic realm="App Hub SSO"');
+                ->header('WWW-Authenticate', 'Basic realm="UHPH App Hub SSO"');
         }
 
         $validator = Validator::make($request->all(), [
@@ -46,7 +40,7 @@ class TokenController extends Controller
         }
 
         $input = $validator->validated();
-        $identity = DB::transaction(function () use ($application, $input): ?array {
+        $identity = DB::transaction(function () use ($application, $input, $actorTokens): ?array {
             $authorizationCode = AuthorizationCode::query()
                 ->where('token_hash', hash('sha256', $input['code']))
                 ->lockForUpdate()
@@ -87,6 +81,7 @@ class TokenController extends Controller
                 'role' => $assignment->pivot->role,
                 'application_count' => $assignments->count(),
                 'logout_url' => URL::signedRoute('sso.logout', ['application' => $application->key]),
+                'actor_token' => $actorTokens->issue($user, $application),
             ];
         });
 
@@ -97,23 +92,6 @@ class TokenController extends Controller
         return response()->json($identity)
             ->header('Cache-Control', 'no-store, private')
             ->header('Pragma', 'no-cache');
-    }
-
-    private function basicCredentials(Request $request): array
-    {
-        $authorization = $request->header('Authorization', '');
-
-        if (! str_starts_with($authorization, 'Basic ')) {
-            return [null, null];
-        }
-
-        $decoded = base64_decode(substr($authorization, 6), true);
-
-        if ($decoded === false || ! str_contains($decoded, ':')) {
-            return [null, null];
-        }
-
-        return explode(':', $decoded, 2);
     }
 
     private function error(string $error, string $description, int $status): JsonResponse

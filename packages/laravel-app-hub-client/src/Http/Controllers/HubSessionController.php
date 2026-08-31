@@ -41,6 +41,7 @@ class HubSessionController
         $request->session()->put(config('hub.authenticated_at_session_key', 'hub_authenticated_at'), now()->timestamp);
         $request->session()->put(config('hub.application_count_session_key', 'hub_application_count'), $identity['application_count']);
         $request->session()->put(config('hub.logout_url_session_key', 'hub_logout_url'), $identity['logout_url']);
+        $request->session()->put(config('hub.actor_token_session_key', 'hub_actor_token'), $identity['actor_token']);
 
         return redirect()->intended($destinations->destination($user));
     }
@@ -56,5 +57,20 @@ class HubSessionController
         return config('hub.enabled') && is_string($logoutUrl) && $hub->isSafeLogoutUrl($logoutUrl)
             ? redirect()->away($logoutUrl)
             : redirect()->route(config('hub.login_route', 'login'));
+    }
+
+    public function globalDestroy(Request $request, HubClient $hub): RedirectResponse
+    {
+        abort_unless(config('hub.enabled'), 404);
+        $token = $request->query('logout_token');
+        abort_unless(is_string($token) && preg_match('/^[A-Za-z0-9]{64}$/', $token) === 1, 400);
+        $nextUrl = $hub->continueLogout($token);
+
+        Auth::guard(config('hub.guard', 'web'))->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->away($nextUrl)
+            ->withHeaders(['Cache-Control' => 'no-store, private', 'Referrer-Policy' => 'no-referrer']);
     }
 }

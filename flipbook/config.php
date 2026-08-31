@@ -97,6 +97,7 @@ define('FLIPBOOK_HUB_SSO_ENABLED', filter_var(getenv('FLIPBOOK_HUB_SSO_ENABLED')
 define('FLIPBOOK_HUB_BASE_URL', rtrim(getenv('FLIPBOOK_HUB_URL') ?: 'https://localhost/apps', '/'));
 define('FLIPBOOK_HUB_AUTHORIZE_URL', FLIPBOOK_HUB_BASE_URL . '/sso/authorize');
 define('FLIPBOOK_HUB_TOKEN_URL', FLIPBOOK_HUB_BASE_URL . '/sso/token');
+define('FLIPBOOK_HUB_LOGOUT_CONTINUE_URL', FLIPBOOK_HUB_BASE_URL . '/sso/logout/continue');
 define('FLIPBOOK_HUB_CLIENT_ID', getenv('FLIPBOOK_HUB_CLIENT_ID') ?: '');
 define('FLIPBOOK_HUB_CLIENT_SECRET', getenv('FLIPBOOK_HUB_CLIENT_SECRET') ?: '');
 define('FLIPBOOK_HUB_CALLBACK_URI', getenv('FLIPBOOK_HUB_CALLBACK_URI') ?: '/apps/flipbook/auth/callback.php');

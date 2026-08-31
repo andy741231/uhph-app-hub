@@ -21,17 +21,13 @@
     {{-- Success message --}}
     @if (session('status') === 'profile-updated')
         <div role="alert" class="flex items-start gap-3 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
-            <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="m9 12.75 2.25 2.25L15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-            </svg>
+            <x-heroicon-o-check-circle class="w-5 h-5 flex-shrink-0 mt-0.5" />
             <span class="text-sm font-medium">Profile updated successfully.</span>
         </div>
     @endif
     @if (session('status') === 'password-updated')
         <div role="alert" class="flex items-start gap-3 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
-            <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="m9 12.75 2.25 2.25L15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-            </svg>
+            <x-heroicon-o-check-circle class="w-5 h-5 flex-shrink-0 mt-0.5" />
             <span class="text-sm font-medium">Password updated successfully.</span>
         </div>
     @endif
@@ -100,9 +96,7 @@
 
             <div class="pt-4 border-t border-uh-border">
                 <button type="submit" class="btn-primary">
-                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
-                    </svg>
+                    <x-heroicon-o-check class="w-4 h-4 mr-1.5" />
                     Save Changes
                 </button>
             </div>
@@ -149,9 +143,7 @@
 
             <div class="pt-4 border-t border-uh-border">
                 <button type="submit" class="btn-primary">
-                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 6v.75m0 0v3m0-.75h3m-3 0H9.75m6 0v3.75m0-3.75H9.75m6 0L9.75 18.75"/>
-                    </svg>
+                    <x-heroicon-o-key class="w-4 h-4 mr-1.5" />
                     Update Password
                 </button>
             </div>

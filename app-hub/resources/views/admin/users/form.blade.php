@@ -33,7 +33,7 @@
         <input type="hidden" name="is_admin" value="0">
         <label class="check" for="is_admin">
             <input id="is_admin" name="is_admin" type="checkbox" value="1" @checked(old('is_admin', $managedUser->is_admin ?? false))>
-            <span>App Hub administrator</span>
+            <span>UHPH App Hub administrator</span>
         </label>
         @error('is_admin')<p class="field-error">{{ $message }}</p>@enderror
     </div>

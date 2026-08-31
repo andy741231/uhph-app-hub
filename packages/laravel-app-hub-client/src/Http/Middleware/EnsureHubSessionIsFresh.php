@@ -12,7 +12,10 @@ class EnsureHubSessionIsFresh
 {
     public function handle(Request $request, Closure $next): Response|RedirectResponse
     {
-        if (! config('hub.enabled') || ! $request->user() || $request->session()->get(config('hub.emergency_authenticated_session_key', 'emergency_authenticated'))) {
+        if ($request->routeIs(config('hub.global_logout_route', 'hub.logout'))
+            || ! config('hub.enabled')
+            || ! $request->user()
+            || $request->session()->get(config('hub.emergency_authenticated_session_key', 'emergency_authenticated'))) {
             return $next($request);
         }
 

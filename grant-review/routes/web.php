@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\DecisionController;
 use App\Http\Controllers\Admin\ReviewAssignmentController;
 use App\Http\Controllers\Admin\ReviewResultsController;
 use App\Http\Controllers\Admin\RoundController;
+use App\Http\Controllers\Admin\SettingController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\SetPasswordController;
 use App\Http\Controllers\ProfileController;
@@ -42,9 +43,16 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('conflicts', [AdminConflictOfInterestController::class, 'index'])->name('conflicts.index');
     Route::get('review-results/export', [ReviewResultsController::class, 'exportCsv'])->name('review-results.export');
     Route::get('review-results/export/{roundId}', [ReviewResultsController::class, 'exportCsv'])->name('review-results.export.round');
+    Route::post('review-results/{submission}/approve', [ReviewResultsController::class, 'approve'])->name('review-results.approve')->whereNumber('submission');
     Route::get('review-results/{submission}/reviews/{review}/timeline', [ReviewResultsController::class, 'reviewTimeline'])->name('review-results.timeline')->whereNumber(['submission', 'review']);
     Route::get('review-results/{submission}', [ReviewResultsController::class, 'show'])->name('review-results.show')->whereNumber('submission');
     Route::post('decisions/{submission}', [DecisionController::class, 'store'])->name('decisions.store');
+});
+
+// Settings (all authenticated users — admin sees global settings too)
+Route::middleware('auth')->group(function () {
+    Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
+    Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
 });
 
 // Submitter routes

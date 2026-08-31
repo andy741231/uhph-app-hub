@@ -21,7 +21,15 @@ class AuthenticationTest extends TestCase
     {
         $this->get('/login')
             ->assertOk()
-            ->assertSee('Sign in to App Hub');
+            ->assertSee('Sign in to UHPH App Hub');
+    }
+
+    public function test_login_uses_a_dedicated_cookie_scoped_to_the_hub(): void
+    {
+        $this->get('/login')->assertCookie('uhph_app_hub_session');
+
+        $this->assertSame('uhph_app_hub_session', config('session.cookie'));
+        $this->assertSame('/apps', config('session.path'));
     }
 
     public function test_active_users_can_log_in_and_out(): void

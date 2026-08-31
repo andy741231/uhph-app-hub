@@ -22,7 +22,7 @@
                     <span class="w-2 h-2 rounded-full bg-[#00866C]" aria-hidden="true"></span>
                     Submitted on {{ $review->submitted_at->format('M j, Y g:i A') }}
                 </span>
-            @elseif ($review->score !== null || $review->comments)
+            @elseif ($review->score !== null || $review->comments || $review->factor1_score !== null || $review->factor2_score !== null || $review->factor3_sufficient !== null || $review->additional_human_subjects !== null)
                 <span class="badge-yellow inline-flex items-center gap-1.5 px-3 py-1">
                     <span class="w-2 h-2 rounded-full bg-[#D89B00]" aria-hidden="true"></span>
                     Draft Saved
@@ -116,6 +116,8 @@
                     <p class="text-xs text-gray-500 mt-0.5">
                         @if ($submission->status === 'decided')
                             This proposal has been decided — your review is locked.
+                        @elseif ($submission->reviewsReleased)
+                            Reviews have been released — your review is locked.
                         @else
                             NIH simplified review framework — score each criterion 1 (exceptional) to 9 (very poor)
                         @endif
@@ -148,7 +150,7 @@
                 </div>
             @endif
 
-            @if ($submission->status === 'decided')
+            @if ($submission->status === 'decided' || $submission->reviewsReleased)
                 {{-- Read-only view: submission has been decided, review is locked --}}
                 <div class="space-y-5">
                     <div class="bg-uh-muted border border-uh-border rounded-xl p-4 flex items-start gap-3">
@@ -158,7 +160,9 @@
                         <div>
                             <p class="text-sm font-bold text-uh-fg">Review locked</p>
                             <p class="text-xs text-gray-600 mt-1 leading-relaxed">
-                                A decision has been recorded for this proposal. Your submitted review is preserved below and remains visible to administrators, but it can no longer be edited.
+                                {{ $submission->reviewsReleased
+                                    ? 'The completed reviews have been approved for release. Your submitted review is preserved below and can no longer be edited.'
+                                    : 'A decision has been recorded for this proposal. Your submitted review is preserved below and remains visible to administrators, but it can no longer be edited.' }}
                             </p>
                         </div>
                     </div>
@@ -174,11 +178,11 @@
                 @csrf
 
                 {{-- 1. Overall Impact --}}
-                <fieldset class="space-y-3">
+                <fieldset class="space-y-3 rounded-lg border border-uh-border bg-gray-50/50 p-4">
                     <legend class="text-sm font-bold text-uh-fg">
                         <a href="https://grants.nih.gov/policy-and-compliance/policy-topics/peer-review/simplifying-review/framework#overallimpact"
                            target="_blank" rel="noopener"
-                           class="text-uh-red hover:underline">Overall Impact</a>
+                           class="text-uh-red underline">Overall Impact</a>
                         <span class="req">*</span>
                     </legend>
                     <p class="text-xs text-gray-600 leading-relaxed">
@@ -189,10 +193,17 @@
                             <label class="cursor-pointer">
                                 <input type="radio" name="score" value="{{ $i }}" class="sr-only peer"
                                     {{ (int) old('score', $review->score) === $i ? 'checked' : '' }} required>
-                                <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-uh-border bg-white text-sm font-bold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red hover:border-uh-red hover:bg-uh-muted">{{ $i }}</span>
+                                <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-uh-border bg-white text-sm font-bold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red peer-focus-visible:ring-2 peer-focus-visible:ring-uh-red peer-focus-visible:ring-offset-1 hover:border-uh-red hover:bg-uh-muted">{{ $i }}</span>
                             </label>
                         @endfor
                     </div>
+                    <p class="text-xs text-gray-400 mt-1.5 flex items-center gap-2">
+                        <span class="font-semibold text-green-700">1 = Exceptional</span>
+                        <span class="text-gray-300">←</span>
+                        <span class="text-gray-500">5 = Moderate</span>
+                        <span class="text-gray-300">→</span>
+                        <span class="font-semibold text-red-600">9 = Very Poor</span>
+                    </p>
                     @error('score') <p class="text-sm text-uh-red">{{ $message }}</p> @enderror
                     <div>
                         <label for="comments" class="label mb-1">Overall Impact Comment</label>
@@ -207,11 +218,11 @@
                     <h3 class="text-sm font-bold text-uh-fg">
                         <a href="https://grants.nih.gov/policy-and-compliance/policy-topics/peer-review/simplifying-review/framework#review-criteria-within-the-simplified-framework"
                            target="_blank" rel="noopener"
-                           class="text-uh-red hover:underline">Review Criteria</a>
+                           class="text-uh-red underline">Review Criteria</a>
                     </h3>
 
                     {{-- Factor 1: Importance of the Research --}}
-                    <fieldset class="space-y-3">
+                    <fieldset class="space-y-3 rounded-lg border border-uh-border bg-gray-50/50 p-4">
                         <legend class="text-sm font-semibold text-uh-fg">
                             Factor 1 — Importance of the Research
                             <span class="text-xs font-normal text-gray-500">(Significance, Innovation)</span>
@@ -222,7 +233,7 @@
                                 <label class="cursor-pointer">
                                     <input type="radio" name="factor1_score" value="{{ $i }}" class="sr-only peer"
                                         {{ (int) old('factor1_score', $review->factor1_score) === $i ? 'checked' : '' }} required>
-                                    <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-uh-border bg-white text-sm font-bold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red hover:border-uh-red hover:bg-uh-muted">{{ $i }}</span>
+                                    <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-uh-border bg-white text-sm font-bold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red peer-focus-visible:ring-2 peer-focus-visible:ring-uh-red peer-focus-visible:ring-offset-1 hover:border-uh-red hover:bg-uh-muted">{{ $i }}</span>
                                 </label>
                             @endfor
                         </div>
@@ -233,7 +244,7 @@
                     </fieldset>
 
                     {{-- Factor 2: Rigor and Feasibility --}}
-                    <fieldset class="space-y-3">
+                    <fieldset class="space-y-3 rounded-lg border border-uh-border bg-gray-50/50 p-4">
                         <legend class="text-sm font-semibold text-uh-fg">
                             Factor 2 — Rigor and Feasibility
                             <span class="text-xs font-normal text-gray-500">(Approach)</span>
@@ -244,7 +255,7 @@
                                 <label class="cursor-pointer">
                                     <input type="radio" name="factor2_score" value="{{ $i }}" class="sr-only peer"
                                         {{ (int) old('factor2_score', $review->factor2_score) === $i ? 'checked' : '' }} required>
-                                    <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-uh-border bg-white text-sm font-bold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red hover:border-uh-red hover:bg-uh-muted">{{ $i }}</span>
+                                    <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-uh-border bg-white text-sm font-bold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red peer-focus-visible:ring-2 peer-focus-visible:ring-uh-red peer-focus-visible:ring-offset-1 hover:border-uh-red hover:bg-uh-muted">{{ $i }}</span>
                                 </label>
                             @endfor
                         </div>
@@ -255,28 +266,36 @@
                     </fieldset>
 
                     {{-- Factor 3: Expertise and Resources --}}
-                    <fieldset class="space-y-3">
+                    <fieldset class="space-y-3 rounded-lg border border-uh-border bg-gray-50/50 p-4">
                         <legend class="text-sm font-semibold text-uh-fg">
                             Factor 3 — Expertise and Resources
                             <span class="text-xs font-normal text-gray-500">(Investigator, Environment)</span>
                             <span class="req">*</span>
                         </legend>
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-3" x-data="{ f3sufficient: {{ old('factor3_sufficient', $review->factor3_sufficient) === false || old('factor3_sufficient') === '0' ? 'false' : 'true' }} }">
                             <label class="cursor-pointer">
                                 <input type="radio" name="factor3_sufficient" value="1" class="sr-only peer"
+                                    x-model="f3sufficient"
                                     {{ old('factor3_sufficient', $review->factor3_sufficient) === true || old('factor3_sufficient') === '1' ? 'checked' : '' }} required>
-                                <span class="inline-flex items-center px-3 py-1.5 rounded-lg border border-uh-border bg-white text-sm font-semibold text-uh-fg transition-all peer-checked:bg-uh-green peer-checked:text-white peer-checked:border-uh-green hover:border-uh-green">Sufficient</span>
+                                <span class="inline-flex items-center px-3 py-1.5 rounded-lg border border-uh-border bg-white text-sm font-semibold text-uh-fg transition-all peer-checked:bg-uh-green peer-checked:text-white peer-checked:border-uh-green peer-focus-visible:ring-2 peer-focus-visible:ring-uh-green peer-focus-visible:ring-offset-1 hover:border-uh-green">Sufficient</span>
                             </label>
                             <label class="cursor-pointer">
                                 <input type="radio" name="factor3_sufficient" value="0" class="sr-only peer"
+                                    x-model="f3sufficient"
                                     {{ old('factor3_sufficient', $review->factor3_sufficient) === false || old('factor3_sufficient') === '0' ? 'checked' : '' }}>
-                                <span class="inline-flex items-center px-3 py-1.5 rounded-lg border border-uh-border bg-white text-sm font-semibold text-uh-fg transition-all peer-checked:bg-red-600 peer-checked:text-white peer-checked:border-red-600 hover:border-red-600">Not Sufficient</span>
+                                <span class="inline-flex items-center px-3 py-1.5 rounded-lg border border-uh-border bg-white text-sm font-semibold text-uh-fg transition-all peer-checked:bg-red-600 peer-checked:text-white peer-checked:border-red-600 peer-focus-visible:ring-2 peer-focus-visible:ring-red-600 peer-focus-visible:ring-offset-1 hover:border-red-600">Not Sufficient</span>
                             </label>
                         </div>
                         @error('factor3_sufficient') <p class="text-sm text-uh-red">{{ $message }}</p> @enderror
-                        <textarea name="factor3_comments" rows="3"
-                            class="input text-sm leading-relaxed"
-                            placeholder="If not sufficient, explain what is lacking in expertise or resources...">{{ old('factor3_comments', $review->factor3_comments) }}</textarea>
+                        <div>
+                            <label for="factor3_comments" class="label mb-1">
+                                Factor 3 Comment
+                                <span x-data="{ f3sufficient: {{ old('factor3_sufficient', $review->factor3_sufficient) === false || old('factor3_sufficient') === '0' ? 'false' : 'true' }} }" x-show="f3sufficient === false" x-cloak class="text-uh-red font-normal text-xs">— required when Not Sufficient</span>
+                            </label>
+                            <textarea id="factor3_comments" name="factor3_comments" rows="3"
+                                class="input text-sm leading-relaxed"
+                                placeholder="If not sufficient, explain what is lacking in expertise or resources...">{{ old('factor3_comments', $review->factor3_comments) }}</textarea>
+                        </div>
                         @error('factor3_comments') <p class="text-sm text-uh-red">{{ $message }}</p> @enderror
                     </fieldset>
                 </div>
@@ -299,18 +318,15 @@
                                 'label' => 'Biohazards',
                                 'href' => 'https://grants.nih.gov/policy-and-compliance/policy-topics/peer-review/simplifying-review/framework#overallimpact',
                             ],
-                            'additional_resubmission' => [
-                                'label' => 'Resubmission / Renewal / Revisions',
-                                'href' => 'https://grants.nih.gov/policy-and-compliance/policy-topics/peer-review/simplifying-review/framework#overallimpact',
-                            ],
                         ];
                     @endphp
 
+                    <div class="rounded-lg border border-uh-border bg-gray-50/50 p-4 space-y-5">
                     @foreach ($additionalCriteria as $field => $criterion)
                         <fieldset class="space-y-3">
                             <legend class="text-sm font-semibold text-uh-fg">
                                 <a href="{{ $criterion['href'] }}" target="_blank" rel="noopener"
-                                   class="text-uh-red hover:underline">{{ $criterion['label'] }}</a>
+                                   class="text-uh-red underline">{{ $criterion['label'] }}</a>
                                 <span class="req">*</span>
                             </legend>
                             <div class="flex items-center gap-3">
@@ -318,7 +334,7 @@
                                     <label class="cursor-pointer">
                                         <input type="radio" name="{{ $field }}" value="{{ $val }}" class="sr-only peer"
                                             {{ old($field, $review->$field) === $val ? 'checked' : '' }} required>
-                                        <span class="inline-flex items-center px-3 py-1.5 rounded-lg border border-uh-border bg-white text-sm font-semibold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red hover:border-uh-red">{{ $label }}</span>
+                                        <span class="inline-flex items-center px-3 py-1.5 rounded-lg border border-uh-border bg-white text-sm font-semibold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red peer-focus-visible:ring-2 peer-focus-visible:ring-uh-red peer-focus-visible:ring-offset-1 hover:border-uh-red">{{ $label }}</span>
                                     </label>
                                 @endforeach
                             </div>
@@ -328,6 +344,7 @@
                                 placeholder="Comment (optional)...">{{ old($field . '_comments', $review->{$field . '_comments'}) }}</textarea>
                         </fieldset>
                     @endforeach
+                    </div>
                 </div>
 
                 {{-- Actions Bar --}}
@@ -350,7 +367,25 @@
                     </button>
                 </div>
             </form>
+            {{-- Sticky mobile action bar --}}
+            @if ($submission->status !== 'decided')
+                <div class="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-uh-border shadow-lg z-30 px-4 py-3 flex items-center gap-2">
+                    <button type="submit" form="reviewerEvaluationForm" class="btn-secondary text-sm font-semibold py-2 px-3 flex-1 justify-center">
+                        <svg class="w-4 h-4 mr-1.5 text-uh-slate" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z"/>
+                        </svg>
+                        Draft
+                    </button>
+                    <button type="submit" form="reviewerEvaluationForm" id="btnSubmitReviewMobile" formaction="{{ route('reviewer.reviews.submit', $review) }}" class="btn-accent text-sm font-bold py-2 px-3 flex-1 justify-center">
+                        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/>
+                        </svg>
+                        Submit
+                    </button>
+                </div>
+                <div class="sm:hidden h-20"></div>{{-- spacer to prevent content hidden behind sticky bar --}}
             @endif
+            @endif {{-- end decided/else --}}
         </div>
 
         {{-- Other Reviewers' Submitted Reviews (anonymized) --}}
@@ -390,6 +425,30 @@
                                 </div>
                             @else
                                 <p class="text-xs text-gray-400 italic mt-2">No written comments provided.</p>
+                            @endif
+
+                            {{-- Factor scores summary --}}
+                            @if ($peerReview['factor1_score'] !== null || $peerReview['factor2_score'] !== null || $peerReview['factor3_sufficient'] !== null)
+                                <div class="mt-2 flex flex-wrap gap-1.5">
+                                    @if ($peerReview['factor1_score'] !== null)
+                                        <span class="text-xs font-semibold px-2 py-1 rounded-md bg-gray-50 text-gray-600 border border-uh-border">
+                                            Factor 1: {{ $peerReview['factor1_score'] }}/9
+                                        </span>
+                                    @endif
+                                    @if ($peerReview['factor2_score'] !== null)
+                                        <span class="text-xs font-semibold px-2 py-1 rounded-md bg-gray-50 text-gray-600 border border-uh-border">
+                                            Factor 2: {{ $peerReview['factor2_score'] }}/9
+                                        </span>
+                                    @endif
+                                    @if ($peerReview['factor3_sufficient'] !== null)
+                                        <span class="text-xs font-semibold px-2 py-1 rounded-md border
+                                            {{ $peerReview['factor3_sufficient']
+                                                ? 'bg-green-50 text-green-700 border-green-200'
+                                                : 'bg-red-50 text-red-700 border-red-200' }}">
+                                            Factor 3: {{ $peerReview['factor3_sufficient'] ? 'Sufficient' : 'Not Sufficient' }}
+                                        </span>
+                                    @endif
+                                </div>
                             @endif
                         </div>
                     @endforeach

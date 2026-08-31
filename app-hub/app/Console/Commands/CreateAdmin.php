@@ -12,7 +12,7 @@ class CreateAdmin extends Command
 {
     protected $signature = 'hub:create-admin {email?} {--name=}';
 
-    protected $description = 'Create an active App Hub administrator';
+    protected $description = 'Create an active UHPH App Hub administrator';
 
     public function handle(): int
     {

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreDecisionRequest;
+use App\Mail\DecisionRecorded;
 use App\Models\Decision;
 use App\Models\Submission;
 use Illuminate\Http\RedirectResponse;
@@ -37,32 +38,14 @@ class DecisionController extends Controller
 
         $submission->update(['status' => 'decided']);
 
-        if (config('mail.decision_notify_submitter', false)) {
-            $this->notifySubmitter($submission->load('submitter', 'round'), $decision);
+        // Notify submitter: decision recorded
+        $submitter = $submission->submitter;
+        if ($submitter && $submitter->wantsEmail('notify_decision_recorded')) {
+            Mail::to($submitter)->send(new DecisionRecorded($submission->load('round', 'submitter'), $decision));
         }
 
         return redirect()
             ->route('admin.review-results.index')
             ->with('status', 'Decision saved for '.$submission->title.'.');
-    }
-
-    private function notifySubmitter(Submission $submission, Decision $decision): void
-    {
-        $outcome = $decision->outcome === 'funded' ? 'funded' : 'not funded';
-        $amount = $decision->amount_awarded !== null
-            ? "\nAmount awarded: $".number_format((float) $decision->amount_awarded, 2)
-            : '';
-
-        Mail::raw(
-            "Your UH Grants Portal proposal has been decided.\n\n" .
-            "Proposal: {$submission->title}\n" .
-            "Round: {$submission->round->name}\n" .
-            "Outcome: {$outcome}{$amount}\n\n" .
-            "Please contact the grants administrator if you have questions.",
-            function ($message) use ($submission): void {
-                $message->to($submission->submitter->email)
-                    ->subject('UH Grants Portal — Proposal Decision');
-            }
-        );
     }
 }

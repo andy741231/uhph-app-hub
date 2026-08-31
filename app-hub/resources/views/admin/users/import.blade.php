@@ -39,7 +39,7 @@
             <li>Application values use the keys shown below.</li>
             <li>Existing accounts keep their password and Hub permissions.</li>
             <li>New users receive a secure set-password email.</li>
-            <li>CSV imports can never grant App Hub administrator access.</li>
+            <li>CSV imports can never grant UHPH App Hub administrator access.</li>
         </ul>
     </div>
 </div>

@@ -3,11 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\ReviewsAvailable;
 use App\Models\ConflictOfInterestDeclaration;
 use App\Models\Review;
 use App\Models\Round;
 use App\Models\Submission;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -58,7 +62,12 @@ class ReviewResultsController extends Controller
 
         $assignments = $submission->reviewAssignments->sortBy('assigned_at');
         $submittedReviews = $assignments->pluck('review')->filter()->whereNotNull('submitted_at');
-        $scores = $submittedReviews->pluck('score')->filter(fn ($score) => $score !== null);
+        $scores = $submittedReviews->flatMap(function ($review) {
+            return collect($review->numericScoreFields())
+                ->map(fn ($field) => $review->{$field})
+                ->filter(fn ($value) => $value !== null)
+                ->map(fn ($value) => (float) $value);
+        })->values();
 
         $stats = [
             'assigned' => $assignments->count(),
@@ -93,6 +102,66 @@ class ReviewResultsController extends Controller
         $revisions = $review->revisions()->latest('submitted_at')->get();
 
         return view('admin.review-results.timeline', compact('submission', 'review', 'revisions'));
+    }
+
+    public function approve(Request $request, Submission $submission): RedirectResponse
+    {
+        $released = DB::transaction(function () use ($request, $submission): bool {
+            $lockedSubmission = Submission::query()->lockForUpdate()->findOrFail($submission->id);
+
+            if ($lockedSubmission->reviewsReleased()) {
+                return false;
+            }
+
+            if (! $lockedSubmission->reviewsComplete()) {
+                return false;
+            }
+
+            $lockedSubmission->update([
+                'reviews_released_at' => now(),
+                'reviews_released_by' => $request->user()->id,
+            ]);
+
+            return true;
+        });
+
+        if (! $released) {
+            $submission->refresh();
+
+            if ($submission->reviewsReleased()) {
+                return redirect()
+                    ->route('admin.review-results.index')
+                    ->with('status', 'Reviews were already approved for release.');
+            }
+
+            return redirect()
+                ->route('admin.review-results.index')
+                ->withErrors(['reviews' => 'All assigned reviews must be submitted before they can be approved for release.']);
+        }
+
+        $submission->load(['round', 'submitter', 'reviewAssignments.reviewer', 'reviewAssignments.review']);
+        $recipients = $submission->reviewAssignments
+            ->pluck('reviewer')
+            ->filter()
+            ->push($submission->submitter)
+            ->filter()
+            ->unique('id');
+
+        foreach ($recipients as $recipient) {
+            if (! $recipient->wantsEmail('notify_reviews_available')) {
+                continue;
+            }
+
+            $viewUrl = $recipient->isReviewer()
+                ? route('reviewer.reviews.show', $submission->reviewAssignments->firstWhere('reviewer_id', $recipient->id)->review)
+                : route('submitter.submissions.show', $submission);
+
+            Mail::to($recipient)->send(new ReviewsAvailable($recipient, $submission, $viewUrl));
+        }
+
+        return redirect()
+            ->route('admin.review-results.index')
+            ->with('status', 'Reviews approved for release. Submitter and reviewers have been notified according to their preferences.');
     }
 
     public function exportCsv(?int $roundId = null): StreamedResponse
@@ -188,7 +257,12 @@ class ReviewResultsController extends Controller
             $assignments = $submission->reviewAssignments;
             $reviews = $assignments->pluck('review')->filter();
             $submittedReviews = $reviews->whereNotNull('submitted_at');
-            $scores = $submittedReviews->pluck('score')->filter(fn ($score) => $score !== null);
+            $scores = $submittedReviews->flatMap(function ($review) {
+                return collect($review->numericScoreFields())
+                    ->map(fn ($field) => $review->{$field})
+                    ->filter(fn ($value) => $value !== null)
+                    ->map(fn ($value) => (float) $value);
+            })->values();
 
             return [
                 'submission' => $submission,

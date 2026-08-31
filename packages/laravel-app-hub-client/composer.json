@@ -1,6 +1,6 @@
 {
     "name": "uh/app-hub-client",
-    "description": "Reusable Laravel client for the transitional App Hub authorization-code flow.",
+    "description": "Reusable Laravel client for the transitional UHPH App Hub authorization-code flow.",
     "type": "library",
     "license": "proprietary",
     "require": {

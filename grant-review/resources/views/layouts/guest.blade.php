@@ -7,6 +7,7 @@
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     <title>@yield('title', 'UH Grants Portal') — UH Grants Portal</title>
+    @include('layouts.partials.fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-uh-bg text-uh-fg min-h-screen flex flex-col items-center justify-center px-4">

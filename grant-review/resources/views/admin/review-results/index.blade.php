@@ -115,11 +115,23 @@
                                 <span class="text-sm text-gray-400">Pending</span>
                             @endif
                         </td>
-                        <td class="text-right min-w-[250px]">
-                            <a href="{{ route('admin.review-results.show', $submission) }}" class="text-sm text-uh-red hover:underline font-medium cursor-pointer">View reviews</a>
-                            <span class="text-gray-300 mx-1">·</span>
-                            <a href="{{ route('admin.review-assignments.index') }}" class="text-sm text-uh-slate hover:underline font-medium cursor-pointer">Manage</a>
-                            <details class="inline-block ml-3 text-left align-middle">
+                        <td class="text-right min-w-[280px]">
+                            <div class="flex items-center justify-end gap-2 flex-wrap">
+                                @if ($submission->reviewsReleased())
+                                    <span class="badge-green">Reviews released</span>
+                                @elseif ($assigned > 0 && $completed === $assigned)
+                                    <form action="{{ route('admin.review-results.approve', $submission) }}" method="POST" class="inline">
+                                        @csrf
+                                        <button type="submit" class="btn-primary text-xs" onclick="return confirm('Approve these completed reviews for release? This cannot be undone.')">
+                                            <x-heroicon-o-check-circle class="w-4 h-4 mr-1.5" />
+                                            Approve reviews
+                                        </button>
+                                    </form>
+                                @endif
+                                <a href="{{ route('admin.review-results.show', $submission) }}" class="text-sm text-uh-red hover:underline font-medium cursor-pointer">View reviews</a>
+                                <a href="{{ route('admin.review-assignments.index') }}" class="text-sm text-uh-slate hover:underline font-medium cursor-pointer">Manage</a>
+                            </div>
+                            <details class="inline-block mt-2 text-left align-middle">
                                 <summary class="text-sm text-uh-red hover:underline font-medium cursor-pointer">{{ $submission->decision ? 'Update decision' : 'Set decision' }}</summary>
                                 <form action="{{ route('admin.decisions.store', $submission) }}" method="POST" class="mt-2 p-3 card space-y-2 absolute right-4 z-10 w-56">
                                     @csrf

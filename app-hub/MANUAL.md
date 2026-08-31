@@ -1,8 +1,8 @@
-# App Hub Admin & Web Developer Manual
+# UHPH App Hub Admin & Web Developer Manual
 
-## 1. What App Hub does
+## 1. What UHPH App Hub does
 
-App Hub is a small Laravel application that lives at `E:\apps\app-hub` but is served from the IIS parent application at `/apps`. It is the front door for every application placed under `/apps`:
+UHPH App Hub is a small Laravel application that lives at `E:\apps\app-hub` but is served from the IIS parent application at `/apps`. It is the front door for every application placed under `/apps`:
 
 - Authenticates users at `/apps/login`.
 - Shows each user a dashboard of the applications they are allowed to launch.
@@ -22,7 +22,7 @@ App Hub is a small Laravel application that lives at `E:\apps\app-hub` but is se
 | `/apps/sso/authorize` | Start the mini-OAuth identity hand-off |
 | `/apps/sso/token` | Exchange an authorization code for identity |
 
-IIS routing is controlled by `E:\apps\web.config`. Physical directories under `E:\apps\` are served directly, so existing applications keep working. Requests that do not match a real file or directory are rewritten to `E:\apps\index.php`, which loads App Hub.
+IIS routing is controlled by `E:\apps\web.config`. Physical directories under `E:\apps\` are served directly, so existing applications keep working. Requests that do not match a real file or directory are rewritten to `E:\apps\index.php`, which loads UHPH App Hub.
 
 > Important: The `app-hub` directory itself is blocked from direct HTTP access by `web.config`.
 
@@ -121,7 +121,7 @@ New users are created with a random password and are sent a **Set password** ema
 
 ## 8. The mini-OAuth / one-time-code flow
 
-App Hub uses a tiny OAuth2-style code flow. This lets a child application verify that a user is authenticated and what role they have, without sharing a session cookie.
+UHPH App Hub uses a tiny OAuth2-style code flow. This lets a child application verify that a user is authenticated and what role they have, without sharing a session cookie.
 
 ### Sequence
 
@@ -134,8 +134,8 @@ App Hub uses a tiny OAuth2-style code flow. This lets a child application verify
    - `redirect_uri` must exactly match the `callback_url` saved for the application.
    - `state` must be at least 16 characters.
 
-2. App Hub validates the user is assigned to the application and the application is enabled.
-3. App Hub creates a single-use authorization code, valid for `HUB_AUTHORIZATION_CODE_TTL` seconds.
+2. UHPH App Hub validates the user is assigned to the application and the application is enabled.
+3. UHPH App Hub creates a single-use authorization code, valid for `HUB_AUTHORIZATION_CODE_TTL` seconds.
 4. It redirects the browser back to:
 
    ```
@@ -173,7 +173,7 @@ App Hub uses a tiny OAuth2-style code flow. This lets a child application verify
 1. Register the application with a `callback_url` and save.
 2. In the application edit form, click **Generate client credentials**.
 3. Copy the `client_id` and `client_secret` shown; the secret is displayed only once.
-4. Store them in the child application's configuration. The secret hash is stored in App Hub; only the plain secret should live in the child app.
+4. Store them in the child application's configuration. The secret hash is stored in UHPH App Hub; only the plain secret should live in the child app.
 
 ### Security notes
 
@@ -183,21 +183,21 @@ App Hub uses a tiny OAuth2-style code flow. This lets a child application verify
 
 ## 9. Adding a new Laravel or other application under `/apps`
 
-A web developer can add a new application without touching App Hub code. The typical steps are:
+A web developer can add a new application without touching UHPH App Hub code. The typical steps are:
 
 1. Create the application under `E:\apps\<key>` (for example, `E:\apps\grant-review`). This must be a real directory so IIS's `Preserve physical applications` rule serves it directly.
 2. Configure the child app to be served from `/apps/<key>`.
-3. In App Hub, register an application with the same `key` and `path`, e.g. `path = /apps/grant-review`.
+3. In UHPH App Hub, register an application with the same `key` and `path`, e.g. `path = /apps/grant-review`.
 4. Assign users to the new application from the **Users** section.
 
 ### If the new app does not need SSO
 
 - The user clicks the app tile on the dashboard.
-- App Hub checks that the app is enabled and the user is assigned.
+- UHPH App Hub checks that the app is enabled and the user is assigned.
 - On success, the browser is redirected to the `path`.
 - The child app is responsible for its own session/identity from there.
 
-### If the new app wants App Hub identity
+### If the new app wants UHPH App Hub identity
 
 - Complete the mini-OAuth steps in section 8.
 - In the child app, implement the `authorize` redirect and the `token` exchange.
@@ -211,10 +211,10 @@ The `app-hub` directory is hidden from the web. New applications must be sibling
 
 The current flow is intentionally small. To move to a full enterprise SSO later (for example, SAML 2.0 or an OIDC provider), the usual path is:
 
-1. Keep the application registration in App Hub so launch and role management do not change.
+1. Keep the application registration in UHPH App Hub so launch and role management do not change.
 2. Replace or augment the current login page (`/apps/login`) with an external identity provider, storing the returned `external_subject` in the `users` table.
 3. Keep `public_id` as the stable identifier passed to child apps, so child apps do not need to change.
-4. Continue to enforce application and role assignments in App Hub after authentication.
+4. Continue to enforce application and role assignments in UHPH App Hub after authentication.
 
 Because the child apps already receive a stable `subject` UUID, the underlying authentication source can be swapped without requiring every child app to change.
 

@@ -23,6 +23,8 @@ class Submission extends Model
         'pdf_path',
         'status',
         'submitted_at',
+        'reviews_released_at',
+        'reviews_released_by',
     ];
 
     protected function casts(): array
@@ -30,6 +32,7 @@ class Submission extends Model
         return [
             'amount_requested' => 'decimal:2',
             'submitted_at' => 'datetime',
+            'reviews_released_at' => 'datetime',
         ];
     }
 
@@ -51,6 +54,26 @@ class Submission extends Model
     public function decision(): HasOne
     {
         return $this->hasOne(Decision::class);
+    }
+
+    public function reviewsReleasedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviews_released_by');
+    }
+
+    public function reviewsComplete(): bool
+    {
+        $assignments = $this->relationLoaded('reviewAssignments')
+            ? $this->reviewAssignments
+            : $this->reviewAssignments()->with('review')->get();
+
+        return $assignments->isNotEmpty()
+            && $assignments->every(fn (ReviewAssignment $assignment): bool => $assignment->review?->submitted_at !== null);
+    }
+
+    public function reviewsReleased(): bool
+    {
+        return $this->reviews_released_at !== null;
     }
 
     public function conflictOfInterestEntries(): HasMany

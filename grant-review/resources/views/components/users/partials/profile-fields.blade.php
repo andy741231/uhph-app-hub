@@ -82,3 +82,46 @@
         <p class="text-xs text-gray-500">Check if you are a new investigator.</p>
     </div>
 </div>
+
+{{-- Key Personnel (dynamic repeater) --}}
+<div x-data="{
+    personnel: {{ json_encode(old('key_personnel', $user?->key_personnel ?? [])) }},
+    add() { this.personnel.push({ title: '', name: '' }) },
+    remove(index) { this.personnel.splice(index, 1) },
+}">
+    <label class="label">Key Personnel</label>
+    <p class="text-xs text-gray-500 mb-3">Add additional team members (optional).</p>
+
+    <template x-for="(person, index) in personnel" :key="index">
+        <div class="flex items-start gap-2 mb-2">
+            <input type="text"
+                :name="'key_personnel[' + index + '][title]'"
+                x-model="person.title"
+                class="input flex-1"
+                placeholder="Title (e.g. Co-PI)">
+            <input type="text"
+                :name="'key_personnel[' + index + '][name]'"
+                x-model="person.name"
+                class="input flex-1"
+                placeholder="Name">
+            <button type="button"
+                @click="remove(index)"
+                class="shrink-0 inline-flex items-center justify-center w-9 h-9 rounded-lg border border-uh-border bg-white text-gray-400 hover:text-red-600 hover:border-red-300 transition-colors"
+                aria-label="Remove"
+                title="Remove">
+                <x-heroicon-o-x-mark class="w-4 h-4" />
+            </button>
+        </div>
+    </template>
+
+    <button type="button"
+        @click="add()"
+        class="inline-flex items-center gap-1.5 text-sm font-semibold text-uh-red hover:text-uh-red/80 transition-colors">
+        <x-heroicon-o-plus class="w-4 h-4" />
+        Add Key Personnel
+    </button>
+
+    @error('key_personnel')
+        <p class="text-sm text-uh-red mt-1">{{ $message }}</p>
+    @enderror
+</div>

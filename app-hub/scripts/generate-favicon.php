@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Generates the App Hub default favicon (red rounded square with "AH").
+ * Generates the UHPH App Hub default favicon (red rounded square with "AH").
  *
  * Writes public/favicon.png (64x64) and public/favicon.ico (multi-size) in the
  * Laravel public dir, then copies them to the IIS served root (E:/apps) because

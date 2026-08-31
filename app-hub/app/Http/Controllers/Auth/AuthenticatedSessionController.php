@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Sso\GlobalLogout;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\Application;
 use Illuminate\Http\RedirectResponse;
@@ -30,12 +31,13 @@ class AuthenticatedSessionController extends Controller
         return redirect()->intended(route('dashboard'));
     }
 
-    public function destroy(Request $request): RedirectResponse
+    public function destroy(Request $request, GlobalLogout $logout): RedirectResponse
     {
         Auth::guard('web')->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+        $request->session()->flash('status', 'You have been signed out of all applications.');
 
-        return redirect()->route('login');
+        return $logout->start($request);
     }
 }

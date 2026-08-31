@@ -29,6 +29,8 @@ class User extends Authenticatable
         'investigator_type',
         'early_stage_investigator',
         'new_investigator',
+        'key_personnel',
+        'email_preferences',
         'role',
         'status',
         'invite_token_hash',
@@ -48,7 +50,36 @@ class User extends Authenticatable
             'invite_expires_at' => 'datetime',
             'early_stage_investigator' => 'boolean',
             'new_investigator' => 'boolean',
+            'key_personnel' => 'array',
+            'email_preferences' => 'array',
         ];
+    }
+
+    /**
+     * Default email notification preferences for new users.
+     */
+    public static function defaultEmailPreferences(): array
+    {
+        return [
+            'notify_profile_completed' => true,
+            'notify_review_submitted' => true,
+            'notify_proposal_submitted' => true,
+            'notify_all_reviews_complete' => true,
+            'notify_decision_recorded' => true,
+            'notify_reviewer_assigned' => true,
+            'notify_submission_confirmation' => true,
+            'notify_reviews_available' => true,
+        ];
+    }
+
+    /**
+     * Check if the user wants to receive a specific email notification.
+     */
+    public function wantsEmail(string $key): bool
+    {
+        $prefs = $this->email_preferences ?? self::defaultEmailPreferences();
+
+        return (bool) ($prefs[$key] ?? true);
     }
 
     public function hasCompleteProfile(): bool

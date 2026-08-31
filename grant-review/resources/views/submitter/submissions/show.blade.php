@@ -4,9 +4,7 @@
 @section('content')
 <div class="mb-6">
     <a href="{{ route('submitter.submissions.index') }}" class="text-sm text-gray-500 hover:underline inline-flex items-center gap-1 mb-3">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
-        </svg>
+        <x-heroicon-o-arrow-left class="w-4 h-4" />
         Back to my submissions
     </a>
     <div class="flex items-center gap-3 mb-1">
@@ -35,9 +33,7 @@
     @if ($canEdit)
         <div class="mt-4 flex flex-wrap items-center gap-3">
             <a href="{{ route('submitter.submissions.edit', $submission) }}" class="btn-secondary text-sm">
-                <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z"/>
-                </svg>
+                <x-heroicon-o-pencil-square class="w-4 h-4 mr-1.5" />
                 Edit
             </a>
             @if ($submission->status === 'draft')
@@ -83,9 +79,7 @@
         <div>
             <p class="text-gray-500">Proposal PDF</p>
             <a href="{{ route('submissions.pdf', $submission) }}" class="text-uh-red hover:underline font-medium inline-flex items-center gap-1" target="_blank" rel="noopener">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V8.25c0-.621-.504-1.125-1.125-1.125H10.5V2.25Z"/>
-                </svg>
+                <x-heroicon-o-document-text class="w-4 h-4" />
                 View PDF
             </a>
         </div>
@@ -116,6 +110,7 @@
 
 {{-- Review summary (only for submitted/under_review/decided) --}}
 @if (in_array($submission->status, ['submitted', 'under_review', 'decided']))
+    @if ($reviewsReleased)
     {{-- Summary cards --}}
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         <div class="card p-4">
@@ -160,19 +155,10 @@
                                 Submitted {{ $review['submitted_at']?->format('M j, Y') }}
                             </p>
                         </div>
-                        <div class="flex items-center gap-3 shrink-0">
-                            <span class="badge-green text-xs">Submitted</span>
-                            @if ($review['score'] !== null)
-                                <span class="text-lg font-bold text-uh-red">{{ $review['score'] }}<span class="text-xs text-gray-500">/9</span></span>
-                            @endif
-                        </div>
+                        <span class="badge-green text-xs shrink-0">Submitted</span>
                     </div>
-                    @if ($review['comments'])
-                        <div class="mt-3 bg-uh-muted rounded-md p-3">
-                            <p class="text-xs text-gray-500 mb-1">Overall Impact</p>
-                            <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ $review['comments'] }}</p>
-                        </div>
-                    @endif
+
+                    @include('reviews.partials.structured-review-summary', ['review' => $review['review'], 'showOverall' => true])
                 </div>
             @empty
                 <div class="px-5 py-10 text-center text-gray-500">
@@ -185,5 +171,14 @@
             @endforelse
         </div>
     </div>
+    @else
+        <div class="card p-6 flex items-start gap-3">
+            <x-heroicon-o-clock class="w-5 h-5 text-uh-slate shrink-0 mt-0.5" />
+            <div>
+                <h2 class="font-semibold text-uh-fg">Reviews pending release</h2>
+                <p class="text-sm text-gray-600 mt-1">Reviewer feedback is awaiting administrator approval. You will receive an email when the reviews are available.</p>
+            </div>
+        </div>
+    @endif
 @endif
 @endsection

@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -30,16 +31,26 @@ class SetPasswordController extends Controller
             'email' => ['required', 'email'],
             'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
         ]);
-        $status = Password::reset($credentials, function (User $user, string $password): void {
+        $resetUser = null;
+        $status = Password::reset($credentials, function (User $user, string $password) use (&$resetUser): void {
             $user->forceFill([
                 'password' => Hash::make($password),
                 'remember_token' => Str::random(60),
             ])->save();
+            $resetUser = $user;
             event(new PasswordReset($user));
         });
 
-        return $status === Password::PASSWORD_RESET
-            ? redirect()->route('login')->with('status', 'Your password has been set. You can now sign in.')
-            : back()->withInput($request->only('email'))->withErrors(['email' => __($status)]);
+        if ($status !== Password::PASSWORD_RESET || ! $resetUser) {
+            return back()->withInput($request->only('email'))->withErrors(['email' => __($status)]);
+        }
+
+        Auth::login($resetUser);
+        $request->session()->regenerate();
+        $applications = $resetUser->applications()->where('enabled', true)->get();
+
+        return $applications->count() === 1
+            ? redirect()->route('applications.launch', $applications->first())
+            : redirect()->route('dashboard');
     }
 }

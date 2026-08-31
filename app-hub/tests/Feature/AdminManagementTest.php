@@ -80,6 +80,7 @@ class AdminManagementTest extends TestCase
             'name' => 'Grant Review',
             'key' => 'grant-review',
             'path' => '/apps/grant-review',
+            'frontchannel_logout_path' => '/apps/grant-review/auth/hub/logout',
             'roles' => 'admin, submitter, reviewer',
             'enabled' => true,
             'sort_order' => 10,
@@ -87,6 +88,7 @@ class AdminManagementTest extends TestCase
 
         $application = Application::where('key', 'grant-review')->firstOrFail();
         $this->assertSame(['admin', 'submitter', 'reviewer'], $application->roles);
+        $this->assertSame('/apps/grant-review/auth/hub/logout', $application->frontchannel_logout_path);
         $this->assertTrue($application->enabled);
     }
 

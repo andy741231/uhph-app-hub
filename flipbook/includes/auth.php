@@ -71,6 +71,22 @@ function flipbook_is_safe_hub_logout_url(string $url): bool
         && !empty($candidate['query']);
 }
 
+function flipbook_is_safe_hub_navigation_url(string $url): bool
+{
+    $base = parse_url(FLIPBOOK_HUB_BASE_URL);
+    $candidate = parse_url($url);
+    $path = $candidate['path'] ?? '';
+
+    return is_array($base)
+        && is_array($candidate)
+        && ($candidate['scheme'] ?? null) === ($base['scheme'] ?? null)
+        && ($candidate['host'] ?? null) === ($base['host'] ?? null)
+        && ($candidate['port'] ?? null) === ($base['port'] ?? null)
+        && is_string($path)
+        && preg_match('#^/apps(?:/[A-Za-z0-9_~.-]+)*$#', $path) === 1
+        && preg_match('#(?:^|/)\.{1,2}(?:/|$)#', $path) !== 1;
+}
+
 function flipbook_is_admin(): bool
 {
     if (!FLIPBOOK_HUB_SSO_ENABLED) {

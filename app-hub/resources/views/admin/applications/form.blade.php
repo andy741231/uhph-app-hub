@@ -24,6 +24,12 @@
         @error('callback_url')<p class="field-error">{{ $message }}</p>@enderror
     </div>
     <div class="field field-full">
+        <label class="label" for="frontchannel_logout_path">Single logout path</label>
+        <input class="input" id="frontchannel_logout_path" name="frontchannel_logout_path" value="{{ old('frontchannel_logout_path', $application->frontchannel_logout_path ?? '') }}" placeholder="/apps/grant-review/auth/hub/logout" @error('frontchannel_logout_path') aria-invalid="true" @enderror>
+        <p class="hint">Internal endpoint used to clear this application's browser session during global sign out.</p>
+        @error('frontchannel_logout_path')<p class="field-error">{{ $message }}</p>@enderror
+    </div>
+    <div class="field field-full">
         <label class="label" for="roles">Supported roles</label>
         <input class="input" id="roles" name="roles" value="{{ old('roles', isset($application) ? implode(', ', $application->roles ?? []) : '') }}" placeholder="admin, submitter, reviewer" @error('roles') aria-invalid="true" @enderror>
         <p class="hint">Comma-separated. Leave empty when the application does not use roles.</p>

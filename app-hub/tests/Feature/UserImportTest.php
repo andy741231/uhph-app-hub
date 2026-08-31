@@ -122,9 +122,30 @@ class UserImportTest extends TestCase
             'email' => $user->email,
             'password' => 'abcd1234',
             'password_confirmation' => 'abcd1234',
-        ])->assertRedirect(route('login'))->assertSessionHas('status');
+        ])->assertRedirect(route('dashboard'));
 
+        $this->assertAuthenticatedAs($user);
         $this->assertTrue(Hash::check('abcd1234', $user->fresh()->password));
+    }
+
+    public function test_invited_user_with_one_application_is_launched_after_setting_password(): void
+    {
+        $user = User::factory()->create(['password' => 'unknown-password-123']);
+        $application = $this->application('grant-review', ['submitter', 'reviewer']);
+        $user->applications()->attach($application, [
+            'role' => 'reviewer',
+            'granted_at' => now(),
+        ]);
+        $token = Password::createToken($user);
+
+        $this->post('/set-password', [
+            'token' => $token,
+            'email' => $user->email,
+            'password' => 'abcd1234',
+            'password_confirmation' => 'abcd1234',
+        ])->assertRedirect(route('applications.launch', $application));
+
+        $this->assertAuthenticatedAs($user);
     }
 
     public function test_set_password_rejects_fewer_than_eight_characters(): void

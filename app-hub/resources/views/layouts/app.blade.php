@@ -6,7 +6,7 @@
     <meta name="color-scheme" content="light">
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    <title>@yield('title', 'App Hub') | {{ config('app.name') }}</title>
+    <title>@yield('title', 'UHPH App Hub') | {{ config('app.name') }}</title>
     <style>
         :root {
             color-scheme: light;
@@ -158,9 +158,9 @@
 <div class="shell">
     <header class="topbar">
         <div class="topbar-inner">
-            <a class="brand" href="{{ url('/') }}" aria-label="App Hub home">
+            <a class="brand" href="{{ url('/') }}" aria-label="UHPH App Hub home">
                 <span class="brand-mark" aria-hidden="true">AH</span>
-                <span>App Hub</span>
+                <span>UHPH App Hub</span>
             </a>
             @auth
                 <div class="topbar-actions">

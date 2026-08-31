@@ -2,6 +2,7 @@
 
 return [
     'authorization_code_ttl' => (int) env('HUB_AUTHORIZATION_CODE_TTL', 60),
+    'application_admin_token_ttl' => (int) env('HUB_APPLICATION_ADMIN_TOKEN_TTL', 20),
     'local_client' => [
         'application_keys' => array_values(array_filter(array_map(
             'trim',

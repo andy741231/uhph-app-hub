@@ -56,7 +56,6 @@ class ReviewerWorkflowTest extends TestCase
             'additional_human_subjects' => 'na',
             'additional_vertebrate_animals' => 'na',
             'additional_biohazards' => 'na',
-            'additional_resubmission' => 'na',
             'submitted_at' => now(),
         ]);
 
@@ -88,8 +87,6 @@ class ReviewerWorkflowTest extends TestCase
             'additional_vertebrate_animals_comments' => '',
             'additional_biohazards' => 'na',
             'additional_biohazards_comments' => '',
-            'additional_resubmission' => 'na',
-            'additional_resubmission_comments' => '',
         ], $overrides);
     }
 

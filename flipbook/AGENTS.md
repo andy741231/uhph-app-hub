@@ -8,7 +8,7 @@
 - Dashboard, upload, editor, and all API mutations require Flipbook administrator access when Hub SSO is enabled.
 - Regenerate the Flipbook favicon with `php E:/apps/flipbook/scripts/generate-favicon.php` (requires GD); it renders the navbar Font Awesome `book-open` glyph white on the red rounded square and writes `favicon.png` + `favicon.ico` in the flipbook root. The `scripts/` directory is blocked from direct HTTP access by `web.config` and `.htaccess`.
 
-## App Hub SSO
+## UHPH App Hub SSO
 
 SSO is active. Runtime configuration is loaded from the ignored `E:\apps\flipbook\.env`, which must remain blocked by IIS and excluded from Git:
 
@@ -25,7 +25,7 @@ BASE_PATH_OVERRIDE=/apps/flipbook
 
 Never commit or log `FLIPBOOK_HUB_CLIENT_SECRET`. The client must have the Flipbook `admin` role. When SSO is enabled, administrator sessions reauthorize through the Hub every 15 minutes by default.
 
-The SSO callback stores the Hub-issued application count and signed logout URL in the Flipbook administrator session. “All applications” appears only for users assigned to multiple enabled Hub apps and returns to the launcher without ending either session. “Sign Out” destroys the Flipbook session, follows only a validated signed Hub logout URL, destroys the Hub session, and shows the Flipbook-context login screen.
+The SSO callback stores the Hub-issued application count and signed logout URL in the Flipbook administrator session. “All applications” appears only for users assigned to multiple enabled Hub apps and returns to the launcher without ending either session. “Sign Out” destroys the Flipbook session and follows only a validated signed Hub logout URL. The Hub then sends the browser through each registered front-channel endpoint; `auth/hub-logout.php` validates the opaque transaction with the Hub before clearing Flipbook, so signing out anywhere immediately clears all application and Hub sessions before showing the contextual login screen.
 
 ## Access boundaries
 

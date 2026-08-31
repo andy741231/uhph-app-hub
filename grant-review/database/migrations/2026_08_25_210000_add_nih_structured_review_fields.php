@@ -31,8 +31,6 @@ return new class extends Migration
             $table->text('additional_vertebrate_animals_comments')->nullable()->after('additional_vertebrate_animals');
             $table->string('additional_biohazards', 3)->nullable()->after('additional_vertebrate_animals_comments');
             $table->text('additional_biohazards_comments')->nullable()->after('additional_biohazards');
-            $table->string('additional_resubmission', 3)->nullable()->after('additional_biohazards_comments');
-            $table->text('additional_resubmission_comments')->nullable()->after('additional_resubmission');
         });
 
         Schema::table('review_revisions', function (Blueprint $table) {
@@ -48,8 +46,6 @@ return new class extends Migration
             $table->text('additional_vertebrate_animals_comments')->nullable()->after('additional_vertebrate_animals');
             $table->string('additional_biohazards', 3)->nullable()->after('additional_vertebrate_animals_comments');
             $table->text('additional_biohazards_comments')->nullable()->after('additional_biohazards');
-            $table->string('additional_resubmission', 3)->nullable()->after('additional_biohazards_comments');
-            $table->text('additional_resubmission_comments')->nullable()->after('additional_resubmission');
         });
     }
 
@@ -69,8 +65,6 @@ return new class extends Migration
                 'additional_vertebrate_animals_comments',
                 'additional_biohazards',
                 'additional_biohazards_comments',
-                'additional_resubmission',
-                'additional_resubmission_comments',
             ]);
         });
 
@@ -88,8 +82,6 @@ return new class extends Migration
                 'additional_vertebrate_animals_comments',
                 'additional_biohazards',
                 'additional_biohazards_comments',
-                'additional_resubmission',
-                'additional_resubmission_comments',
             ]);
         });
     }

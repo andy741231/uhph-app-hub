@@ -25,11 +25,11 @@ class SetPasswordInvitation extends Notification
         ]);
 
         return (new MailMessage)
-            ->subject('Set your App Hub password')
+            ->subject('Set your UHPH App Hub password')
             ->greeting("Hello {$notifiable->name},")
-            ->line('An App Hub account has been created for you.')
+            ->line('An UHPH App Hub account has been created for you.')
             ->action('Set password', $url)
             ->line('This link expires in '.config('auth.passwords.users.expire').' minutes.')
-            ->line('If you were not expecting this invitation, contact your App Hub administrator.');
+            ->line('If you were not expecting this invitation, contact your UHPH App Hub administrator.');
     }
 }

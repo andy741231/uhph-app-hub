@@ -5,19 +5,22 @@ namespace App\Http\Controllers\Submitter;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreSubmissionRequest;
 use App\Http\Requests\UpdateSubmissionRequest;
+use App\Mail\ProposalSubmitted;
+use App\Mail\SubmissionConfirmation;
 use App\Models\Round;
 use App\Models\Submission;
+use App\Models\User;
 use App\Services\SubmissionFileService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SubmissionController extends Controller
 {
-    public function __construct(private SubmissionFileService $files)
-    {
-    }
+    public function __construct(private SubmissionFileService $files) {}
 
     /**
      * List the submitter's own submissions.
@@ -105,7 +108,13 @@ class SubmissionController extends Controller
             ->whereNotNull('submitted_at')
             ->values();
 
-        $scores = $submittedReviews->pluck('score')->filter(fn ($score) => $score !== null);
+        // Average across Overall Impact + Factor 1 + Factor 2 scores
+        $scores = $submittedReviews->flatMap(function ($review) {
+            return collect($review->numericScoreFields())
+                ->map(fn ($field) => $review->{$field})
+                ->filter(fn ($value) => $value !== null)
+                ->map(fn ($value) => (float) $value);
+        })->values();
 
         $stats = [
             'assigned' => $assignments->count(),
@@ -116,19 +125,22 @@ class SubmissionController extends Controller
         ];
 
         // Anonymize reviewer names: "Reviewer 1", "Reviewer 2", etc.
-        $reviews = $submittedReviews->map(function ($review, $index) {
-            return [
-                'label' => 'Reviewer ' . ($index + 1),
-                'score' => $review->score !== null ? (float) $review->score : null,
-                'comments' => $review->comments,
-                'submitted_at' => $review->submitted_at,
-            ];
-        });
+        // Pass full Review objects so the structured-review-summary partial can render.
+        $reviewsReleased = $submission->reviewsReleased();
+        $reviews = $reviewsReleased
+            ? $submittedReviews->map(function ($review, $index) {
+                return [
+                    'label' => 'Reviewer '.($index + 1),
+                    'review' => $review,
+                    'submitted_at' => $review->submitted_at,
+                ];
+            })
+            : collect();
 
         // Whether the submitter can still edit (deadline not passed, not in review)
         $canEdit = $request->user()->can('update', $submission);
 
-        return view('submitter.submissions.show', compact('submission', 'reviews', 'stats', 'canEdit'));
+        return view('submitter.submissions.show', compact('submission', 'reviews', 'stats', 'canEdit', 'reviewsReleased'));
     }
 
     /**
@@ -218,10 +230,10 @@ class SubmissionController extends Controller
         if (now()->gt($round->deadline_at)) {
             return redirect()
                 ->route('submitter.submissions.show', $submission)
-                ->withErrors(['submit' => 'The deadline for this round (' . $round->deadline_at->format('M j, Y g:i A') . ') has passed.']);
+                ->withErrors(['submit' => 'The deadline for this round ('.$round->deadline_at->format('M j, Y g:i A').') has passed.']);
         }
 
-        if (! $submission->pdf_path || ! \Illuminate\Support\Facades\Storage::disk('local')->exists($submission->pdf_path)) {
+        if (! $submission->pdf_path || ! Storage::disk('local')->exists($submission->pdf_path)) {
             return redirect()
                 ->route('submitter.submissions.show', $submission)
                 ->withErrors(['submit' => 'Your submission must have a valid PDF attached before submitting.']);
@@ -231,6 +243,21 @@ class SubmissionController extends Controller
             'status' => 'submitted',
             'submitted_at' => now(),
         ]);
+        $submission->load('round', 'submitter');
+
+        // Notify submitter: confirmation
+        $submitter = $submission->submitter;
+        if ($submitter && $submitter->wantsEmail('notify_submission_confirmation')) {
+            Mail::to($submitter)->send(new SubmissionConfirmation($submission));
+        }
+
+        // Notify admins: proposal submitted
+        $admins = User::where('role', 'admin')
+            ->where('status', 'active')
+            ->get()
+            ->filter(fn ($admin) => $admin->wantsEmail('notify_proposal_submitted'));
+
+        $admins->each(fn ($admin) => Mail::to($admin)->send(new ProposalSubmitted($submission)));
 
         return redirect()
             ->route('submitter.submissions.show', $submission)

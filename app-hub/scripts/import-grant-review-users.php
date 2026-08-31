@@ -38,7 +38,7 @@ $connection = DB::connection();
 $targetDatabase = $connection->getDatabaseName();
 
 if (preg_match('/^[A-Za-z0-9_-]+$/', $targetDatabase) !== 1) {
-    fwrite(STDERR, "App Hub database name is invalid.\n");
+    fwrite(STDERR, "UHPH App Hub database name is invalid.\n");
     exit(1);
 }
 

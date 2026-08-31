@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CompleteProfileRequest;
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Mail\ProfileCompleted;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\View\View;
 
@@ -21,7 +24,16 @@ class ProfileController extends Controller
 
     public function completeUpdate(CompleteProfileRequest $request): RedirectResponse
     {
-        $request->user()->update($request->validated());
+        $user = $request->user();
+        $user->update($request->validated());
+
+        // Notify admins who want this notification
+        $admins = User::where('role', 'admin')
+            ->where('status', 'active')
+            ->get()
+            ->filter(fn ($admin) => $admin->wantsEmail('notify_profile_completed'));
+
+        $admins->each(fn ($admin) => Mail::to($admin)->send(new ProfileCompleted($user)));
 
         return Redirect::route('dashboard')->with('status', 'profile-completed');
     }

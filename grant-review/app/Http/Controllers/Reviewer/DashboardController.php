@@ -4,13 +4,18 @@ namespace App\Http\Controllers\Reviewer;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreReviewRequest;
+use App\Mail\AllReviewsComplete;
+use App\Mail\ReviewSubmitted;
 use App\Models\ConflictOfInterestDeclaration;
 use App\Models\Review;
 use App\Models\ReviewAssignment;
 use App\Models\ReviewRevision;
+use App\Models\Submission;
+use App\Models\User;
 use App\Support\ReviewerSubmissionView;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -106,23 +111,28 @@ class DashboardController extends Controller
         // Load other submitted reviews for the same submission, anonymized.
         // The current reviewer's own review is excluded — they see their own
         // form directly. Only submitted reviews are shown (drafts are private).
-        $otherReviews = $review->reviewAssignment->submission
-            ->reviewAssignments()
-            ->with('review')
-            ->where('reviewer_id', '!=', auth()->id())
-            ->get()
-            ->pluck('review')
-            ->filter(fn ($r) => $r && $r->submitted_at !== null)
-            ->sortBy('submitted_at')
-            ->values()
-            ->map(function ($r, $i) {
-                return [
-                    'label' => 'Reviewer '.($i + 1),
-                    'score' => $r->score !== null ? (float) $r->score : null,
-                    'comments' => $r->comments,
-                    'submitted_at' => $r->submitted_at,
-                ];
-            });
+        $otherReviews = $review->reviewAssignment->submission->reviewsReleased()
+            ? $review->reviewAssignment->submission
+                ->reviewAssignments()
+                ->with('review')
+                ->where('reviewer_id', '!=', auth()->id())
+                ->get()
+                ->pluck('review')
+                ->filter(fn ($r) => $r && $r->submitted_at !== null)
+                ->sortBy('submitted_at')
+                ->values()
+                ->map(function ($r, $i) {
+                    return [
+                        'label' => 'Reviewer '.($i + 1),
+                        'score' => $r->score !== null ? (float) $r->score : null,
+                        'comments' => $r->comments,
+                        'factor1_score' => $r->factor1_score,
+                        'factor2_score' => $r->factor2_score,
+                        'factor3_sufficient' => $r->factor3_sufficient,
+                        'submitted_at' => $r->submitted_at,
+                    ];
+                })
+            : collect();
 
         // Count of this reviewer's submitted revisions (for timeline button)
         $revisionCount = $review->revisions()->count();
@@ -174,6 +184,7 @@ class DashboardController extends Controller
 
         $data = $request->validated();
         $now = now();
+        $wasSubmitted = $review->submitted_at !== null;
 
         $review->update(array_merge($data, ['submitted_at' => $now]));
 
@@ -194,13 +205,38 @@ class DashboardController extends Controller
             'additional_vertebrate_animals_comments' => $data['additional_vertebrate_animals_comments'] ?? null,
             'additional_biohazards' => $data['additional_biohazards'] ?? null,
             'additional_biohazards_comments' => $data['additional_biohazards_comments'] ?? null,
-            'additional_resubmission' => $data['additional_resubmission'] ?? null,
-            'additional_resubmission_comments' => $data['additional_resubmission_comments'] ?? null,
             'submitted_at' => $now,
         ]);
+
+        // Notify admins: review submitted
+        $submission = $review->reviewAssignment->submission;
+        $reviewer = $review->reviewAssignment->reviewer;
+        $this->notifyAdmins('notify_review_submitted', function (User $admin) use ($reviewer, $submission, $review) {
+            Mail::to($admin)->send(new ReviewSubmitted($reviewer, $submission, $review));
+        });
+
+        // Check if all reviews are complete and notify admins
+        if (! $wasSubmitted && $submission->reviewsComplete()) {
+            $this->notifyAdmins('notify_all_reviews_complete', function (User $admin) use ($submission) {
+                Mail::to($admin)->send(new AllReviewsComplete($submission->load('round', 'submitter')));
+            });
+        }
 
         return redirect()
             ->route('reviewer.reviews.show', $review)
             ->with('status', 'Review submitted. Thank you.');
+    }
+
+    /**
+     * Send email to all admins who have the given notification preference enabled.
+     */
+    private function notifyAdmins(string $preferenceKey, callable $callback): void
+    {
+        $admins = User::where('role', 'admin')
+            ->where('status', 'active')
+            ->get()
+            ->filter(fn ($admin) => $admin->wantsEmail($preferenceKey));
+
+        $admins->each($callback);
     }
 }

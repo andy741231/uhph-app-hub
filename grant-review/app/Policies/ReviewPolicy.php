@@ -29,7 +29,8 @@ class ReviewPolicy
     public function update(User $user, Review $review): bool
     {
         return $this->view($user, $review)
-            && ! $this->submissionIsDecided($review);
+            && ! $this->submissionIsDecided($review)
+            && ! $review->reviewAssignment->submission->reviewsReleased();
     }
 
     /**

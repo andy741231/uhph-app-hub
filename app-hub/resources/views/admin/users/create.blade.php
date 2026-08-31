@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="page-heading">
-    <div><p class="eyebrow">User administration</p><h1>Create user</h1><p>Create an administrator-managed App Hub account.</p></div>
+    <div><p class="eyebrow">User administration</p><h1>Create user</h1><p>Create an administrator-managed UHPH App Hub account.</p></div>
     <a href="{{ route('admin.users.index') }}">Back to users</a>
 </div>
 

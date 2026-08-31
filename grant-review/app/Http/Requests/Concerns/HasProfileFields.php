@@ -23,6 +23,9 @@ trait HasProfileFields
             'investigator_type' => ['nullable', 'in:pi,other'],
             'early_stage_investigator' => ['boolean'],
             'new_investigator' => ['boolean'],
+            'key_personnel' => ['nullable', 'array'],
+            'key_personnel.*.title' => ['nullable', 'string', 'max:255'],
+            'key_personnel.*.name' => ['nullable', 'string', 'max:255'],
         ];
     }
 

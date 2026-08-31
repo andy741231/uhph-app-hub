@@ -29,7 +29,7 @@ class SsoAuthorizationCodeTest extends TestCase
             ->assertSee('Sign in to Grant Review');
         $this->get(route('login'))
             ->assertOk()
-            ->assertSee('Sign in to App Hub')
+            ->assertSee('Sign in to UHPH App Hub')
             ->assertDontSee('Sign in to Grant Review');
     }
 
@@ -109,6 +109,7 @@ class SsoAuthorizationCodeTest extends TestCase
             ]);
 
         $this->assertStringStartsWith(route('sso.logout'), $response->json('logout_url'));
+        $this->assertIsString($response->json('actor_token'));
         $this->assertArrayNotHasKey('password', $response->json());
         $this->assertNotNull(AuthorizationCode::firstOrFail()->consumed_at);
 
@@ -117,17 +118,39 @@ class SsoAuthorizationCodeTest extends TestCase
             ->assertJson(['error' => 'invalid_grant']);
     }
 
-    public function test_signed_sso_logout_ends_the_hub_session_and_returns_to_contextual_login(): void
+    public function test_signed_sso_logout_ends_all_application_sessions_and_returns_to_contextual_login(): void
     {
         $user = User::factory()->create();
         $application = $this->application();
+        Application::create([
+            'key' => 'flipbook',
+            'name' => 'Flipbook',
+            'path' => '/apps/flipbook',
+            'frontchannel_logout_path' => '/apps/flipbook/auth/hub-logout.php',
+            'roles' => ['admin'],
+        ]);
         $this->assign($user, $application, 'reviewer');
         $code = $this->issueCode($user, $application);
         $logoutUrl = $this->exchange($application, 'test-client-secret', $code)->json('logout_url');
 
-        $this->actingAs($user)->get($logoutUrl)
-            ->assertRedirect(route('login', ['application' => $application->key]))
-            ->assertSessionHas('status', 'You have been signed out.');
+        $response = $this->actingAs($user)->get($logoutUrl)
+            ->assertRedirectContains('/apps/grant-review/auth/hub/logout?logout_token=')
+            ->assertSessionHas('status', 'You have been signed out of all applications.');
+        parse_str((string) parse_url($response->headers->get('Location'), PHP_URL_QUERY), $query);
+        $token = $query['logout_token'];
+
+        $this->postJson('/sso/logout/continue', [
+            'application' => 'grant-review',
+            'logout_token' => $token,
+        ])->assertOk()->assertJsonPath('next_url', 'https://localhost/apps/flipbook/auth/hub-logout.php?logout_token='.$token);
+        $this->postJson('/sso/logout/continue', [
+            'application' => 'flipbook',
+            'logout_token' => $token,
+        ])->assertOk()->assertJsonPath('next_url', route('login', ['application' => $application->key]));
+        $this->postJson('/sso/logout/continue', [
+            'application' => 'flipbook',
+            'logout_token' => $token,
+        ])->assertBadRequest()->assertJson(['error' => 'invalid_logout_token']);
 
         $this->assertGuest();
         $this->assertSame('https://localhost'.$application->path, session('url.intended'));
@@ -137,7 +160,7 @@ class SsoAuthorizationCodeTest extends TestCase
             ->assertSee('Sign in to Grant Review');
         $this->get(route('login'))
             ->assertOk()
-            ->assertSee('Sign in to App Hub')
+            ->assertSee('Sign in to UHPH App Hub')
             ->assertDontSee('Sign in to Grant Review');
         $this->post('/login', [
             'email' => $user->email,
@@ -294,6 +317,7 @@ class SsoAuthorizationCodeTest extends TestCase
             'name' => 'Grant Review',
             'path' => '/apps/grant-review',
             'callback_url' => '/apps/grant-review/auth/hub/callback',
+            'frontchannel_logout_path' => '/apps/grant-review/auth/hub/logout',
             'client_id' => 'hub_grant_review',
             'client_secret_hash' => hash('sha256', 'test-client-secret'),
             'roles' => ['admin', 'reviewer'],
