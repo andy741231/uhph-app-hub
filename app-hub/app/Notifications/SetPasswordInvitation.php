@@ -29,7 +29,7 @@ class SetPasswordInvitation extends Notification
             ->greeting("Hello {$notifiable->name},")
             ->line('An UHPH App Hub account has been created for you.')
             ->action('Set password', $url)
-            ->line('This link expires in '.config('auth.passwords.users.expire').' minutes.')
+            ->line('This link expires in 7 days.')
             ->line('If you were not expecting this invitation, contact your UHPH App Hub administrator.');
     }
 }
