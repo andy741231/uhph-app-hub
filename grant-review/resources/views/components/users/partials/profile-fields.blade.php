@@ -1,4 +1,4 @@
-@props(['user' => null, 'required' => false])
+@props(['user' => null, 'required' => false, 'hideInvestigatorFields' => false])
 
 @php
     $reqMark = $required ? ' <span class="req">*</span>' : '';
@@ -46,6 +46,7 @@
     @enderror
 </div>
 
+@unless($hideInvestigatorFields)
 {{-- Type of Investigator --}}
 <div>
     <label for="investigator_type" class="label">Type of Investigator{!! $reqMark !!}</label>
@@ -125,3 +126,4 @@
         <p class="text-sm text-uh-red mt-1">{{ $message }}</p>
     @enderror
 </div>
+@endunless

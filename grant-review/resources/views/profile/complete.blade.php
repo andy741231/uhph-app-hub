@@ -33,7 +33,7 @@
             @csrf
             @method('PATCH')
 
-            <x-users.partials.profile-fields :user="$user" required />
+            <x-users.partials.profile-fields :user="$user" required :hideInvestigatorFields="$user->role === 'reviewer'" />
 
             <div class="pt-5 border-t border-uh-border">
                 <button type="submit" class="btn-primary w-full sm:w-auto">Save and Continue</button>

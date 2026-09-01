@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\HasProfileFields;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rules\Password;
 
@@ -23,10 +24,15 @@ class SetPasswordRequest extends FormRequest
             'department' => ['required', 'string', 'max:255'],
             'title' => ['required', 'string', 'max:255'],
             'peoplesoft_id' => ['required', 'regex:/^\d{7,20}$/'],
-            'investigator_type' => ['required', 'in:pi,other'],
-            'early_stage_investigator' => ['boolean'],
-            'new_investigator' => ['boolean'],
         ];
+
+        // Investigator fields are not required for reviewers
+        $user = User::where('email', $this->email)->first();
+        if ($user?->role !== 'reviewer') {
+            $requiredProfile['investigator_type'] = ['required', 'in:pi,other'];
+            $requiredProfile['early_stage_investigator'] = ['boolean'];
+            $requiredProfile['new_investigator'] = ['boolean'];
+        }
 
         return array_merge($requiredProfile, [
             'token' => ['required', 'string'],

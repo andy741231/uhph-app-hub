@@ -77,7 +77,7 @@
             </div>
 
             {{-- Shared profile fields: Department, Phone, Title, PeopleSoft ID, Investigator Type --}}
-            <x-users.partials.profile-fields :user="$user" />
+            <x-users.partials.profile-fields :user="$user" :hideInvestigatorFields="$user->role === 'reviewer'" />
 
             {{-- Role (read-only) --}}
             <div>

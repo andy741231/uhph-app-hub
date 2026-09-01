@@ -69,6 +69,75 @@ class ProfileTest extends TestCase
             ->assertSee('New Investigator');
     }
 
+    public function test_reviewer_profile_completion_hides_investigator_fields(): void
+    {
+        config()->set('hub.enabled', true);
+        $user = User::factory()->create([
+            'role' => 'reviewer',
+            'phone' => null,
+            'department' => null,
+            'title' => null,
+            'peoplesoft_id' => null,
+            'investigator_type' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['hub_authenticated_at' => now()->timestamp])
+            ->get('/complete-profile')
+            ->assertOk()
+            ->assertDontSee('Type of Investigator')
+            ->assertDontSee('Early-Stage Investigator')
+            ->assertDontSee('New Investigator')
+            ->assertDontSee('Key Personnel');
+    }
+
+    public function test_reviewer_can_complete_profile_without_investigator_fields(): void
+    {
+        config()->set('hub.enabled', true);
+        $user = User::factory()->create([
+            'role' => 'reviewer',
+            'phone' => null,
+            'department' => null,
+            'title' => null,
+            'peoplesoft_id' => null,
+            'investigator_type' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->withSession(['hub_authenticated_at' => now()->timestamp])
+            ->patch('/complete-profile', [
+                'phone' => '713-743-1234',
+                'department' => 'Population Health',
+                'title' => 'Reviewer',
+                'peoplesoft_id' => '1234567',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('dashboard', absolute: false));
+
+        $user->refresh();
+        $this->assertTrue($user->hasCompleteProfile());
+    }
+
+    public function test_reviewer_profile_is_complete_without_investigator_type(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'reviewer',
+            'investigator_type' => null,
+        ]);
+
+        $this->assertTrue($user->hasCompleteProfile());
+    }
+
+    public function test_submitter_profile_is_incomplete_without_investigator_type(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'submitter',
+            'investigator_type' => null,
+        ]);
+
+        $this->assertFalse($user->hasCompleteProfile());
+    }
+
     public function test_hub_user_can_complete_their_profile(): void
     {
         config()->set('hub.enabled', true);

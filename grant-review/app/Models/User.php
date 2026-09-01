@@ -84,11 +84,17 @@ class User extends Authenticatable
 
     public function hasCompleteProfile(): bool
     {
-        return filled($this->phone)
+        $complete = filled($this->phone)
             && filled($this->department)
             && filled($this->title)
-            && preg_match('/^\d{7,20}$/', (string) $this->peoplesoft_id) === 1
-            && in_array($this->investigator_type, ['pi', 'other'], true);
+            && preg_match('/^\d{7,20}$/', (string) $this->peoplesoft_id) === 1;
+
+        // Investigator type is not required for reviewers
+        if ($this->role !== 'reviewer') {
+            $complete = $complete && in_array($this->investigator_type, ['pi', 'other'], true);
+        }
+
+        return $complete;
     }
 
     public function roundsInvitedTo(): BelongsToMany

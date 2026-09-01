@@ -14,9 +14,12 @@ class SetPasswordController extends Controller
 {
     public function create(Request $request): View
     {
+        $user = User::where('email', $request->email)->first();
+
         return view('auth.set-password', [
             'token' => $request->token,
             'email' => $request->email,
+            'hideInvestigatorFields' => $user?->role === 'reviewer',
         ]);
     }
 
@@ -47,9 +50,9 @@ class SetPasswordController extends Controller
             'department' => $request->department,
             'title' => $request->title,
             'peoplesoft_id' => $request->peoplesoft_id,
-            'investigator_type' => $request->investigator_type,
-            'early_stage_investigator' => $request->boolean('early_stage_investigator'),
-            'new_investigator' => $request->boolean('new_investigator'),
+            'investigator_type' => $user->role === 'reviewer' ? $user->investigator_type : $request->investigator_type,
+            'early_stage_investigator' => $user->role === 'reviewer' ? $user->early_stage_investigator : $request->boolean('early_stage_investigator'),
+            'new_investigator' => $user->role === 'reviewer' ? $user->new_investigator : $request->boolean('new_investigator'),
         ]);
 
         auth()->login($user);

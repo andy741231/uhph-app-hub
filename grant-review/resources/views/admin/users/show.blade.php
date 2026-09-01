@@ -84,6 +84,7 @@
             </div>
         </div>
     </div>
+    @if ($user->role !== 'reviewer')
     <div class="card p-5">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center text-yellow-600 shrink-0">
@@ -95,6 +96,7 @@
             </div>
         </div>
     </div>
+    @endif
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -115,10 +117,12 @@
                     ['label' => 'Department', 'value' => $user->department, 'icon' => 'o-building-office-2'],
                     ['label' => 'Title', 'value' => $user->title, 'icon' => 'o-briefcase'],
                     ['label' => 'PeopleSoft ID', 'value' => $user->peoplesoft_id, 'icon' => 'o-identification'],
-                    ['label' => 'Investigator Type', 'value' => $user->investigator_type === 'pi' ? 'Principal Investigator' : ($user->investigator_type === 'other' ? 'Other' : null), 'icon' => 'o-sparkles'],
-                    ['label' => 'Early-Stage Investigator', 'value' => $user->early_stage_investigator ? 'Yes' : 'No', 'icon' => 'o-sparkles'],
-                    ['label' => 'New Investigator', 'value' => $user->new_investigator ? 'Yes' : 'No', 'icon' => 'o-sparkles'],
                 ];
+                if ($user->role !== 'reviewer') {
+                    $profileFields[] = ['label' => 'Investigator Type', 'value' => $user->investigator_type === 'pi' ? 'Principal Investigator' : ($user->investigator_type === 'other' ? 'Other' : null), 'icon' => 'o-sparkles'];
+                    $profileFields[] = ['label' => 'Early-Stage Investigator', 'value' => $user->early_stage_investigator ? 'Yes' : 'No', 'icon' => 'o-sparkles'];
+                    $profileFields[] = ['label' => 'New Investigator', 'value' => $user->new_investigator ? 'Yes' : 'No', 'icon' => 'o-sparkles'];
+                }
             @endphp
             @foreach ($profileFields as $field)
                 <div class="bg-white px-4 py-3.5 flex items-center gap-3">
@@ -141,8 +145,8 @@
             @endforeach
         </dl>
 
-        {{-- Key Personnel --}}
-        @if (filled($user->key_personnel))
+        {{-- Key Personnel (hidden for reviewers) --}}
+        @if ($user->role !== 'reviewer' && filled($user->key_personnel))
             <div class="mt-5 pt-5 border-t border-uh-border">
                 <h3 class="text-sm font-bold text-uh-fg mb-3 flex items-center gap-2">
                     <x-heroicon-o-users class="w-4 h-4 text-uh-red" />

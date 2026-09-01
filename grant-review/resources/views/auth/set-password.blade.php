@@ -37,7 +37,7 @@
             </div>
 
             {{-- Shared profile fields: Phone, Department, Title, PeopleSoft ID, Investigator Type --}}
-            <x-users.partials.profile-fields required />
+            <x-users.partials.profile-fields required :hideInvestigatorFields="$hideInvestigatorFields ?? false" />
 
             {{-- Password section --}}
             <div class="pt-2">
