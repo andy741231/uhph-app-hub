@@ -51,7 +51,7 @@
     <label for="investigator_type" class="label">Type of Investigator{!! $reqMark !!}</label>
     <select id="investigator_type" name="investigator_type" class="input" {{ $reqAttr }}>
         <option value="">Select...</option>
-        <option value="pi" {{ old('investigator_type', $user?->investigator_type) === 'pi' ? 'selected' : '' }}>PI</option>
+        <option value="pi" {{ old('investigator_type', $user?->investigator_type) === 'pi' ? 'selected' : '' }}>Principal Investigator</option>
         <option value="other" {{ old('investigator_type', $user?->investigator_type) === 'other' ? 'selected' : '' }}>Other</option>
     </select>
     @error('investigator_type')

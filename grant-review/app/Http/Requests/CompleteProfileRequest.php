@@ -31,7 +31,7 @@ class CompleteProfileRequest extends FormRequest
     {
         return [
             'peoplesoft_id.regex' => 'PeopleSoft ID must contain 7 to 20 digits.',
-            'investigator_type.in' => 'Please select PI or Other.',
+            'investigator_type.in' => 'Please select Principal Investigator or Other.',
         ];
     }
 }

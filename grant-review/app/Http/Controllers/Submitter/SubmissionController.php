@@ -183,7 +183,11 @@ class SubmissionController extends Controller
             'submitted_at' => $submitNow ? now() : null,
         ];
 
-        Submission::create($data);
+        $submission = Submission::create($data);
+
+        if ($submitNow) {
+            $this->notifySubmission($submission);
+        }
 
         return redirect()
             ->route('submitter.submissions.index')
@@ -245,6 +249,20 @@ class SubmissionController extends Controller
         ]);
         $submission->load('round', 'submitter');
 
+        $this->notifySubmission($submission);
+
+        return redirect()
+            ->route('submitter.submissions.show', $submission)
+            ->with('status', 'Submission submitted successfully.');
+    }
+
+    /**
+     * Send submission confirmation to the submitter and notify admins.
+     */
+    private function notifySubmission(Submission $submission): void
+    {
+        $submission->load('round', 'submitter');
+
         // Notify submitter: confirmation
         $submitter = $submission->submitter;
         if ($submitter && $submitter->wantsEmail('notify_submission_confirmation')) {
@@ -252,16 +270,11 @@ class SubmissionController extends Controller
         }
 
         // Notify admins: proposal submitted
-        $admins = User::where('role', 'admin')
+        User::where('role', 'admin')
             ->where('status', 'active')
             ->get()
-            ->filter(fn ($admin) => $admin->wantsEmail('notify_proposal_submitted'));
-
-        $admins->each(fn ($admin) => Mail::to($admin)->send(new ProposalSubmitted($submission)));
-
-        return redirect()
-            ->route('submitter.submissions.show', $submission)
-            ->with('status', 'Submission submitted successfully.');
+            ->filter(fn ($admin) => $admin->wantsEmail('notify_proposal_submitted'))
+            ->each(fn ($admin) => Mail::to($admin)->send(new ProposalSubmitted($submission)));
     }
 
     /**
