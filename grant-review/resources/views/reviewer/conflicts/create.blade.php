@@ -109,6 +109,24 @@
                                                 <span>{{ $submission->submitter->department }}</span>
                                             @endif
                                         </p>
+                                        @if (filled($submission->submitter->key_personnel))
+                                            <div class="mt-2">
+                                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Key Personnel</p>
+                                                <ul class="space-y-0.5">
+                                                    @foreach ($submission->submitter->key_personnel as $person)
+                                                        @if (filled($person['name'] ?? null))
+                                                            <li class="text-xs text-gray-600 flex items-center gap-1.5">
+                                                                <span class="w-1 h-1 rounded-full bg-gray-400 shrink-0" aria-hidden="true"></span>
+                                                                @if (filled($person['title'] ?? null))
+                                                                    <span class="font-medium text-gray-500">{{ $person['title'] }}:</span>
+                                                                @endif
+                                                                <span class="font-medium text-gray-700">{{ $person['name'] }}</span>
+                                                            </li>
+                                                        @endif
+                                                    @endforeach
+                                                </ul>
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             </label>
