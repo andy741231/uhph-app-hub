@@ -6,7 +6,7 @@
 
 ---
 
-**Project:** UH Grants Portal
+**Project:** Pilot Central
 **Generated:** 2026-08-12 15:51:40
 **Category:** Smart Home/IoT Dashboard
 

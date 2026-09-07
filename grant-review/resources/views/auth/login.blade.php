@@ -5,7 +5,7 @@
 <div class="w-full max-w-md">
     <div class="card p-8">
         <h1 class="text-xl font-bold text-uh-fg mb-1">Sign In</h1>
-        <p class="text-sm text-gray-500 mb-6">Enter your credentials to access the grants portal.</p>
+        <p class="text-sm text-gray-500 mb-6">Enter your credentials to access Pilot Central.</p>
 
         @if (session('status'))
             <div role="alert" class="mb-4 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-md text-sm">
