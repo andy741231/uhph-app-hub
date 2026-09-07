@@ -10,7 +10,7 @@ You have been assigned to review a proposal.
 **Submitter:** {{ $submission->submitter->full_name }}
 </x-mail::panel>
 
-<x-mail::button :url="config('app.url').'/reviews'" color="red">
+<x-mail::button :url="route('reviewer.dashboard')" color="red">
 View My Assignments
 </x-mail::button>
 

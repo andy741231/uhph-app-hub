@@ -10,7 +10,7 @@ A new proposal has been submitted for review.
 **Amount requested:** ${{ number_format((float) $submission->amount_requested, 2) }}
 </x-mail::panel>
 
-<x-mail::button :url="config('app.url').'/admin/submissions/'.$submission->id" color="red">
+<x-mail::button :url="route('admin.review-results.show', $submission)" color="red">
 View Submission
 </x-mail::button>
 

@@ -12,7 +12,7 @@ A funding decision has been recorded for your proposal.
 @endif
 </x-mail::panel>
 
-<x-mail::button :url="config('app.url').'/submissions/'.$submission->id" color="red">
+<x-mail::button :url="route('submitter.submissions.show', $submission)" color="red">
 View Submission
 </x-mail::button>
 

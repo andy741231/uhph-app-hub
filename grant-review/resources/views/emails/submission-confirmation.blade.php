@@ -10,7 +10,7 @@ Your proposal has been submitted successfully.
 **Submitted date:** {{ $submission->submitted_at?->format('M j, Y g:i A') }}
 </x-mail::panel>
 
-<x-mail::button :url="config('app.url').'/submissions/'.$submission->id" color="red">
+<x-mail::button :url="route('submitter.submissions.show', $submission)" color="red">
 View Submission
 </x-mail::button>
 
