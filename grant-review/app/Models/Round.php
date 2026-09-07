@@ -34,6 +34,11 @@ class Round extends Model
             ->withPivot('invited_at');
     }
 
+    public function reviewerInvitations(): HasMany
+    {
+        return $this->hasMany(ReviewerRoundInvitation::class, 'round_id');
+    }
+
     public function submissions(): HasMany
     {
         return $this->hasMany(Submission::class);

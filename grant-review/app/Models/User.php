@@ -67,6 +67,7 @@ class User extends Authenticatable
             'notify_all_reviews_complete' => true,
             'notify_decision_recorded' => true,
             'notify_reviewer_assigned' => true,
+            'notify_reviewer_screening_invited' => true,
             'notify_submission_confirmation' => true,
             'notify_reviews_available' => true,
         ];
@@ -101,6 +102,11 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Round::class, 'round_invitations')
             ->withPivot('invited_at');
+    }
+
+    public function reviewerRoundInvitations(): HasMany
+    {
+        return $this->hasMany(ReviewerRoundInvitation::class, 'reviewer_id');
     }
 
     public function submissions(): HasMany

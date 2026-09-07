@@ -37,7 +37,7 @@
         </svg>
         <div class="text-sm">
             <p class="font-semibold">You already submitted a declaration for this round on {{ $existing->declared_at->format('M j, Y g:i A') }}.</p>
-            <p class="mt-0.5">You may update it below — submitting again will replace your previous declaration and notify the administrator again.</p>
+            <p class="mt-0.5">You may update it below — submitting again will record a new version of your declaration and notify the administrator again. Your previous declarations are preserved.</p>
         </div>
     </div>
 @endif
@@ -76,8 +76,9 @@
             <div class="divide-y divide-uh-border">
                 @foreach ($submissions as $submission)
                     @php
-                        $existingEntry = $existingConflicts->get($submission->id);
-                        $isChecked = $existingEntry !== null;
+                        $existingResponse = $existingResponses->get($submission->id);
+                        $isChecked = $existingResponse !== null && $existingResponse->isConflict();
+                        $addedAfterDeclaration = $existing !== null && $submission->submitted_at !== null && $submission->submitted_at->gt($existing->declared_at);
                         $rowId = 'coi-' . $submission->id;
                     @endphp
                     <div class="px-5 py-4" data-coi-row>
@@ -101,7 +102,11 @@
                                         {{ strtoupper(substr($submission->submitter->first_name ?? '?', 0, 1)) }}
                                     </div>
                                     <div class="min-w-0">
-                                        <p class="font-semibold text-uh-fg text-sm leading-snug">{{ $submission->title }}</p>
+                                        <p class="font-semibold text-uh-fg text-sm leading-snug">{{ $submission->title }}
+                                            @if ($addedAfterDeclaration)
+                                                <span class="inline-flex items-center rounded-full border border-uh-border bg-uh-muted px-2 py-0.5 text-[10px] font-semibold text-gray-600 align-middle ml-1">Added after your last declaration</span>
+                                            @endif
+                                        </p>
                                         <p class="text-xs text-gray-500 mt-1">
                                             <span class="font-medium text-gray-700">{{ $submission->submitter->full_name }}</span>
                                             @if ($submission->submitter->department)
@@ -143,7 +148,7 @@
                                       rows="3"
                                       maxlength="2000"
                                       class="input text-sm leading-relaxed"
-                                      placeholder="e.g. Co-author on a recent publication; departmental colleague; family member...">{{ old("conflicts.{$submission->id}.description", $existingEntry?->description) }}</textarea>
+                                      placeholder="e.g. Co-author on a recent publication; departmental colleague; family member...">{{ old("conflicts.{$submission->id}.description", $existingResponse?->description) }}</textarea>
                             <p class="text-xs text-gray-400 mt-1">Optional but recommended. Max 2,000 characters.</p>
                         </div>
                     </div>

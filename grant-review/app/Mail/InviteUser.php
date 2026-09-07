@@ -20,7 +20,7 @@ class InviteUser extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'UH Grants Portal — Set Your Password',
+            subject: 'Pilot Central — Set Your Password',
         );
     }
 

@@ -20,7 +20,7 @@ class ProposalSubmitted extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'UH Grants Portal — New proposal submitted',
+            subject: 'Pilot Central — New proposal submitted',
         );
     }
 

@@ -20,7 +20,7 @@ class SubmissionConfirmation extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'UH Grants Portal — Proposal submission confirmation',
+            subject: 'Pilot Central — Proposal submission confirmation',
         );
     }
 

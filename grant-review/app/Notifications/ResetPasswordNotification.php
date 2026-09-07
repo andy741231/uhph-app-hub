@@ -27,11 +27,11 @@ class ResetPasswordNotification extends Notification
         ], false));
 
         return (new MailMessage)
-            ->subject('UH Grants Portal — Reset Your Password')
+            ->subject('Pilot Central — Reset Your Password')
             ->markdown('emails.reset-password', [
                 'resetUrl' => $url,
                 'recipientName' => $notifiable->full_name,
-                'expiryMinutes' => config('auth.passwords.' . config('auth.defaults.passwords') . '.expire', 60),
+                'expiryMinutes' => config('auth.passwords.'.config('auth.defaults.passwords').'.expire', 60),
             ]);
     }
 }

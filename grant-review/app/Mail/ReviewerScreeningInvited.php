@@ -2,36 +2,32 @@
 
 namespace App\Mail;
 
-use App\Models\Review;
-use App\Models\Submission;
-use App\Models\User;
+use App\Models\ReviewerRoundInvitation;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class ReviewSubmitted extends Mailable
+class ReviewerScreeningInvited extends Mailable
 {
     use Queueable, SerializesModels;
 
     public function __construct(
-        public User $reviewer,
-        public Submission $submission,
-        public Review $review,
+        public ReviewerRoundInvitation $invitation,
     ) {}
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Pilot Central — Review submitted by '.$this->reviewer->full_name,
+            subject: 'Pilot Central — Conflict of interest screening invitation',
         );
     }
 
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.review-submitted',
+            markdown: 'emails.reviewer-screening-invited',
         );
     }
 }

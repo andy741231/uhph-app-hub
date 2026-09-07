@@ -22,7 +22,7 @@ class ReviewerAssigned extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'UH Grants Portal — You have been assigned to review a proposal',
+            subject: 'Pilot Central — You have been assigned to review a proposal',
         );
     }
 

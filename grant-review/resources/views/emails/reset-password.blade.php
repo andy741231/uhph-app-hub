@@ -3,7 +3,7 @@
 
 Hello {{ $recipientName }},
 
-You are receiving this email because we received a password reset request for your UH Grants Portal account.
+You are receiving this email because we received a password reset request for your Pilot Central account.
 
 <x-mail::button :url="$resetUrl" color="red">
 Reset Password
@@ -20,6 +20,6 @@ If the button above doesn't work, copy and paste this link into your browser:
 </x-mail::panel>
 
 Thanks,<br>
-**UH Grants Portal**<br>
+**Pilot Central**<br>
 UH RCMI
 </x-mail::message>

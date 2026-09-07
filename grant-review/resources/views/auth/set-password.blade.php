@@ -5,7 +5,7 @@
 <div class="w-full max-w-md">
     <div class="card p-8">
         <div class="mb-6">
-            <h1 class="text-xl font-bold text-uh-fg">Welcome to the UH Grants Portal</h1>
+            <h1 class="text-xl font-bold text-uh-fg">Welcome to the UH Pilot Central</h1>
             <p class="text-sm text-gray-500 mt-2">Complete your profile and choose a password to get started.</p>
         </div>
 
@@ -72,7 +72,7 @@
         </form>
     </div>
     <p class="text-center text-xs text-gray-400 mt-4">
-        University of Houston — Grants Portal
+        University of Houston — Pilot Central
     </p>
 </div>
 

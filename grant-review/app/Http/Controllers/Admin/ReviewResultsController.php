@@ -62,26 +62,19 @@ class ReviewResultsController extends Controller
 
         $assignments = $submission->reviewAssignments->sortBy('assigned_at');
         $submittedReviews = $assignments->pluck('review')->filter()->whereNotNull('submitted_at');
-        $scores = $submittedReviews->flatMap(function ($review) {
-            return collect($review->numericScoreFields())
-                ->map(fn ($field) => $review->{$field})
-                ->filter(fn ($value) => $value !== null)
-                ->map(fn ($value) => (float) $value);
-        })->values();
 
         $stats = [
             'assigned' => $assignments->count(),
             'completed' => $submittedReviews->count(),
-            'average' => $scores->isNotEmpty() ? round((float) $scores->avg(), 2) : null,
-            'min' => $scores->isNotEmpty() ? round((float) $scores->min(), 2) : null,
-            'max' => $scores->isNotEmpty() ? round((float) $scores->max(), 2) : null,
         ];
 
         // Conflict-of-interest declarations for this round, keyed by reviewer
         // and then by submission id, so admins can see which reviewers flagged
-        // a conflict on this specific proposal (and why).
+        // a conflict on this specific proposal (and why). Only current
+        // declarations are consulted.
         $coiByReviewer = ConflictOfInterestDeclaration::query()
-            ->with('entries')
+            ->with('responses')
+            ->current()
             ->where('round_id', $submission->round_id)
             ->get()
             ->keyBy('reviewer_id');

@@ -72,7 +72,7 @@ class ApplicationAdminManagementTest extends TestCase
                 'role' => 'reviewer',
             ])
             ->assertRedirect(route('admin.users.index', absolute: false))
-            ->assertSessionHas('status', 'User new.user@uh.edu created in UHPH App Hub and assigned to Grant Review.');
+            ->assertSessionHas('status', 'User new.user@uh.edu created in UHPH App Hub and assigned to Pilot Central.');
 
         Http::assertSent(fn ($request): bool => $request->url() === 'https://hub.test/apps/sso/managed-users'
             && $request->hasHeader('Authorization', 'Basic '.base64_encode('hub_grant_review:test-client-secret'))
@@ -183,7 +183,7 @@ class ApplicationAdminManagementTest extends TestCase
             ->withSession($this->hubSession())
             ->post('/admin/users/'.$target->id.'/restore')
             ->assertRedirect(route('admin.users.index', absolute: false))
-            ->assertSessionHas('status', 'Grant Review access restored for Review User.');
+            ->assertSessionHas('status', 'Pilot Central access restored for Review User.');
 
         Http::assertSent(fn ($request): bool => $request->method() === 'PUT'
             && $request->url() === 'https://hub.test/apps/sso/managed-users'

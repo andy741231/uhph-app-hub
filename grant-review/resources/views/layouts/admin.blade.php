@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    <title>@yield('title', 'Dashboard') — UH Grants Portal</title>
+    <title>@yield('title', 'Dashboard') — Pilot Central</title>
     @include('layouts.partials.fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -20,7 +20,7 @@
                         <x-heroicon-o-trophy class="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <div class="font-bold text-base leading-tight tracking-wide">Grants Portal</div>
+                        <div class="font-bold text-base leading-tight tracking-wide">Pilot Central</div>
                         <div class="text-xs text-white/80 font-medium">University of Houston</div>
                     </div>
                 </div>
@@ -50,6 +50,12 @@
                           {{ request()->routeIs('admin.review-assignments.*') ? 'bg-white/20 text-white font-semibold' : 'text-white/85 hover:text-white hover:bg-white/10' }}">
                     <x-heroicon-o-user-plus class="w-5 h-5" />
                     Assign reviewers
+                </a>
+                <a href="{{ route('admin.review-invitations.index') }}"
+                   class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150
+                          {{ request()->routeIs('admin.review-invitations.*') ? 'bg-white/20 text-white font-semibold' : 'text-white/85 hover:text-white hover:bg-white/10' }}">
+                    <x-heroicon-o-envelope-open class="w-5 h-5" />
+                    Review invitations
                 </a>
                 <a href="{{ route('admin.review-results.index') }}"
                    class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150
@@ -103,7 +109,7 @@
             <header class="md:hidden bg-uh-red text-white px-4 py-3 flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <x-heroicon-o-trophy class="w-6 h-6 text-white" />
-                    <span class="font-bold">Grants Portal</span>
+                    <span class="font-bold">Pilot Central</span>
                 </div>
                 <div class="flex items-center gap-4">
                     @if (config('hub.enabled') && session('hub_application_count', 1) > 1)
@@ -122,6 +128,7 @@
                 <a href="{{ route('admin.rounds.index') }}" class="{{ request()->routeIs('admin.rounds.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Rounds</a>
                 <a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Users</a>
                 <a href="{{ route('admin.review-assignments.index') }}" class="{{ request()->routeIs('admin.review-assignments.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Assignments</a>
+                <a href="{{ route('admin.review-invitations.index') }}" class="{{ request()->routeIs('admin.review-invitations.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Invitations</a>
                 <a href="{{ route('admin.review-results.index') }}" class="{{ request()->routeIs('admin.review-results.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Results</a>
                 <a href="{{ route('admin.conflicts.index') }}" class="{{ request()->routeIs('admin.conflicts.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">COI</a>
                 <a href="{{ route('settings.edit') }}" class="{{ request()->routeIs('settings.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Settings</a>

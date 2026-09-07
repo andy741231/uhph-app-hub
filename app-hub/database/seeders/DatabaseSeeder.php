@@ -21,7 +21,7 @@ class DatabaseSeeder extends Seeder
         Application::updateOrCreate(
             ['key' => 'grant-review'],
             [
-                'name' => 'Grant Review',
+                'name' => 'Pilot Central',
                 'path' => '/apps/grant-review',
                 'callback_url' => '/apps/grant-review/auth/hub/callback',
                 'frontchannel_logout_path' => '/apps/grant-review/auth/hub/logout',

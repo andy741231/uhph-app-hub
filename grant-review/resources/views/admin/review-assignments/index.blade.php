@@ -2,9 +2,28 @@
 @section('title', 'Reviewer Assignments')
 
 @section('content')
-<div class="mb-6">
-    <h1 class="text-2xl font-bold text-uh-fg">Reviewer assignments</h1>
-    <p class="text-sm text-gray-500 mt-1">Assign active reviewers to submitted proposals.</p>
+<div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
+    <div>
+        <h1 class="text-2xl font-bold text-uh-fg">Reviewer assignments</h1>
+        <p class="text-sm text-gray-500 mt-1">Assign active reviewers to submitted proposals. Screening status is shown per reviewer — reported conflicts are advisory; the decision to assign remains yours.</p>
+    </div>
+    <form method="GET" action="{{ route('admin.review-assignments.index') }}" class="flex items-end gap-2">
+        <div>
+            <label for="assignment-round" class="label">Round</label>
+            <select id="assignment-round" name="round_id" class="input mt-1" onchange="this.form.submit()">
+                <option value="">All rounds</option>
+                @foreach ($rounds as $round)
+                    <option value="{{ $round->id }}" @selected($roundId === $round->id)>{{ $round->name }}</option>
+                @endforeach
+            </select>
+        </div>
+        @if ($highlightReviewerId)
+            <input type="hidden" name="reviewer_id" value="{{ $highlightReviewerId }}">
+        @endif
+ @if ($roundId || $highlightReviewerId)
+            <a href="{{ route('admin.review-assignments.index') }}" class="btn-secondary h-[42px]">Clear</a>
+        @endif
+    </form>
 </div>
 
 @if ($reviewers->isEmpty())
@@ -19,8 +38,12 @@
         @php
             $assignedIds = $submission->reviewAssignments->pluck('reviewer_id')->all();
             $submittedReviews = $submission->reviewAssignments->filter(fn ($assignment) => $assignment->review?->submitted_at !== null)->count();
+            $perReviewer = collect($screening->get($submission->id, []));
+            $invitedCount = $perReviewer->filter(fn ($s) => $s['status'] !== 'not_invited')->count();
+            $notInvitedCount = $reviewers->count() - $invitedCount;
+            $conflictedSelection = collect();
         @endphp
-        <article class="card p-5">
+        <article class="card p-5" id="submission-{{ $submission->id }}">
             <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-2 mb-2">
@@ -51,7 +74,7 @@
                 </a>
             </div>
 
-            <form action="{{ route('admin.review-assignments.update', $submission) }}" method="POST" class="mt-5 pt-4 border-t border-uh-border">
+            <form action="{{ route('admin.review-assignments.update', $submission) }}" method="POST" class="mt-5 pt-4 border-t border-uh-border" data-assignment-form data-submission-title="{{ $submission->title }}">
                 @csrf @method('PUT')
                 <fieldset>
                     <legend class="text-sm font-semibold text-uh-fg mb-3">Assign reviewers</legend>
@@ -60,17 +83,54 @@
                     @else
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                             @foreach ($reviewers as $reviewer)
-                                <label class="flex items-center gap-3 rounded-md border border-uh-border px-3 py-2.5 hover:bg-uh-muted/60 transition-colors duration-150 cursor-pointer">
+                                @php
+                                    $screen = $perReviewer->get($reviewer->id, ['status' => 'not_invited']);
+                                    $status = $screen['status'];
+                                    $isAssigned = in_array($reviewer->id, $assignedIds);
+                                    $isHighlighted = $highlightReviewerId === $reviewer->id;
+                                    $disabled = in_array($status, ['not_invited', 'awaiting', 'unscreened']);
+                                    $isConflict = $status === 'potential_conflict';
+                                    if ($isConflict && $isAssigned) {
+                                        $conflictedSelection->push($reviewer);
+                                    }
+                                @endphp
+                                <label @class([
+                                    'flex items-start gap-3 rounded-md border px-3 py-2.5 transition-colors duration-150',
+                                    'border-uh-border hover:bg-uh-muted/60 cursor-pointer' => ! $disabled,
+                                    'border-uh-border bg-gray-50 opacity-60 cursor-not-allowed' => $disabled,
+                                    'border-uh-red ring-2 ring-uh-red/20' => $isHighlighted,
+                                ]) data-reviewer-row="{{ $reviewer->id }}">
                                     <input type="checkbox" name="reviewer_ids[]" value="{{ $reviewer->id }}"
-                                        class="rounded border-uh-border text-uh-red focus:ring-uh-red"
-                                        {{ in_array($reviewer->id, $assignedIds) ? 'checked' : '' }}>
-                                    <span class="min-w-0">
+                                        class="mt-0.5 rounded border-uh-border text-uh-red focus:ring-uh-red"
+                                        {{ in_array($reviewer->id, $assignedIds) ? 'checked' : '' }}
+                                        {{ $disabled ? 'disabled' : '' }}
+                                        @if ($isConflict) data-conflict-reviewer="{{ $reviewer->full_name }}" data-conflict-description="{{ $screen['description'] ?? '' }}" @endif>
+                                    <span class="min-w-0 flex-1">
                                         <span class="block text-sm font-medium truncate">{{ $reviewer->full_name }}</span>
                                         <span class="block text-xs text-gray-500 truncate">{{ $reviewer->email }}</span>
+                                        <span class="block mt-1">
+                                            @if ($status === 'potential_conflict')
+                                                <span class="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900">Potential conflict reported</span>
+                                            @elseif ($status === 'clear')
+                                                <span class="inline-flex items-center rounded-full border border-green-300 bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">No conflicts</span>
+                                            @elseif ($status === 'awaiting')
+                                                <span class="inline-flex items-center rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">Awaiting declaration</span>
+                                            @elseif ($status === 'unscreened')
+                                                <span class="inline-flex items-center rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">Not screened for this proposal</span>
+                                            @elseif ($status === 'not_invited')
+                                                <span class="inline-flex items-center rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-gray-400">Not invited to screen this round</span>
+                                            @endif
+                                        </span>
+                                        @if ($isConflict && filled($screen['description'] ?? null))
+                                            <span class="block mt-1.5 rounded-md bg-amber-50 border border-amber-200 px-2 py-1.5 text-xs text-amber-900 whitespace-pre-wrap">{{ $screen['description'] }}</span>
+                                        @endif
                                     </span>
                                 </label>
                             @endforeach
                         </div>
+                        @if ($notInvitedCount > 0)
+                            <p class="text-xs text-gray-400 mt-2">{{ $notInvitedCount }} active reviewer{{ $notInvitedCount === 1 ? ' has' : 's have' }} not been invited to screen this round and cannot be assigned. Send invitations from Review invitations.</p>
+                        @endif
                     @endif
                 </fieldset>
                 <div class="mt-4 flex items-center justify-between gap-3">
@@ -89,4 +149,36 @@
         </div>
     @endforelse
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('form[data-assignment-form]').forEach((form) => {
+            form.addEventListener('submit', (event) => {
+                const conflicted = [...form.querySelectorAll('input[data-conflict-reviewer]:checked')];
+                if (conflicted.length === 0) return;
+
+                const lines = conflicted.map((input) => {
+                    const description = input.dataset.conflictDescription;
+                    return '• ' + input.dataset.conflictReviewer + (description ? ' — ' + description : '');
+                });
+
+                const confirmed = window.confirm(
+                    'The following reviewer(s) reported a potential conflict of interest on "' +
+                    form.dataset.submissionTitle + '":\n\n' + lines.join('\n') +
+                    '\n\nAssign anyway? You can also leave them unassigned.'
+                );
+
+                if (! confirmed) {
+                    event.preventDefault();
+                }
+            });
+        });
+
+        // Scroll to the highlighted reviewer from the conflicts page link.
+        const highlight = document.querySelector('[data-reviewer-row].ring-2');
+        if (highlight) {
+            highlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+</script>
 @endsection

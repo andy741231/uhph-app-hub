@@ -4,7 +4,7 @@ namespace Tests\Feature;
 
 use App\Mail\ConflictOfInterestDeclared;
 use App\Models\ConflictOfInterestDeclaration;
-use App\Models\ConflictOfInterestEntry;
+use App\Models\ConflictOfInterestResponse;
 use App\Models\Review;
 use App\Models\ReviewAssignment;
 use App\Models\Round;
@@ -244,19 +244,22 @@ class ConflictOfInterestTest extends TestCase
 
         $declaration = ConflictOfInterestDeclaration::where('reviewer_id', $reviewer->id)
             ->where('round_id', $round->id)
+            ->current()
             ->first();
 
         $this->assertNotNull($declaration);
-        $this->assertCount(1, $declaration->entries);
 
-        $entry = $declaration->entries->first();
-        $this->assertSame($submission1->id, $entry->submission_id);
-        $this->assertSame('Co-author on a 2024 paper.', $entry->description);
+        // One explicit response per screened proposal.
+        $this->assertCount(2, $declaration->responses);
 
-        $this->assertDatabaseMissing('conflict_of_interest_entries', [
-            'declaration_id' => $declaration->id,
-            'submission_id' => $submission2->id,
-        ]);
+        $conflictResponse = $declaration->responses->firstWhere('submission_id', $submission1->id);
+        $this->assertNotNull($conflictResponse);
+        $this->assertSame(ConflictOfInterestResponse::STATUS_CONFLICT, $conflictResponse->status);
+        $this->assertSame('Co-author on a 2024 paper.', $conflictResponse->description);
+
+        $clearResponse = $declaration->responses->firstWhere('submission_id', $submission2->id);
+        $this->assertNotNull($clearResponse);
+        $this->assertSame(ConflictOfInterestResponse::STATUS_CLEAR, $clearResponse->status);
     }
 
     public function test_coi_submission_notifies_admins_by_email(): void
@@ -334,7 +337,7 @@ class ConflictOfInterestTest extends TestCase
         $response->assertForbidden();
     }
 
-    public function test_coi_resubmission_replaces_previous_entries(): void
+    public function test_coi_resubmission_creates_new_version_and_preserves_history(): void
     {
         Mail::fake();
         [$reviewer, $round, $submission1, $submission2] = $this->setupRoundWithAssignedReviewer();
@@ -347,8 +350,15 @@ class ConflictOfInterestTest extends TestCase
                 ],
             ]);
 
-        $this->assertDatabaseHas('conflict_of_interest_entries', [
+        $firstDeclaration = ConflictOfInterestDeclaration::where('reviewer_id', $reviewer->id)
+            ->where('round_id', $round->id)
+            ->current()
+            ->first();
+
+        $this->assertDatabaseHas('conflict_of_interest_responses', [
+            'declaration_id' => $firstDeclaration->id,
             'submission_id' => $submission1->id,
+            'status' => ConflictOfInterestResponse::STATUS_CONFLICT,
             'description' => 'Old reason.',
         ]);
 
@@ -361,13 +371,26 @@ class ConflictOfInterestTest extends TestCase
                 ],
             ]);
 
-        $declaration = ConflictOfInterestDeclaration::where('reviewer_id', $reviewer->id)
+        // The first declaration is superseded but preserved for audit.
+        $this->assertNotNull($firstDeclaration->fresh()->superseded_at);
+
+        $currentDeclaration = ConflictOfInterestDeclaration::where('reviewer_id', $reviewer->id)
             ->where('round_id', $round->id)
+            ->current()
             ->first();
 
-        $this->assertCount(1, $declaration->entries);
-        $this->assertSame($submission2->id, $declaration->entries->first()->submission_id);
-        $this->assertSame('New reason.', $declaration->entries->first()->description);
+        $this->assertNotNull($currentDeclaration ?? null);
+        $this->assertNotSame($firstDeclaration->id, $currentDeclaration->id);
+        $this->assertCount(2, $currentDeclaration->responses);
+        $this->assertSame(ConflictOfInterestResponse::STATUS_CONFLICT, $currentDeclaration->responses->firstWhere('submission_id', $submission2->id)->status);
+        $this->assertSame('New reason.', $currentDeclaration->responses->firstWhere('submission_id', $submission2->id)->description);
+
+        // History preserved: the superseded declaration keeps its responses.
+        $this->assertDatabaseHas('conflict_of_interest_responses', [
+            'declaration_id' => $firstDeclaration->id,
+            'submission_id' => $submission1->id,
+            'description' => 'Old reason.',
+        ]);
     }
 
     public function test_return_to_redirects_back_to_review_after_coi_submission(): void
@@ -398,9 +421,10 @@ class ConflictOfInterestTest extends TestCase
             'round_id' => $round->id,
             'declared_at' => now(),
         ]);
-        ConflictOfInterestEntry::create([
+        ConflictOfInterestResponse::create([
             'declaration_id' => $declaration->id,
             'submission_id' => $submission1->id,
+            'status' => ConflictOfInterestResponse::STATUS_CONFLICT,
             'description' => 'Spouse of the submitter.',
         ]);
 
@@ -420,9 +444,10 @@ class ConflictOfInterestTest extends TestCase
             'round_id' => $round->id,
             'declared_at' => now(),
         ]);
-        ConflictOfInterestEntry::create([
+        ConflictOfInterestResponse::create([
             'declaration_id' => $declaration->id,
             'submission_id' => $submission1->id,
+            'status' => ConflictOfInterestResponse::STATUS_CONFLICT,
             'description' => 'Recent research collaborator.',
         ]);
 
@@ -438,5 +463,10 @@ class ConflictOfInterestTest extends TestCase
             ->get(route('admin.conflicts.index', ['status' => 'clear']))
             ->assertOk()
             ->assertDontSee('Recent research collaborator.');
+
+        $this->actingAs($admin)
+            ->get(route('admin.conflicts.index', ['status' => 'conflicts']))
+            ->assertOk()
+            ->assertSee('Recent research collaborator.');
     }
 }

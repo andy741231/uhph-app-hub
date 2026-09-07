@@ -98,7 +98,6 @@
                         <td>
                             @if ($item['average'] !== null)
                                 <span class="font-bold text-uh-fg">{{ number_format($item['average'], 1) }}</span>
-                                <span class="text-xs text-gray-500">/ 9</span>
                             @else
                                 <span class="text-sm text-gray-400">—</span>
                             @endif

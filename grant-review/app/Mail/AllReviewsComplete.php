@@ -20,7 +20,7 @@ class AllReviewsComplete extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'UH Grants Portal — All reviews complete for '.$this->submission->title,
+            subject: 'Pilot Central — All reviews complete for '.$this->submission->title,
         );
     }
 

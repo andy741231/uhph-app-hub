@@ -93,8 +93,8 @@ class UserController extends Controller
             $user = $identities->resolve($identity);
             $this->syncRoundInvitations($user, $request->input('round_ids', []));
             $message = $identity['created']
-                ? "User {$user->email} created in UHPH App Hub and assigned to Grant Review."
-                : "Existing UHPH App Hub user {$user->email} assigned to Grant Review.";
+                ? "User {$user->email} created in UHPH App Hub and assigned to Pilot Central."
+                : "Existing UHPH App Hub user {$user->email} assigned to Pilot Central.";
             if ($identity['created'] && ! $identity['invitation_sent']) {
                 $message .= ' The UHPH App Hub invitation could not be sent.';
             }
@@ -274,7 +274,7 @@ class UserController extends Controller
     public function revoke(Request $request, User $user, HubClient $hub): RedirectResponse
     {
         if ($user->id === $request->user()->id) {
-            return back()->withErrors(['user' => 'You cannot revoke your own Grant Review access.']);
+            return back()->withErrors(['user' => 'You cannot revoke your own Pilot Central access.']);
         }
         abort_unless(config('hub.enabled') && is_string($user->sso_sub), 404);
         $hub->revokeManagedUser(
@@ -285,7 +285,7 @@ class UserController extends Controller
         DB::table('sessions')->where('user_id', $user->id)->delete();
 
         return redirect()->route('admin.users.index')
-            ->with('status', "Grant Review access revoked for {$user->full_name}. Historical records were preserved.");
+            ->with('status', "Pilot Central access revoked for {$user->full_name}. Historical records were preserved.");
     }
 
     public function restore(
@@ -308,7 +308,7 @@ class UserController extends Controller
         $identities->restore($user, $identity);
 
         return redirect()->route('admin.users.index')
-            ->with('status', "Grant Review access restored for {$user->full_name}.");
+            ->with('status', "Pilot Central access restored for {$user->full_name}.");
     }
 
     public function destroy(Request $request, User $user): RedirectResponse

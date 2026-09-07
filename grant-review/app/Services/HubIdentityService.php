@@ -22,7 +22,7 @@ class HubIdentityService implements MapsHubIdentity
             $byEmail = $users->firstWhere('email', $email);
 
             if ($bySubject && $byEmail && ! $bySubject->is($byEmail)) {
-                throw new ConflictHttpException('The Hub identity conflicts with an existing Grant Review account.');
+                throw new ConflictHttpException('The Hub identity conflicts with an existing Pilot Central account.');
             }
 
             if (! $bySubject
@@ -54,7 +54,7 @@ class HubIdentityService implements MapsHubIdentity
             $email = strtolower(trim($identity['email']));
 
             if ($profile->status !== 'disabled' || strtolower($profile->email) !== $email) {
-                throw new ConflictHttpException('The Hub identity does not match the archived Grant Review profile.');
+                throw new ConflictHttpException('The Hub identity does not match the archived Pilot Central profile.');
             }
 
             $subjectOwner = User::query()
@@ -64,7 +64,7 @@ class HubIdentityService implements MapsHubIdentity
                 ->exists();
 
             if ($subjectOwner) {
-                throw new ConflictHttpException('The Hub identity is linked to a different Grant Review account.');
+                throw new ConflictHttpException('The Hub identity is linked to a different Pilot Central account.');
             }
 
             return $this->apply($profile, $identity, $email);

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -14,7 +15,7 @@ return new class extends Migration
         });
 
         // Populate first_name/last_name from existing name for current users
-        \App\Models\User::whereNotNull('name')->each(function ($user) {
+        User::whereNotNull('name')->each(function ($user) {
             $parts = explode(' ', trim($user->name), 2);
             $user->update([
                 'first_name' => $parts[0] ?? '',

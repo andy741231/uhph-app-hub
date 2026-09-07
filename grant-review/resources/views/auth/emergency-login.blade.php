@@ -5,7 +5,7 @@
 <div class="w-full max-w-md">
     <div class="card p-8">
         <h1 class="text-xl font-bold text-uh-fg mb-1">Emergency Administrator Sign In</h1>
-        <p class="text-sm text-gray-500 mb-6">Restricted fallback access for designated Grant Review administrators.</p>
+        <p class="text-sm text-gray-500 mb-6">Restricted fallback access for designated Pilot Central administrators.</p>
 
         @if ($errors->any())
             <div role="alert" class="mb-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md text-sm">

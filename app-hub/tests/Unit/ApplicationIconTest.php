@@ -28,7 +28,7 @@ class ApplicationIconTest extends TestCase
 
     public function test_icon_initial_is_derived_from_the_application_name(): void
     {
-        $this->assertSame('GR', $this->application(['name' => 'Grant Review'])->iconInitial());
+        $this->assertSame('PC', $this->application(['name' => 'Pilot Central'])->iconInitial());
         $this->assertSame('F', $this->application(['name' => 'Flipbook'])->iconInitial());
         $this->assertSame('CP', $this->application(['name' => 'Community- Partners'])->iconInitial());
     }

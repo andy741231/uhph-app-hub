@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\ConflictOfInterestController as AdminConflictOfIn
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DecisionController;
 use App\Http\Controllers\Admin\ReviewAssignmentController;
+use App\Http\Controllers\Admin\ReviewInvitationController;
 use App\Http\Controllers\Admin\ReviewResultsController;
 use App\Http\Controllers\Admin\RoundController;
 use App\Http\Controllers\Admin\SettingController;
@@ -39,6 +40,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('users/{user}/resend-invite', [UserController::class, 'resendInvite'])->middleware('hub-sso-disabled')->name('users.resend-invite');
     Route::get('review-assignments', [ReviewAssignmentController::class, 'index'])->name('review-assignments.index');
     Route::put('review-assignments/{submission}', [ReviewAssignmentController::class, 'update'])->name('review-assignments.update');
+    Route::get('review-invitations', [ReviewInvitationController::class, 'index'])->name('review-invitations.index');
+    Route::post('review-invitations', [ReviewInvitationController::class, 'store'])->name('review-invitations.store');
+    Route::post('review-invitations/{invitation}/resend', [ReviewInvitationController::class, 'resend'])->name('review-invitations.resend')->whereNumber('invitation');
+    Route::post('review-invitations/{invitation}/revoke', [ReviewInvitationController::class, 'revoke'])->name('review-invitations.revoke')->whereNumber('invitation');
     Route::get('review-results', [ReviewResultsController::class, 'index'])->name('review-results.index');
     Route::get('conflicts', [AdminConflictOfInterestController::class, 'index'])->name('conflicts.index');
     Route::get('review-results/export', [ReviewResultsController::class, 'exportCsv'])->name('review-results.export');

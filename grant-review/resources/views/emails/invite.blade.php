@@ -1,9 +1,9 @@
 <x-mail::message>
-# Welcome to the UH Grants Portal
+# Welcome to Pilot Central
 
 Hello {{ $recipientName }},
 
-You have been invited to join the **University of Houston Grants Portal**. To get started, please set your password by clicking the button below.
+You have been invited to join the **University of Houston Pilot Central**. To get started, please set your password by clicking the button below.
 
 <x-mail::button :url="$setPasswordUrl" color="red">
 Set Your Password
@@ -20,6 +20,6 @@ If the button above doesn't work, copy and paste this link into your browser:
 </x-mail::panel>
 
 Thanks,<br>
-**UH Grants Portal**<br>
+**Pilot Central**<br>
 UH RCMI
 </x-mail::message>

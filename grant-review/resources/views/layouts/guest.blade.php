@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    <title>@yield('title', 'UH Grants Portal') — UH Grants Portal</title>
+    <title>@yield('title', 'Pilot Central') — Pilot Central</title>
     @include('layouts.partials.fonts')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -16,7 +16,7 @@
             <x-heroicon-o-trophy class="w-7 h-7 text-white" />
         </div>
         <div>
-            <div class="font-bold text-xl text-uh-fg tracking-tight">UH Grants Portal</div>
+            <div class="font-bold text-xl text-uh-fg tracking-tight">Pilot Central</div>
             <div class="text-xs text-uh-slate font-medium">University of Houston</div>
         </div>
     </div>

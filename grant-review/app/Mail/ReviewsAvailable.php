@@ -23,7 +23,7 @@ class ReviewsAvailable extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'UH Grants Portal — Reviews available for '.$this->submission->title,
+            subject: 'Pilot Central — Reviews available for '.$this->submission->title,
         );
     }
 

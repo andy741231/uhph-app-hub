@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\Round;
 use App\Models\Submission;
 use App\Models\User;
 
@@ -39,7 +40,7 @@ class SubmissionPolicy
      * Only submitters invited to the round may submit, and only while
      * the round is open.
      */
-    public function create(User $user, ?\App\Models\Round $round = null): bool
+    public function create(User $user, ?Round $round = null): bool
     {
         if (! $user->isSubmitter()) {
             return false;

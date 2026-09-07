@@ -63,7 +63,7 @@
 </div>
 
 {{-- Stats Row --}}
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+<div class="grid grid-cols-2 lg:grid-cols-2 gap-4 mb-6">
     <div class="card p-5 shadow-xs">
         <div class="flex items-center justify-between">
             <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Assigned</p>
@@ -80,28 +80,6 @@
         @if ($stats['assigned'] > 0)
             <p class="text-xs text-gray-400 mt-1">{{ round(($stats['completed'] / $stats['assigned']) * 100) }}% complete</p>
         @endif
-    </div>
-    <div class="card p-5 shadow-xs border-l-4 border-l-uh-red">
-        <div class="flex items-center justify-between">
-            <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Average</p>
-            <x-heroicon-o-chart-bar class="w-5 h-5 text-uh-red/40" />
-        </div>
-        <p class="text-3xl font-black text-uh-red mt-2">
-            {{ $stats['average'] !== null ? number_format($stats['average'], 2) : '—' }}
-        </p>
-    </div>
-    <div class="card p-5 shadow-xs">
-        <div class="flex items-center justify-between">
-            <p class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Range</p>
-            <x-heroicon-o-arrows-up-down class="w-5 h-5 text-gray-300" />
-        </div>
-        <p class="text-3xl font-black text-uh-fg mt-2">
-            @if ($stats['min'] !== null)
-                {{ number_format($stats['min'], 2) }}<span class="text-gray-400 text-xl">–</span>{{ number_format($stats['max'], 2) }}
-            @else
-                —
-            @endif
-        </p>
     </div>
 </div>
 
@@ -214,7 +192,8 @@
                     @php
                         $review = $assignment->review;
                         $coiDeclaration = $coiByReviewer->get($assignment->reviewer_id);
-                        $coiEntry = $coiDeclaration?->entries->firstWhere('submission_id', $submission->id);
+                        $coiResponse = $coiDeclaration?->responses->firstWhere('submission_id', $submission->id);
+                        $coiEntry = $coiResponse !== null && $coiResponse->isConflict() ? $coiResponse : null;
                     @endphp
                     <div class="px-5 py-4 hover:bg-gray-50/50 transition-colors">
                         <div class="flex items-start justify-between gap-4">
@@ -266,7 +245,7 @@
                                 <div class="flex items-center justify-between mb-1.5">
                                     <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Overall Impact</p>
                                     @if ($review?->score !== null)
-                                        <span class="text-lg font-black text-uh-red leading-none">{{ $review->score }}<span class="text-xs text-gray-400">/9</span></span>
+                                        <span class="text-lg font-black text-uh-red leading-none">{{ $review->score }}</span>
                                     @endif
                                 </div>
                                 <p class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{{ $review->comments }}</p>

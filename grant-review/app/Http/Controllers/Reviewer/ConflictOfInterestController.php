@@ -6,7 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreConflictOfInterestRequest;
 use App\Mail\ConflictOfInterestDeclared;
 use App\Models\ConflictOfInterestDeclaration;
-use App\Models\ConflictOfInterestEntry;
+use App\Models\ConflictOfInterestResponse;
+use App\Models\ReviewerRoundInvitation;
 use App\Models\Round;
 use App\Models\Submission;
 use App\Models\User;
@@ -36,81 +37,119 @@ class ConflictOfInterestController extends Controller
             ->orderBy('title')
             ->get();
 
-        $existing = ConflictOfInterestDeclaration::with('entries')
+        $existing = ConflictOfInterestDeclaration::query()
+            ->with('responses')
             ->where('reviewer_id', $request->user()->id)
             ->where('round_id', $round->id)
+            ->current()
             ->first();
 
-        $existingConflicts = $existing?->entries->keyBy('submission_id') ?? collect();
+        $existingResponses = $existing?->responses->keyBy('submission_id') ?? collect();
 
         $returnTo = $this->sanitizeReturnTo($request->query('return_to'));
 
-        return view('reviewer.conflicts.create', compact('round', 'submissions', 'existing', 'existingConflicts', 'returnTo'));
+        return view('reviewer.conflicts.create', compact('round', 'submissions', 'existing', 'existingResponses', 'returnTo'));
     }
 
     /**
      * Store the reviewer's COI declaration for the round.
      *
-     * One declaration row per (reviewer, round). Each checked conflict
-     * becomes an entry row with an optional description. Unchecked
-     * proposals produce no entry. Admins are notified by email.
+     * Each submission creates a new declaration version; the previous
+     * version is superseded (history preserved). One explicit response
+     * row is recorded per screened proposal — clear or potential
+     * conflict — so coverage is provable. Admins are notified by email.
      */
     public function store(StoreConflictOfInterestRequest $request, Round $round): RedirectResponse
     {
         $this->authorizeRound($request, $round);
 
         $reviewer = $request->user();
+        $submissions = $round->submissions()
+            ->whereIn('status', ['submitted', 'under_review', 'decided'])
+            ->get();
+
         $conflicts = collect($request->input('conflicts', []))
             ->filter(fn (array $row) => filter_var($row['has_conflict'] ?? false, FILTER_VALIDATE_BOOLEAN));
 
-        $declaration = DB::transaction(function () use ($reviewer, $round, $conflicts): ConflictOfInterestDeclaration {
-            $declaration = ConflictOfInterestDeclaration::updateOrCreate(
-                [
-                    'reviewer_id' => $reviewer->id,
-                    'round_id' => $round->id,
-                ],
-                ['declared_at' => now()],
-            );
+        $invitation = ReviewerRoundInvitation::query()
+            ->where('reviewer_id', $reviewer->id)
+            ->where('round_id', $round->id)
+            ->whereNull('revoked_at')
+            ->first();
 
-            // Replace any prior entries so re-submission reflects the latest state.
-            $declaration->entries()->delete();
+        $declaration = DB::transaction(function () use ($reviewer, $round, $submissions, $conflicts, $invitation): ConflictOfInterestDeclaration {
+            // Supersede any prior active declarations so the latest
+            // version is authoritative while history remains auditable.
+            ConflictOfInterestDeclaration::query()
+                ->where('reviewer_id', $reviewer->id)
+                ->where('round_id', $round->id)
+                ->whereNull('superseded_at')
+                ->update(['superseded_at' => now()]);
 
-            foreach ($conflicts as $row) {
-                ConflictOfInterestEntry::create([
+            $declaration = ConflictOfInterestDeclaration::create([
+                'reviewer_id' => $reviewer->id,
+                'round_id' => $round->id,
+                'reviewer_round_invitation_id' => $invitation?->id,
+                'declared_at' => now(),
+            ]);
+
+            foreach ($submissions as $submission) {
+                $conflict = $conflicts->get($submission->id);
+
+                ConflictOfInterestResponse::create([
                     'declaration_id' => $declaration->id,
-                    'submission_id' => $row['submission_id'],
-                    'description' => trim($row['description'] ?? '') ?: null,
+                    'submission_id' => $submission->id,
+                    'status' => $conflict !== null
+                        ? ConflictOfInterestResponse::STATUS_CONFLICT
+                        : ConflictOfInterestResponse::STATUS_CLEAR,
+                    'description' => $conflict !== null ? (trim($conflict['description'] ?? '') ?: null) : null,
                 ]);
             }
 
-            return $declaration->load('entries.submission.submitter', 'round');
+            return $declaration->load('responses.submission.submitter', 'round');
         });
 
         $this->notifyAdmins($reviewer, $declaration);
 
         $returnTo = $this->sanitizeReturnTo($request->input('return_to'));
+
+        $notified = $declaration->admin_notified_at !== null
+            ? 'The administrators have been notified.'
+            : 'Your declaration is now available to the administrators.';
+
         if ($returnTo !== null) {
-            return redirect($returnTo)->with('status', 'Conflict of interest declaration saved.');
+            return redirect($returnTo)->with('status', 'Conflict of interest declaration saved. '.$notified);
         }
 
         return redirect()
             ->route('reviewer.dashboard')
-            ->with('status', 'Conflict of interest declaration saved for '.$round->name.'.');
+            ->with('status', 'Conflict of interest declaration saved for '.$round->name.'. '.$notified);
     }
 
     /**
-     * Only reviewers with an assignment in the round may declare COIs.
+     * Reviewers may declare COIs for rounds they were invited to screen,
+     * or rounds where they already hold an assignment (legacy path).
      */
     private function authorizeRound(Request $request, Round $round): void
     {
         abort_unless($request->user()->isReviewer(), 403);
+
+        $invited = ReviewerRoundInvitation::query()
+            ->where('reviewer_id', $request->user()->id)
+            ->where('round_id', $round->id)
+            ->whereNull('revoked_at')
+            ->exists();
+
+        if ($invited) {
+            return;
+        }
 
         $hasAssignment = Submission::query()
             ->where('round_id', $round->id)
             ->whereHas('reviewAssignments', fn ($q) => $q->where('reviewer_id', $request->user()->id))
             ->exists();
 
-        abort_unless($hasAssignment, 403, 'You are not assigned to review in this round.');
+        abort_unless($hasAssignment, 403, 'You have not been invited to screen this round.');
     }
 
     /**
@@ -140,8 +179,16 @@ class ConflictOfInterestController extends Controller
             ->where('status', 'active')
             ->pluck('email');
 
-        if ($admins->isNotEmpty()) {
-            Mail::bcc($admins)->send(new ConflictOfInterestDeclared($reviewer, $declaration));
+        if ($admins->isEmpty()) {
+            return;
         }
+
+        try {
+            Mail::bcc($admins)->send(new ConflictOfInterestDeclared($reviewer, $declaration));
+        } catch (\Throwable) {
+            return;
+        }
+
+        $declaration->forceFill(['admin_notified_at' => now()])->save();
     }
 }

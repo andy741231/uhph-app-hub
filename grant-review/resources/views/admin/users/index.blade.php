@@ -24,7 +24,7 @@
 
 @if(config('hub.enabled'))
     <div class="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-        UHPH App Hub manages identities and access. This page synchronizes Grant Review assignments from UHPH App Hub; revoked or deleted identities are archived locally so submissions, reviews, and decision history remain intact.
+        UHPH App Hub manages identities and access. This page synchronizes Pilot Central assignments from UHPH App Hub; revoked or deleted identities are archived locally so submissions, reviews, and decision history remain intact.
     </div>
 @endif
 
@@ -131,7 +131,7 @@
                                 </a>
                                 @if (config('hub.enabled') && ! $showArchived && $user->id !== auth()->id())
                                     <form action="{{ route('admin.users.revoke', $user) }}" method="POST"
-                                          onsubmit="return confirm('Revoke Grant Review access for {{ $user->full_name }}? Historical records will be preserved.');">
+                                          onsubmit="return confirm('Revoke Pilot Central access for {{ $user->full_name }}? Historical records will be preserved.');">
                                         @csrf
                                         <button type="submit"
                                                 class="text-uh-brick hover:underline text-sm inline-flex items-center gap-1 font-medium"
@@ -142,7 +142,7 @@
                                 @endif
                                 @if (config('hub.enabled') && $showArchived && is_string($user->sso_sub))
                                     <form action="{{ route('admin.users.restore', $user) }}" method="POST"
-                                          onsubmit="return confirm('Restore Grant Review access for {{ $user->full_name }}? They will be re-assigned with their previous role ({{ ucfirst($user->role) }}).');">
+                                          onsubmit="return confirm('Restore Pilot Central access for {{ $user->full_name }}? They will be re-assigned with their previous role ({{ ucfirst($user->role) }}).');">
                                         @csrf
                                         <button type="submit"
                                                 class="text-uh-red hover:underline text-sm inline-flex items-center gap-1 font-medium"

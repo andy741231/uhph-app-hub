@@ -9,6 +9,7 @@ use App\Mail\ReviewSubmitted;
 use App\Models\ConflictOfInterestDeclaration;
 use App\Models\Review;
 use App\Models\ReviewAssignment;
+use App\Models\ReviewerRoundInvitation;
 use App\Models\ReviewRevision;
 use App\Models\Submission;
 use App\Models\User;
@@ -44,21 +45,48 @@ class DashboardController extends Controller
             ->latest('assigned_at')
             ->get();
 
-        $declaredRoundIds = ConflictOfInterestDeclaration::query()
+        $currentDeclarations = ConflictOfInterestDeclaration::query()
+            ->with('responses')
             ->where('reviewer_id', auth()->id())
-            ->pluck('round_id');
+            ->current()
+            ->get()
+            ->keyBy('round_id');
 
         // Assignments are ordered by latest first, so the first round
         // without a declaration is the most recently assigned one.
         foreach ($assignments as $assignment) {
             $round = $assignment->submission?->round;
-            if ($round && ! $declaredRoundIds->contains($round->id)) {
+            if ($round && ! $currentDeclarations->has($round->id)) {
                 return redirect()->route('reviewer.conflicts.create', [
                     'round' => $round->id,
                     'return_to' => route('reviewer.dashboard', [], false),
                 ]);
             }
         }
+
+        // Screening invitations awaiting a declaration — surfaced as an
+        // action-required card. These do not hard-redirect: the reviewer
+        // can still see their workspace. Matching is by reviewer+round
+        // (not invitation FK) so legacy declarations count as coverage.
+        $pendingInvitations = ReviewerRoundInvitation::query()
+            ->with('round')
+            ->where('reviewer_id', auth()->id())
+            ->whereNull('revoked_at')
+            ->whereNotExists(function ($query): void {
+                $query->selectRaw(1)
+                    ->from('conflict_of_interest_declarations as d')
+                    ->whereColumn('d.reviewer_id', 'reviewer_round_invitations.reviewer_id')
+                    ->whereColumn('d.round_id', 'reviewer_round_invitations.round_id')
+                    ->whereNull('d.superseded_at');
+            })
+            ->orderBy('invited_at')
+            ->get();
+
+        // Declared rounds whose coverage is incomplete (new proposals
+        // arrived after the declaration, or a legacy declaration without
+        // explicit responses) — surfaced as an update-required card.
+        $staleDeclarations = $currentDeclarations
+            ->filter(fn (ConflictOfInterestDeclaration $declaration) => $declaration->isStale());
 
         $assignments = $assignments->map(function (ReviewAssignment $assignment): array {
             return [
@@ -68,7 +96,12 @@ class DashboardController extends Controller
             ];
         });
 
-        return view('reviewer.dashboard', compact('assignments'));
+        return view('reviewer.dashboard', compact(
+            'assignments',
+            'pendingInvitations',
+            'staleDeclarations',
+            'currentDeclarations',
+        ));
     }
 
     /**

@@ -136,7 +136,7 @@
                         </div>
                         <div>
                             <p class="text-sm font-bold text-green-800">
-                                Latest submission: Overall Impact {{ $review->score ?? '—' }} / 9
+                                Latest submission: Overall Impact {{ $review->score ?? '—' }}
                             </p>
                             <p class="text-xs text-green-700 mt-0.5">
                                 Submitted {{ $review->submitted_at->format('M j, Y g:i A') }}
@@ -413,7 +413,7 @@
                                 </div>
                                 @if ($peerReview['score'] !== null)
                                     <span class="text-2xl font-black text-uh-red leading-none">
-                                        {{ $peerReview['score'] }}<span class="text-xs text-gray-400 font-semibold">/9</span>
+                                        {{ $peerReview['score'] }}
                                     </span>
                                 @else
                                     <span class="text-xs text-gray-400">No score</span>
@@ -432,12 +432,12 @@
                                 <div class="mt-2 flex flex-wrap gap-1.5">
                                     @if ($peerReview['factor1_score'] !== null)
                                         <span class="text-xs font-semibold px-2 py-1 rounded-md bg-gray-50 text-gray-600 border border-uh-border">
-                                            Factor 1: {{ $peerReview['factor1_score'] }}/9
+                                            Factor 1: {{ $peerReview["factor1_score"] }}
                                         </span>
                                     @endif
                                     @if ($peerReview['factor2_score'] !== null)
                                         <span class="text-xs font-semibold px-2 py-1 rounded-md bg-gray-50 text-gray-600 border border-uh-border">
-                                            Factor 2: {{ $peerReview['factor2_score'] }}/9
+                                            Factor 2: {{ $peerReview["factor2_score"] }}
                                         </span>
                                     @endif
                                     @if ($peerReview['factor3_sufficient'] !== null)

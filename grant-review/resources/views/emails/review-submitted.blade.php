@@ -15,6 +15,6 @@ View Submission
 </x-mail::button>
 
 Thanks,<br>
-**UH Grants Portal**<br>
+**Pilot Central**<br>
 UH RCMI
 </x-mail::message>

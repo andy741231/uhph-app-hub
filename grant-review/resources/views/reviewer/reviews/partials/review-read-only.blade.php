@@ -12,7 +12,7 @@
     <div class="rounded-lg border border-uh-border bg-gray-50/50 p-4">
         <div class="flex items-center justify-between mb-1.5">
             <label class="label mb-0">Overall Impact</label>
-            <span class="text-lg font-bold text-uh-fg">{{ $review->score !== null ? $review->score . ' / 9' : '—' }}</span>
+            <span class="text-lg font-bold text-uh-fg">{{ $review->score !== null ? $review->score : '—' }}</span>
         </div>
         @if ($review->comments)
             <p class="text-sm leading-relaxed text-gray-700 whitespace-pre-wrap">{{ $review->comments }}</p>

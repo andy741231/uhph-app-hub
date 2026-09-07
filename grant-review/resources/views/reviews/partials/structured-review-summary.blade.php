@@ -29,7 +29,7 @@
         <div class="flex items-center justify-between mb-1.5">
             <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Overall Impact</p>
             @if ($review->score !== null)
-                <span class="text-lg font-black text-uh-red leading-none">{{ $review->score }}<span class="text-xs text-gray-400">/9</span></span>
+                <span class="text-lg font-black text-uh-red leading-none">{{ $review->score }}</span>
             @endif
         </div>
         @if ($review->comments)
@@ -46,7 +46,7 @@
                 <div class="flex items-center justify-between mb-1">
                     <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Factor 1 — Importance of the Research</p>
                     @if ($review->factor1_score !== null)
-                        <span class="text-lg font-black text-uh-red leading-none">{{ $review->factor1_score }}<span class="text-xs text-gray-400">/9</span></span>
+                        <span class="text-lg font-black text-uh-red leading-none">{{ $review->factor1_score }}</span>
                     @endif
                 </div>
                 @if ($review->factor1_comments)
@@ -59,7 +59,7 @@
                 <div class="flex items-center justify-between mb-1">
                     <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Factor 2 — Rigor and Feasibility</p>
                     @if ($review->factor2_score !== null)
-                        <span class="text-lg font-black text-uh-red leading-none">{{ $review->factor2_score }}<span class="text-xs text-gray-400">/9</span></span>
+                        <span class="text-lg font-black text-uh-red leading-none">{{ $review->factor2_score }}</span>
                     @endif
                 </div>
                 @if ($review->factor2_comments)

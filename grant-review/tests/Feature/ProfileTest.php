@@ -63,7 +63,7 @@ class ProfileTest extends TestCase
             ->withSession(['hub_authenticated_at' => now()->timestamp])
             ->get('/complete-profile')
             ->assertOk()
-            ->assertSee('Complete your Grants Portal profile')
+            ->assertSee('Complete your Pilot Central profile')
             ->assertSee('Type of Investigator')
             ->assertSee('Early-Stage Investigator')
             ->assertSee('New Investigator');

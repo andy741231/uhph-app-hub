@@ -20,7 +20,7 @@ class ProfileCompleted extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'UH Grants Portal — New user profile completed',
+            subject: 'Pilot Central — New user profile completed',
         );
     }
 

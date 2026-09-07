@@ -22,7 +22,7 @@ class ConflictOfInterestDeclared extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'UH Grants Portal — Conflict of Interest declared by '.$this->reviewer->full_name,
+            subject: 'Pilot Central — Conflict of Interest declared by '.$this->reviewer->full_name,
         );
     }
 

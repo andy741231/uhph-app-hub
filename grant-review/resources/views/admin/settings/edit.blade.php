@@ -61,6 +61,11 @@
                             'desc' => 'When you are assigned to review a submission.',
                             'roles' => ['reviewer'],
                         ],
+                        'notify_reviewer_screening_invited' => [
+                            'label' => 'Screening invitation',
+                            'desc' => 'When you are invited to declare conflicts of interest for a review round.',
+                            'roles' => ['reviewer'],
+                        ],
                         'notify_submission_confirmation' => [
                             'label' => 'Submission confirmation',
                             'desc' => 'Receive a confirmation email when you submit a proposal.',

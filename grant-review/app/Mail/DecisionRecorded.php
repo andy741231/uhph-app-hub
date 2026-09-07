@@ -22,7 +22,7 @@ class DecisionRecorded extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'UH Grants Portal — Decision recorded for your proposal',
+            subject: 'Pilot Central — Decision recorded for your proposal',
         );
     }
 

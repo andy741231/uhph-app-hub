@@ -13,8 +13,8 @@
 <div class="max-w-2xl mx-auto">
     <div class="mb-6">
         <p class="text-sm font-semibold uppercase tracking-wider text-uh-red">One final step</p>
-        <h1 class="text-2xl sm:text-3xl font-bold text-uh-fg mt-1">Complete your Grants Portal profile</h1>
-        <p class="text-gray-600 mt-2">Provide the information below before continuing to Grants Portal.</p>
+        <h1 class="text-2xl sm:text-3xl font-bold text-uh-fg mt-1">Complete your Pilot Central profile</h1>
+        <p class="text-gray-600 mt-2">Provide the information below before continuing to Pilot Central.</p>
     </div>
 
     <div class="card p-6 shadow-xs">

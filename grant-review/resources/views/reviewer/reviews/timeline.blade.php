@@ -65,15 +65,11 @@
                 </div>
 
                 @if ($revisions->isNotEmpty())
-                    @php
-                        $revisionAverages = $revisions->map(fn ($revision) => $revision->averageScore());
-                        $latestAverage = $revisionAverages->first();
-                    @endphp
-                    {{-- Latest average score --}}
+                    {{-- Latest Overall Impact score --}}
                     <div class="flex items-center justify-between pt-3 border-t border-uh-border">
-                        <span class="text-sm text-gray-500">Latest Average Score</span>
-                        @if ($latestAverage !== null)
-                            <span class="text-2xl font-black text-uh-red">{{ number_format($latestAverage, 2) }}<span class="text-xs text-gray-400">/9</span></span>
+                        <span class="text-sm text-gray-500">Latest Overall Impact</span>
+                        @if ($revisions->first()->score !== null)
+                            <span class="text-2xl font-black text-uh-red">{{ $revisions->first()->score }}</span>
                         @else
                             <span class="text-sm text-gray-400">—</span>
                         @endif
@@ -81,10 +77,10 @@
 
                     {{-- Score trend --}}
                     @php
-                        $averages = $revisionAverages->reverse()->values()->filter(fn ($v) => $v !== null)->values();
-                        $firstAverage = $averages->first();
-                        $lastAverage = $averages->last();
-                        $delta = ($firstAverage !== null && $lastAverage !== null) ? round($lastAverage - $firstAverage, 2) : null;
+                        $scores = $revisions->reverse()->pluck('score')->filter()->map(fn ($s) => (int) $s)->values();
+                        $firstScore = $scores->first();
+                        $lastScore = $scores->last();
+                        $delta = ($firstScore !== null && $lastScore !== null) ? $lastScore - $firstScore : null;
                     @endphp
                     @if ($delta !== null && $delta != 0)
                         <div class="flex items-center justify-between pt-3 border-t border-uh-border">
@@ -191,7 +187,7 @@
                                     <div class="flex items-center justify-between mb-2">
                                         <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Overall Impact</p>
                                         @if ($revision->score !== null)
-                                            <span class="text-lg font-black text-uh-red leading-none">{{ $revision->score }}<span class="text-xs text-gray-400">/9</span></span>
+                                            <span class="text-lg font-black text-uh-red leading-none">{{ $revision->score }}</span>
                                         @endif
                                     </div>
                                     @if ($revision->comments)
