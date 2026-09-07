@@ -20,7 +20,7 @@ class ReviewerScreeningInvited extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Pilot Central — Conflict of interest screening invitation',
+            subject: 'Pilot Central — Application review invitation',
         );
     }
 

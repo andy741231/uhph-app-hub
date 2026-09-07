@@ -1,7 +1,7 @@
 <x-mail::message>
-# Conflict of interest screening invitation
+# Application review invitation
 
-You have been invited to screen proposals in **{{ $invitation->round->name }}** for conflicts of interest.
+You have been invited to review proposals in **{{ $invitation->round->name }}**.
 
 Before any proposal can be assigned to you for review, we ask you to look over each submitted proposal in this round and declare whether you have a conflict of interest — personal, professional, financial, or otherwise. This step happens **before** assignment so that administrators can make informed decisions.
 

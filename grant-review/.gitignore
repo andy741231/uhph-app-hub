@@ -19,6 +19,9 @@
 /storage/*.key
 /storage/pail
 /vendor
+# Published mail components (app-branded email layout) must be tracked
+!/resources/views/vendor/
+!/resources/views/vendor/**
 Homestead.json
 Homestead.yaml
 Thumbs.db
