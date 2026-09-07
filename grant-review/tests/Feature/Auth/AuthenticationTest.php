@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Round;
+use App\Models\Submission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -120,6 +122,40 @@ class AuthenticationTest extends TestCase
         $this->assertSame(1, session('hub_application_count'));
         $this->assertSame('https://hub.test/apps/sso/logout?application=grant-review&signature=test', session('hub_logout_url'));
         $this->assertSame('encrypted-actor-token', session('hub_actor_token'));
+    }
+
+    public function test_callback_returns_user_to_preserved_admin_deep_link(): void
+    {
+        $admin = User::factory()->create([
+            'email' => 'admin@example.edu',
+            'role' => 'admin',
+            'status' => 'active',
+        ]);
+        $submitter = User::factory()->create(['role' => 'submitter']);
+        $round = Round::factory()->create();
+        $submission = Submission::factory()->create([
+            'round_id' => $round->id,
+            'submitter_id' => $submitter->id,
+        ]);
+        $deepLink = route('admin.review-results.show', $submission);
+        $state = Str::random(64);
+
+        Http::fake([
+            'https://hub.test/apps/sso/token' => Http::response($this->identity([
+                'subject' => '550e8400-e29b-41d4-a716-446655440020',
+                'email' => $admin->email,
+                'role' => 'admin',
+            ])),
+        ]);
+
+        $this->withSession([
+            'hub_sso_state_hash' => hash('sha256', $state),
+            'url.intended' => $deepLink,
+        ])
+            ->get('/auth/hub/callback?'.http_build_query(['code' => 'valid-code', 'state' => $state]))
+            ->assertRedirect($deepLink);
+
+        $this->assertAuthenticatedAs($admin);
     }
 
     public function test_callback_relinks_a_disabled_profile_when_the_hub_identity_was_recreated(): void
@@ -327,6 +363,26 @@ class AuthenticationTest extends TestCase
             ->withSession(['hub_authenticated_at' => now()->subMinutes(16)->timestamp])
             ->get('/dashboard')
             ->assertRedirect(route('login'));
+
+        $this->assertGuest();
+    }
+
+    public function test_stale_hub_session_preserves_the_requested_admin_deep_link(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $submitter = User::factory()->create(['role' => 'submitter']);
+        $round = Round::factory()->create();
+        $submission = Submission::factory()->create([
+            'round_id' => $round->id,
+            'submitter_id' => $submitter->id,
+        ]);
+        $deepLink = route('admin.review-results.show', $submission, false);
+
+        $this->actingAs($admin)
+            ->withSession(['hub_authenticated_at' => now()->subMinutes(16)->timestamp])
+            ->get($deepLink)
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('url.intended', url($deepLink));
 
         $this->assertGuest();
     }

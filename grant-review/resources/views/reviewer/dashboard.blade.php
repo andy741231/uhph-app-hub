@@ -121,6 +121,14 @@
                                     An assignment decision is pending — you will receive an email if a proposal is assigned to you.
                                     No further action is required at this time.
                                 </p>
+                            @elseif ($pendingInvitations->isEmpty() && $staleDeclarations->isEmpty() && $currentDeclarations->isEmpty())
+                                {{-- Profile complete, awaiting screening invitation --}}
+                                <p class="font-medium text-gray-700">No review assignments yet</p>
+                                <p class="text-sm text-gray-500 mt-2 max-w-md mx-auto leading-relaxed">
+                                    Your profile is complete and the administrators have been notified.
+                                    A conflict-of-interest declaration link will be sent to you soon — once you submit it,
+                                    proposals can be assigned to you for review. You'll receive an email at each step.
+                                </p>
                             @else
                                 <p class="font-medium text-gray-700">No review assignments</p>
                                 <p class="text-sm text-gray-500 mt-1">You'll see submissions here once an administrator assigns them to you.</p>

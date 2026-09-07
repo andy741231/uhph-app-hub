@@ -20,7 +20,9 @@ class ProfileCompleted extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Pilot Central — New user profile completed',
+            subject: $this->user->isReviewer()
+                ? 'Pilot Central — New reviewer profile completed. Please send COI notification'
+                : 'Pilot Central — New user profile completed',
         );
     }
 

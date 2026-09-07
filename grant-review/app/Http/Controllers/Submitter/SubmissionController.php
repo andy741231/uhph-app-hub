@@ -27,7 +27,10 @@ class SubmissionController extends Controller
      */
     public function index(Request $request): View
     {
-        $submissions = $request->user()->submissions()->with('round')->latest()->get();
+        $submissions = $request->user()->submissions()
+            ->with(['round', 'reviewAssignments'])
+            ->latest()
+            ->get();
 
         return view('submitter.submissions.index', compact('submissions'));
     }

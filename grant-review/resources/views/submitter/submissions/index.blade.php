@@ -66,6 +66,25 @@
                         $deadlinePassed = $submission->round && now()->gt($submission->round->deadline_at);
                         $canEdit = ! $deadlinePassed;
                     @endphp
+                    @php
+                        $deadlinePassed = $submission->round && now()->gt($submission->round->deadline_at);
+                        $canEdit = ! $deadlinePassed;
+                        $awaitingAssignment = in_array($submission->status, ['submitted', 'under_review'])
+                            && $submission->reviewAssignments->isEmpty();
+                    @endphp
+
+                    @if ($awaitingAssignment)
+                        <div class="mt-3 bg-uh-muted/70 border border-uh-border rounded-lg px-4 py-3 flex items-start gap-2.5" role="status">
+                            <svg class="w-4 h-4 text-uh-slate shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.852 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.522c.126.315.3.602.565.866l.707.707a1 1 0 0 0 .707.293h13.172a1 1 0 0 0 .707-.293l.707-.707a1 1 0 0 0 .293-.707V14a6 6 0 0 0-2.12-4.558"/>
+                            </svg>
+                            <p class="text-xs text-gray-600 leading-relaxed">
+                                The administrators have been notified of your submission. Reviewers will be assigned soon —
+                                you will receive an email when the review decision is available.
+                            </p>
+                        </div>
+                    @endif
+
                     @if ($canEdit)
                         <div class="mt-3 pt-3 border-t border-uh-border flex flex-wrap items-center gap-3">
                             <a href="{{ route('submitter.submissions.edit', $submission) }}" class="btn-secondary text-sm">

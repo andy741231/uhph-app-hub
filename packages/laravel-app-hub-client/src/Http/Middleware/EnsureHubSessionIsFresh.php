@@ -26,9 +26,15 @@ class EnsureHubSessionIsFresh
             return $next($request);
         }
 
+        $route = $request->route();
+        $intendedUrl = $route && $route->getName()
+            ? route($route->getName(), $route->parameters() + $request->query())
+            : $request->fullUrl();
+
         Auth::guard(config('hub.guard', 'web'))->logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+        $request->session()->put('url.intended', $intendedUrl);
 
         return redirect()->route(config('hub.login_route', 'login'));
     }
