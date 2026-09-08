@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\ReviewerCoiUpdateRequested;
 use App\Mail\ReviewerScreeningInvited;
 use App\Models\ConflictOfInterestDeclaration;
 use App\Models\ReviewerRoundInvitation;
@@ -150,8 +151,19 @@ class ReviewInvitationController extends Controller
             return false;
         }
 
+        // Reviewers who already declared get an update request instead of
+        // the original invitation — new proposals arrived after their
+        // declaration and are not covered yet.
+        $hasDeclared = ConflictOfInterestDeclaration::query()
+            ->where('reviewer_id', $invitation->reviewer_id)
+            ->where('round_id', $invitation->round_id)
+            ->current()
+            ->exists();
+
         try {
-            Mail::to($invitation->reviewer)->send(new ReviewerScreeningInvited($invitation));
+            Mail::to($invitation->reviewer)->send($hasDeclared
+                ? new ReviewerCoiUpdateRequested($invitation)
+                : new ReviewerScreeningInvited($invitation));
         } catch (\Throwable) {
             return false;
         }

@@ -9,7 +9,7 @@ Reviewer **{{ $reviewer->full_name }}** ({{ $reviewer->email }}) has submitted a
 @endphp
 
 @if ($declaration->responses->isNotEmpty())
-Screening results — **{{ $declaration->responses->count() }}** proposal{{ $declaration->responses->count() === 1 ? '' : 's' }} screened:
+COI results — **{{ $declaration->responses->count() }}** proposal{{ $declaration->responses->count() === 1 ? '' : 's' }} covered:
 
 <x-mail::panel>
 @foreach ($declaration->responses as $response)
@@ -30,7 +30,7 @@ Description: {{ $response->description }}
 </x-mail::panel>
 
 @if ($conflicts->isNotEmpty())
-**{{ $conflicts->count() }}** potential conflict{{ $conflicts->count() === 1 ? '' : 's' }} reported and **{{ $clear->count() }}** proposal{{ $clear->count() === 1 ? '' : 's' }} screened with no conflict. Reported conflicts are advisory — the assignment decision remains with the administrator.
+**{{ $conflicts->count() }}** potential conflict{{ $conflicts->count() === 1 ? '' : 's' }} reported and **{{ $clear->count() }}** proposal{{ $clear->count() === 1 ? '' : 's' }} declared with no conflict. Reported conflicts are advisory — the assignment decision remains with the administrator.
 @else
 The reviewer reported **no potential conflicts** for this round.
 @endif
@@ -57,7 +57,9 @@ The reviewer declared **no conflicts of interest** for this round.
 
 Declaration submitted at {{ $declaration->declared_at->format('M j, Y g:i A') }}.
 
-Review the declaration and assign proposals from the [Conflicts of interest page]({{ route('admin.conflicts.index') }}).
+<x-mail::button :url="route('admin.conflicts.index')" color="red">
+Review Declarations
+</x-mail::button>
 
 Thanks,<br>
 **Pilot Central**<br>

@@ -213,6 +213,7 @@ class ReviewAssignmentController extends Controller
                     ? [
                         'status' => 'unscreened',
                         'declared_at' => $declaration->declared_at,
+                        'invitation_id' => $invitation?->id,
                     ]
                     : [
                         'status' => $response->status,

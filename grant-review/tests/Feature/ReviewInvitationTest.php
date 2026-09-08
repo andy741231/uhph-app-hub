@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Mail\ReviewerAssigned;
+use App\Mail\ReviewerCoiUpdateRequested;
 use App\Mail\ReviewerScreeningInvited;
 use App\Models\ConflictOfInterestDeclaration;
 use App\Models\ConflictOfInterestResponse;
@@ -88,6 +89,59 @@ class ReviewInvitationTest extends TestCase
         ]);
 
         $this->assertSame(1, ReviewerRoundInvitation::where('round_id', $round->id)->where('reviewer_id', $reviewer->id)->count());
+    }
+
+    public function test_resend_to_a_declared_reviewer_requests_an_update(): void
+    {
+        Mail::fake();
+        [$admin, $round] = $this->createRoundWithSubmission();
+        $reviewer = User::factory()->create(['role' => 'reviewer', 'status' => 'active']);
+
+        $invitation = ReviewerRoundInvitation::create([
+            'round_id' => $round->id,
+            'reviewer_id' => $reviewer->id,
+            'invited_at' => now(),
+        ]);
+
+        $declaration = ConflictOfInterestDeclaration::create([
+            'reviewer_id' => $reviewer->id,
+            'round_id' => $round->id,
+            'declared_at' => now(),
+        ]);
+        ConflictOfInterestResponse::create([
+            'declaration_id' => $declaration->id,
+            'submission_id' => $round->submissions()->first()->id,
+            'status' => 'clear',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.review-invitations.resend', $invitation))
+            ->assertRedirect()
+            ->assertSessionHas('status');
+
+        Mail::assertSent(ReviewerCoiUpdateRequested::class, fn ($mail) => $mail->hasTo($reviewer->email));
+        Mail::assertNotSent(ReviewerScreeningInvited::class);
+    }
+
+    public function test_resend_to_an_undeclared_reviewer_sends_the_original_invitation(): void
+    {
+        Mail::fake();
+        [$admin, $round] = $this->createRoundWithSubmission();
+        $reviewer = User::factory()->create(['role' => 'reviewer', 'status' => 'active']);
+
+        $invitation = ReviewerRoundInvitation::create([
+            'round_id' => $round->id,
+            'reviewer_id' => $reviewer->id,
+            'invited_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('admin.review-invitations.resend', $invitation))
+            ->assertRedirect()
+            ->assertSessionHas('status');
+
+        Mail::assertSent(ReviewerScreeningInvited::class, fn ($mail) => $mail->hasTo($reviewer->email));
+        Mail::assertNotSent(ReviewerCoiUpdateRequested::class);
     }
 
     public function test_invitation_rejects_non_reviewer_accounts(): void

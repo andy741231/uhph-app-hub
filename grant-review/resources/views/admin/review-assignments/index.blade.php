@@ -116,7 +116,15 @@
                                             @elseif ($status === 'awaiting')
                                                 <span class="inline-flex items-center rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">Awaiting declaration</span>
                                             @elseif ($status === 'unscreened')
-                                                <span class="inline-flex items-center rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">COI declaration does not cover this proposal</span>
+                                                <button type="button" data-outdated-coi
+                                                    data-reviewer="{{ $reviewer->full_name }}"
+                                                    data-round-id="{{ $submission->round_id }}"
+                                                    data-invitation-id="{{ $screen['invitation_id'] ?? '' }}"
+                                                    class="inline-flex items-center gap-1 rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600 hover:bg-gray-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-uh-red/40"
+                                                    title="Why can't this reviewer be assigned?">
+                                                    <x-heroicon-o-arrow-path class="w-3 h-3" />
+                                                    Outdated COI
+                                                </button>
                                             @elseif ($status === 'not_invited')
                                                 <span class="inline-flex items-center rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-gray-400">COI invitation not sent</span>
                                             @endif
@@ -150,6 +158,33 @@
     @endforelse
 </div>
 
+{{-- Outdated COI modal --}}
+<div id="outdated-coi-modal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-labelledby="outdated-coi-title">
+    <div class="card p-6 max-w-md w-full" role="document">
+        <div class="flex items-start justify-between gap-3">
+            <h2 id="outdated-coi-title" class="text-lg font-semibold text-uh-fg">Outdated COI declaration</h2>
+            <button type="button" class="text-gray-400 hover:text-gray-600" data-modal-close aria-label="Close">
+                <x-heroicon-o-x-mark class="w-5 h-5" />
+            </button>
+        </div>
+        <p class="text-sm text-gray-700 mt-3">
+            <span class="font-semibold" data-modal-reviewer></span> declared COI for this round before this proposal was submitted.
+            New application(s) submitted after a COI declaration are not covered until the reviewer updates their declaration —
+            silence cannot be treated as a verified &quot;no conflict&quot;.
+        </p>
+        <p class="text-sm text-gray-600 mt-3">
+            Resend the COI invitation to ask the reviewer to update their declaration. Once they re-declare, this proposal will be covered and they can be assigned.
+        </p>
+        <div class="mt-5 flex items-center justify-end gap-2">
+            <button type="button" class="btn-secondary" data-modal-close>Close</button>
+            <form id="outdated-coi-resend-form" method="POST" action="">
+                @csrf
+                <button type="submit" class="btn-primary">Resend COI invitation</button>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('form[data-assignment-form]').forEach((form) => {
@@ -179,6 +214,43 @@
         if (highlight) {
             highlight.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
+
+        // Outdated COI modal
+        const modal = document.getElementById('outdated-coi-modal');
+        const resendForm = document.getElementById('outdated-coi-resend-form');
+        const resendButton = resendForm.querySelector('button[type="submit"]');
+
+        const closeModal = () => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        };
+
+        document.querySelectorAll('[data-outdated-coi]').forEach((badge) => {
+            badge.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+
+                modal.querySelector('[data-modal-reviewer]').textContent = badge.dataset.reviewer;
+
+                if (badge.dataset.invitationId) {
+                    resendForm.action = '{{ route('admin.review-invitations.index') }}/' + badge.dataset.invitationId + '/resend';
+                    resendButton.classList.remove('hidden');
+                } else {
+                    resendButton.classList.add('hidden');
+                }
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            });
+        });
+
+        modal.querySelectorAll('[data-modal-close]').forEach((el) => el.addEventListener('click', closeModal));
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) closeModal();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && ! modal.classList.contains('hidden')) closeModal();
+        });
     });
 </script>
 @endsection
