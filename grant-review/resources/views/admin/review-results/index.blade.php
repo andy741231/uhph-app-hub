@@ -108,12 +108,16 @@
                         <td class="text-gray-600">{{ $submission->submitter?->full_name ?? '—' }}</td>
                         <td class="text-gray-600">{{ $submission->round->name }}</td>
                         <td>
-                            @if ($submission->status === 'under_review')
-                                <span class="badge-yellow">Under review</span>
-                            @elseif ($submission->status === 'decided')
+                            @if ($submission->status === 'decided')
                                 <span class="badge-green">Decided</span>
+                            @elseif ($submission->reviewsReleased())
+                                <span class="badge-green">Reviews released</span>
+                            @elseif ($assigned > 0 && $completed === $assigned)
+                                <span class="badge-green">Ready to release</span>
+                            @elseif ($assigned > 0)
+                                <span class="badge-yellow">Under review</span>
                             @else
-                                <span class="badge-blue">Submitted</span>
+                                <span class="badge-blue">Awaiting assignment</span>
                             @endif
                         </td>
                         <td class="min-w-[150px]">
@@ -149,14 +153,20 @@
                         </td>
                         <td class="text-right min-w-[280px]">
                             <div class="flex items-center justify-end gap-2 flex-wrap">
-                                @if ($submission->reviewsReleased())
-                                    <span class="badge-green">Reviews released</span>
-                                @elseif ($assigned > 0 && $completed === $assigned)
+                                @if (! $submission->reviewsReleased() && $assigned > 0 && $completed === $assigned)
                                     <form action="{{ route('admin.review-results.approve', $submission) }}" method="POST" class="inline">
                                         @csrf
                                         <button type="submit" class="btn-primary text-xs" onclick="return confirm('Release these completed reviews to the submitter and all reviewers? This cannot be undone.')">
                                             <x-heroicon-o-check-circle class="w-4 h-4 mr-1.5" />
                                             Release reviews
+                                        </button>
+                                    </form>
+                                @elseif ($submission->reviewsReleased() && $submission->status !== 'decided')
+                                    <form action="{{ route('admin.review-results.unrelease', $submission) }}" method="POST" class="inline">
+                                        @csrf
+                                        <button type="submit" class="btn-secondary text-xs" onclick="return confirm('Un-release these reviews? The submitter and reviewers will immediately lose access to the released feedback, and reviewers can edit their reviews again. Email notifications already sent cannot be withdrawn.')">
+                                            <x-heroicon-o-lock-open class="w-4 h-4 mr-1.5" />
+                                            Un-release
                                         </button>
                                     </form>
                                 @endif

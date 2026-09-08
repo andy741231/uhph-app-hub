@@ -195,6 +195,30 @@ class ReviewResultsController extends Controller
             ->with('status', 'Reviews approved for release. Submitter and reviewers have been notified according to their preferences.');
     }
 
+    public function unrelease(Request $request, Submission $submission): RedirectResponse
+    {
+        if ($submission->status === 'decided') {
+            return redirect()
+                ->route('admin.review-results.index')
+                ->with('error', 'Reviews for '.$submission->title.' cannot be un-released after a funding decision has been recorded.');
+        }
+
+        if (! $submission->reviewsReleased()) {
+            return redirect()
+                ->route('admin.review-results.index')
+                ->with('error', 'Reviews for '.$submission->title.' are not currently released.');
+        }
+
+        $submission->forceFill([
+            'reviews_released_at' => null,
+            'reviews_released_by' => null,
+        ])->save();
+
+        return redirect()
+            ->route('admin.review-results.index')
+            ->with('status', 'Reviews un-released for '.$submission->title.'. The submitter and reviewers no longer see the released feedback, and reviewers can edit their reviews again.');
+    }
+
     public function exportCsv(?int $roundId = null): StreamedResponse
     {
         $query = Submission::with([

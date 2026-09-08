@@ -47,7 +47,7 @@ class ReviewReleaseWorkflowTest extends TestCase
         $this->assertNull($submission->fresh()->reviews_released_at);
     }
 
-    public function test_review_release_is_one_way(): void
+    public function test_review_release_is_idempotent(): void
     {
         Mail::fake();
         [$admin, , , $submission] = $this->workflow();
@@ -58,6 +58,68 @@ class ReviewReleaseWorkflowTest extends TestCase
 
         $this->assertTrue($releasedAt->equalTo($submission->fresh()->reviews_released_at));
         Mail::assertSent(ReviewsAvailable::class, 3);
+    }
+
+    public function test_admin_can_unrelease_reviews_and_reviewers_regain_edit_access(): void
+    {
+        Mail::fake();
+        [$admin, $submitter, $reviewers, $submission, $reviews] = $this->workflow();
+
+        $this->actingAs($admin)->post(route('admin.review-results.approve', $submission));
+        $this->assertTrue($submission->fresh()->reviewsReleased());
+
+        $this->actingAs($admin)->post(route('admin.review-results.unrelease', $submission));
+
+        $this->assertNull($submission->fresh()->reviews_released_at);
+        $this->assertNull($submission->fresh()->reviews_released_by);
+
+        $this->actingAs($submitter)
+            ->get(route('submitter.submissions.show', $submission))
+            ->assertOk()
+            ->assertDontSee('Peer review feedback alpha');
+
+        $this->actingAs($reviewers[0])
+            ->post(route('reviewer.reviews.save', $reviews[0]), [
+                'score' => 4,
+                'factor1_score' => 4,
+                'factor2_score' => 4,
+                'factor3_sufficient' => '1',
+                'additional_human_subjects' => 'na',
+                'additional_vertebrate_animals' => 'na',
+                'additional_biohazards' => 'na',
+            ])
+            ->assertRedirect();
+
+        $this->assertSame(4, $reviews[0]->fresh()->score);
+    }
+
+    public function test_unrelease_is_a_no_op_for_unreleased_submissions(): void
+    {
+        Mail::fake();
+        [$admin, , , $submission] = $this->workflow();
+
+        $this->actingAs($admin)
+            ->post(route('admin.review-results.unrelease', $submission))
+            ->assertRedirect(route('admin.review-results.index'))
+            ->assertSessionHas('error');
+
+        $this->assertNull($submission->fresh()->reviews_released_at);
+    }
+
+    public function test_reviews_cannot_be_unreleased_after_a_decision(): void
+    {
+        Mail::fake();
+        [$admin, , , $submission] = $this->workflow();
+
+        $this->actingAs($admin)->post(route('admin.review-results.approve', $submission));
+        $submission->update(['status' => 'decided']);
+
+        $this->actingAs($admin)
+            ->post(route('admin.review-results.unrelease', $submission))
+            ->assertRedirect(route('admin.review-results.index'))
+            ->assertSessionHas('error');
+
+        $this->assertNotNull($submission->fresh()->reviews_released_at);
     }
 
     public function test_submitter_cannot_see_reviews_before_release_but_can_after_release(): void

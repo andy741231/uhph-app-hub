@@ -1,7 +1,7 @@
 <x-mail::message>
 # All reviews complete
 
-All assigned reviews have been submitted for this proposal. It is now ready for a decision.
+All assigned reviews have been submitted for this proposal. Reviews are ready to be released.
 
 @php
     $completedReviews = $submission->reviewAssignments->filter(fn ($assignment) => $assignment->review !== null);

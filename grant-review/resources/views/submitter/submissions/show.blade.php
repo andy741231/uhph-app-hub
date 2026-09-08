@@ -94,16 +94,26 @@
 
 {{-- Decision (if any) --}}
 @if ($submission->decision)
-<div class="card p-5 mb-6">
-    <h2 class="text-lg font-semibold text-uh-fg mb-3">Decision</h2>
-    <div class="flex flex-wrap items-center gap-4 text-sm">
-        <span class="font-medium {{ $submission->decision->outcome === 'funded' ? 'text-uh-green' : 'text-gray-600' }}">
-            {{ $submission->decision->outcome === 'funded' ? 'Funded' : 'Not funded' }}
-        </span>
-        @if ($submission->decision->amount_awarded !== null)
-            <span class="text-gray-600">${{ number_format((float) $submission->decision->amount_awarded, 2) }} awarded</span>
-        @endif
-        <span class="text-gray-500">decided {{ $submission->decision->decided_at?->format('M j, Y') }}</span>
+@php $funded = $submission->decision->outcome === 'funded'; @endphp
+<div class="card p-5 mb-6 border-l-4 {{ $funded ? 'border-l-uh-green bg-green-50/40' : 'border-l-gray-400' }}" role="status">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-full flex items-center justify-center shrink-0 {{ $funded ? 'bg-uh-green/10 text-uh-green' : 'bg-gray-100 text-gray-500' }}">
+                <x-heroicon-o-trophy class="w-6 h-6" />
+            </div>
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Funding decision</p>
+                <p class="text-xl font-bold {{ $funded ? 'text-uh-green' : 'text-uh-fg' }}">
+                    {{ $funded ? 'Funded' : 'Not funded' }}
+                </p>
+            </div>
+        </div>
+        <div class="text-sm text-gray-600 flex flex-wrap items-center gap-x-4 gap-y-1">
+            @if ($submission->decision->amount_awarded !== null)
+                <span class="font-semibold text-uh-fg">${{ number_format((float) $submission->decision->amount_awarded, 2) }} awarded</span>
+            @endif
+            <span>decided {{ $submission->decision->decided_at?->format('M j, Y') }}</span>
+        </div>
     </div>
 </div>
 @endif
