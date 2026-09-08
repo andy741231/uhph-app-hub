@@ -5,7 +5,7 @@
 <div class="flex items-center justify-between mb-6 gap-4 flex-wrap">
     <div>
         <h1 class="text-2xl font-bold text-uh-fg">Review results</h1>
-        <p class="text-sm text-gray-500 mt-1">Monitor reviewer completion and aggregate scores.</p>
+        <p class="text-sm text-gray-500 mt-1">Monitor reviewer completion, release reviews, and record funding decisions.</p>
     </div>
     <div class="flex items-center gap-3">
         <form method="GET" action="{{ route('admin.review-results.index') }}" class="relative" role="search">
@@ -27,7 +27,7 @@
                 </a>
             @endif
         </form>
-        <a href="{{ route('admin.review-results.export') }}" class="btn-secondary">
+        <a href="{{ $roundId ? route('admin.review-results.export.round', ['roundId' => $roundId]) : route('admin.review-results.export') }}" class="btn-secondary">
             <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"/>
             </svg>
@@ -35,6 +35,38 @@
         </a>
     </div>
 </div>
+
+<form method="GET" action="{{ route('admin.review-results.index') }}" class="card p-4 mb-6 grid grid-cols-1 md:grid-cols-[14rem_16rem_auto] gap-3 items-end">
+    @if (isset($search) && $search !== '')
+        <input type="hidden" name="q" value="{{ $search }}">
+    @endif
+    <div>
+        <label for="results-round" class="label">Round</label>
+        <select id="results-round" name="round_id" class="input mt-1.5" onchange="this.form.submit()">
+            <option value="">All rounds</option>
+            @foreach ($rounds as $round)
+                <option value="{{ $round->id }}" @selected($roundId === $round->id)>{{ $round->name }}</option>
+            @endforeach
+        </select>
+    </div>
+    <div>
+        <label for="results-state" class="label">Workflow state</label>
+        <select id="results-state" name="state" class="input mt-1.5" onchange="this.form.submit()">
+            <option value="">All states</option>
+            <option value="awaiting_assignment" @selected($state === 'awaiting_assignment')>Awaiting reviewer assignment</option>
+            <option value="reviews_incomplete" @selected($state === 'reviews_incomplete')>Reviews incomplete</option>
+            <option value="ready_to_release" @selected($state === 'ready_to_release')>Ready to release</option>
+            <option value="released" @selected($state === 'released')>Reviews released</option>
+            <option value="decision_pending" @selected($state === 'decision_pending')>Decision pending</option>
+            <option value="decided" @selected($state === 'decided')>Decided</option>
+        </select>
+    </div>
+    <div>
+        @if ($roundId || $state)
+            <a href="{{ route('admin.review-results.index', $search !== '' ? ['q' => $search] : []) }}" class="btn-secondary">Clear</a>
+        @endif
+    </div>
+</form>
 
 @if (isset($search) && $search !== '')
     <p class="text-sm text-gray-500 mb-3">
@@ -53,7 +85,7 @@
                     <th>Round</th>
                     <th>Status</th>
                     <th>Review progress</th>
-                    <th>Average score</th>
+                    <th title="Mean of Overall Impact, Factor 1, and Factor 2 scores across submitted reviews">Average score</th>
                     <th>Decision</th>
                     <th class="text-right">Actions</th>
                 </tr>
@@ -65,6 +97,7 @@
                         $assigned = $item['assigned'];
                         $completed = $item['completed'];
                         $progress = $assigned > 0 ? round(($completed / $assigned) * 100) : 0;
+                        $assignUrl = route('admin.review-assignments.index', ['round_id' => $submission->round_id]).'#submission-'.$submission->id;
                     @endphp
                     <tr>
                         <td class="font-medium text-uh-fg max-w-xs">
@@ -85,7 +118,7 @@
                         </td>
                         <td class="min-w-[150px]">
                             @if ($assigned === 0)
-                                <span class="text-sm text-gray-500">Not assigned</span>
+                                <a href="{{ $assignUrl }}" class="text-sm text-uh-red hover:underline font-medium">Not assigned — assign reviewers</a>
                             @else
                                 <div class="flex items-center gap-2">
                                     <div class="h-2 w-20 rounded-full bg-gray-200 overflow-hidden" role="progressbar" aria-valuenow="{{ $progress }}" aria-valuemin="0" aria-valuemax="100" aria-label="{{ $completed }} of {{ $assigned }} reviews submitted">
@@ -102,7 +135,7 @@
                                 <span class="text-sm text-gray-400">—</span>
                             @endif
                         </td>
-                        <td class="min-w-[210px]">
+                        <td class="min-w-[150px]">
                             @if ($submission->decision)
                                 <div class="text-sm font-semibold {{ $submission->decision->outcome === 'funded' ? 'text-uh-green' : 'text-gray-600' }}">
                                     {{ $submission->decision->outcome === 'funded' ? 'Funded' : 'Not funded' }}
@@ -121,36 +154,21 @@
                                 @elseif ($assigned > 0 && $completed === $assigned)
                                     <form action="{{ route('admin.review-results.approve', $submission) }}" method="POST" class="inline">
                                         @csrf
-                                        <button type="submit" class="btn-primary text-xs" onclick="return confirm('Approve these completed reviews for release? This cannot be undone.')">
+                                        <button type="submit" class="btn-primary text-xs" onclick="return confirm('Release these completed reviews to the submitter and all reviewers? This cannot be undone.')">
                                             <x-heroicon-o-check-circle class="w-4 h-4 mr-1.5" />
-                                            Approve reviews
+                                            Release reviews
                                         </button>
                                     </form>
                                 @endif
-                                <a href="{{ route('admin.review-results.show', $submission) }}" class="text-sm text-uh-red hover:underline font-medium cursor-pointer">View reviews</a>
-                                <a href="{{ route('admin.review-assignments.index') }}" class="text-sm text-uh-slate hover:underline font-medium cursor-pointer">Manage</a>
+                                <a href="{{ route('admin.review-results.show', $submission) }}" class="text-sm text-uh-red hover:underline font-medium cursor-pointer">View details</a>
+                                <a href="{{ $assignUrl }}" class="text-sm text-uh-slate hover:underline font-medium cursor-pointer">Assign reviewers</a>
                             </div>
-                            <details class="inline-block mt-2 text-left align-middle">
-                                <summary class="text-sm text-uh-red hover:underline font-medium cursor-pointer">{{ $submission->decision ? 'Update decision' : 'Set decision' }}</summary>
-                                <form action="{{ route('admin.decisions.store', $submission) }}" method="POST" class="mt-2 p-3 card space-y-2 absolute right-4 z-10 w-56">
-                                    @csrf
-                                    <input type="hidden" name="submission_id" value="{{ $submission->id }}">
-                                    <label class="block text-xs font-medium text-gray-700" for="outcome-{{ $submission->id }}">Outcome</label>
-                                    <select id="outcome-{{ $submission->id }}" name="outcome" required class="input text-sm py-1.5">
-                                        <option value="funded" {{ $submission->decision?->outcome === 'funded' ? 'selected' : '' }}>Recommended for funding</option>
-                                        <option value="not_funded" {{ $submission->decision?->outcome === 'not_funded' ? 'selected' : '' }}>Not funded</option>
-                                    </select>
-                                    <label class="block text-xs font-medium text-gray-700" for="amount-{{ $submission->id }}">Amount recommended</label>
-                                    <input id="amount-{{ $submission->id }}" type="number" name="amount_awarded" min="0" step="0.01" value="{{ $submission->decision?->amount_awarded }}" class="input text-sm py-1.5" placeholder="0.00">
-                                    <button type="submit" class="btn-primary text-xs w-full">Save decision</button>
-                                </form>
-                            </details>
                         </td>
                     </tr>
                 @empty
                     <tr>
                         <td colspan="8" class="text-center py-10 text-gray-500">
-                            No submitted proposals are available yet.
+                            No submitted proposals match these filters.
                         </td>
                     </tr>
                 @endforelse

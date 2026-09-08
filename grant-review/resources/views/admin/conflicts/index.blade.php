@@ -21,18 +21,20 @@
 @endif
 
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    <div class="card p-4 border-amber-200 bg-amber-50/40">
+    <a href="{{ route('admin.conflicts.index', array_filter(['status' => 'pending', 'round_id' => $roundId])) }}"
+       class="card p-4 border-amber-200 bg-amber-50/40 block hover:border-amber-400 transition-colors">
         <p class="text-xs font-semibold uppercase tracking-wider text-amber-700">Awaiting declaration</p>
         <p class="text-2xl font-bold text-amber-900 mt-1">{{ $stats['pending'] }}</p>
-    </div>
+    </a>
     <div class="card p-4">
         <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Declarations</p>
         <p class="text-2xl font-bold text-uh-fg mt-1">{{ $stats['declarations'] }}</p>
     </div>
-    <div class="card p-4">
+    <a href="{{ route('admin.conflicts.index', array_filter(['status' => 'conflicts', 'round_id' => $roundId])) }}"
+       class="card p-4 block hover:border-amber-400 transition-colors">
         <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">With conflicts</p>
         <p class="text-2xl font-bold text-amber-900 mt-1">{{ $stats['with_conflicts'] }}</p>
-    </div>
+    </a>
     <div class="card p-4">
         <p class="text-xs font-semibold uppercase tracking-wider text-gray-500">Flagged proposals</p>
         <p class="text-2xl font-bold text-uh-fg mt-1">{{ $stats['conflicts'] }}</p>
@@ -80,7 +82,7 @@
                     <th>Round</th>
                     <th>Date</th>
                     <th>Status</th>
-                    <th>Screening details</th>
+                    <th>COI details</th>
                     <th class="text-right">Action</th>
                 </tr>
             </thead>
@@ -143,16 +145,32 @@
                             @endif
                         </td>
                         <td class="text-right whitespace-nowrap">
-                            <a href="{{ route('admin.review-assignments.index', ['round_id' => $round->id, 'reviewer_id' => $reviewer->id]) }}"
-                               class="inline-flex items-center gap-1 text-xs font-semibold text-white bg-uh-red hover:bg-uh-red/90 rounded-md px-3 py-1.5 transition-colors">
-                                <x-heroicon-o-user-plus class="w-3.5 h-3.5" />
-                                Assign reviews
-                            </a>
+                            @if (($isPending || $stale) && $invitation)
+                                <form action="{{ route('admin.review-invitations.resend', $invitation) }}" method="POST" class="inline">
+                                    @csrf
+                                    <button type="submit" class="inline-flex items-center gap-1 text-xs font-semibold text-uh-fg bg-white border border-uh-border hover:bg-uh-muted rounded-md px-3 py-1.5 transition-colors">
+                                        <x-heroicon-o-envelope-open class="w-3.5 h-3.5" />
+                                        Resend COI invitation
+                                    </button>
+                                </form>
+                            @elseif ($stale)
+                                <a href="{{ route('admin.review-invitations.index', ['round_id' => $round->id]) }}"
+                                   class="inline-flex items-center gap-1 text-xs font-semibold text-uh-fg bg-white border border-uh-border hover:bg-uh-muted rounded-md px-3 py-1.5 transition-colors">
+                                    <x-heroicon-o-envelope-open class="w-3.5 h-3.5" />
+                                    View COI invitations
+                                </a>
+                            @else
+                                <a href="{{ route('admin.review-assignments.index', ['round_id' => $round->id, 'reviewer_id' => $reviewer->id]) }}"
+                                   class="inline-flex items-center gap-1 text-xs font-semibold text-white bg-uh-red hover:bg-uh-red/90 rounded-md px-3 py-1.5 transition-colors">
+                                    <x-heroicon-o-user-plus class="w-3.5 h-3.5" />
+                                    Assign reviews
+                                </a>
+                            @endif
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="py-12 text-center text-gray-500">No conflict-of-interest screening records match these filters.</td>
+                        <td colspan="6" class="py-12 text-center text-gray-500">No COI records match these filters.</td>
                     </tr>
                 @endforelse
             </tbody>

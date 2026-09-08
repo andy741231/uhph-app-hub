@@ -77,10 +77,27 @@ class ConflictOfInterestController extends Controller
             ]);
         }
 
+        // Active invitations for the declared reviewer+round pairs, so
+        // stale rows can offer a resend action.
+        $invitationsByPair = ReviewerRoundInvitation::query()
+            ->whereNull('revoked_at')
+            ->when($declarationQuery->isNotEmpty(), function ($query) use ($declarationQuery): void {
+                $query->where(function ($query) use ($declarationQuery): void {
+                    foreach ($declarationQuery as $declaration) {
+                        $query->orWhere(function ($query) use ($declaration): void {
+                            $query->where('round_id', $declaration->round_id)
+                                ->where('reviewer_id', $declaration->reviewer_id);
+                        });
+                    }
+                });
+            })
+            ->get()
+            ->keyBy(fn (ReviewerRoundInvitation $invitation) => $invitation->round_id.'-'.$invitation->reviewer_id);
+
         foreach ($declarationQuery as $declaration) {
             $rows->push([
                 'type' => 'declaration',
-                'invitation' => null,
+                'invitation' => $invitationsByPair->get($declaration->round_id.'-'.$declaration->reviewer_id),
                 'declaration' => $declaration,
                 'sort' => $declaration->declared_at,
             ]);

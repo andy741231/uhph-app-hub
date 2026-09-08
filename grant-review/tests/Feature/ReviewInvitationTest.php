@@ -326,7 +326,8 @@ class ReviewInvitationTest extends TestCase
             ->assertOk()
             ->assertSee('Pending Reviewer')
             ->assertSee('Awaiting declaration')
-            ->assertSee('Assign reviews');
+            ->assertSee('Resend COI invitation')
+            ->assertDontSee('Assign reviews');
     }
 
     public function test_revoke_preserves_existing_assignments(): void

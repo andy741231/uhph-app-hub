@@ -43,8 +43,20 @@
                 </div>
             </div>
 
-            {{-- Status badge + PDF --}}
-            <div class="flex items-center gap-3 shrink-0">
+            {{-- Status badge + PDF + release --}}
+            <div class="flex items-center gap-3 shrink-0 flex-wrap">
+                @if ($submission->reviewsReleased())
+                    <span class="badge-green px-3 py-1.5">Reviews released</span>
+                @elseif ($stats['assigned'] > 0 && $stats['completed'] === $stats['assigned'])
+                    <form action="{{ route('admin.review-results.approve', $submission) }}" method="POST">
+                        @csrf
+                        <button type="submit" class="btn-primary text-xs py-2 px-3 inline-flex items-center gap-1.5"
+                                onclick="return confirm('Release these completed reviews to the submitter and all reviewers? This cannot be undone.')">
+                            <x-heroicon-o-check-circle class="w-4 h-4" />
+                            Release reviews
+                        </button>
+                    </form>
+                @endif
                 @if ($submission->status === 'under_review')
                     <span class="badge-yellow px-3 py-1.5">Under Review</span>
                 @elseif ($submission->status === 'decided')
@@ -130,13 +142,17 @@
             @endif
         </div>
 
-        {{-- Decision Card (if any) --}}
-        @if ($submission->decision)
-            <div class="card p-5 shadow-xs border-l-4 {{ $submission->decision->outcome === 'funded' ? 'border-l-uh-green' : 'border-l-gray-400' }}">
-                <h2 class="text-sm font-bold uppercase tracking-wider text-uh-fg mb-4 flex items-center gap-1.5">
-                    <x-heroicon-o-check-circle class="w-4 h-4 {{ $submission->decision->outcome === 'funded' ? 'text-uh-green' : 'text-gray-400' }}" />
-                    Decision
-                </h2>
+        {{-- Decision Card --}}
+        @php
+            $reviewsComplete = $stats['assigned'] > 0 && $stats['completed'] === $stats['assigned'];
+        @endphp
+        <div class="card p-5 shadow-xs {{ $submission->decision ? 'border-l-4 '.($submission->decision->outcome === 'funded' ? 'border-l-uh-green' : 'border-l-gray-400') : '' }}">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-uh-fg mb-4 flex items-center gap-1.5">
+                <x-heroicon-o-check-circle class="w-4 h-4 {{ $submission->decision?->outcome === 'funded' ? 'text-uh-green' : 'text-gray-400' }}" />
+                Funding decision
+            </h2>
+
+            @if ($submission->decision)
                 <div class="space-y-3 text-sm">
                     <div class="flex items-center justify-between py-2 border-b border-uh-border">
                         <span class="text-gray-500">Outcome</span>
@@ -159,8 +175,38 @@
                         <span class="font-medium text-uh-fg">{{ $submission->decision->decided_at?->format('M j, Y g:i A') ?? '—' }}</span>
                     </div>
                 </div>
-            </div>
-        @endif
+                <p class="text-xs font-bold text-uh-fg uppercase tracking-wider mt-4 pt-4 border-t border-uh-border">Update decision</p>
+            @endif
+
+            @if ($stats['assigned'] === 0 || $stats['completed'] < $stats['assigned'])
+                <p class="text-sm text-gray-500 mt-3">
+                    All assigned reviews must be submitted before a decision can be recorded.
+                    @if ($stats['assigned'] === 0)
+                        No reviewers are assigned yet.
+                    @else
+                        {{ $stats['completed'] }} of {{ $stats['assigned'] }} reviews submitted.
+                    @endif
+                </p>
+            @else
+                <form action="{{ route('admin.decisions.store', $submission) }}" method="POST" class="mt-3 space-y-3">
+                    @csrf
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700" for="show-outcome">Outcome</label>
+                        <select id="show-outcome" name="outcome" required class="input mt-1 text-sm">
+                            <option value="funded" {{ $submission->decision?->outcome === 'funded' ? 'selected' : '' }}>Recommended for funding</option>
+                            <option value="not_funded" {{ $submission->decision?->outcome === 'not_funded' ? 'selected' : '' }}>Not funded</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700" for="show-amount">Amount recommended</label>
+                        <input id="show-amount" type="number" name="amount_awarded" min="0" step="0.01" value="{{ $submission->decision?->amount_awarded }}" class="input mt-1 text-sm" placeholder="0.00">
+                    </div>
+                    <button type="submit" class="btn-primary text-xs w-full">
+                        {{ $submission->decision ? 'Update decision' : 'Save decision' }}
+                    </button>
+                </form>
+            @endif
+        </div>
     </div>
 
     {{-- RIGHT: Individual Reviews --}}

@@ -19,6 +19,9 @@ class ReviewInvitationController extends Controller
     public function index(Request $request): View
     {
         $roundId = $request->integer('round_id') ?: null;
+        $status = in_array($request->query('status'), ['awaiting', 'update_required', 'declared', 'revoked'], true)
+            ? $request->query('status')
+            : null;
 
         $invitations = ReviewerRoundInvitation::query()
             ->with(['reviewer', 'round', 'inviter'])
@@ -58,7 +61,23 @@ class ReviewInvitationController extends Controller
             'revoked' => $invitations->filter(fn (ReviewerRoundInvitation $invitation) => ! $invitation->isActive())->count(),
         ];
 
-        return view('admin.review-invitations.index', compact('invitations', 'rounds', 'eligibleReviewers', 'roundId', 'stats'));
+        // Status filter applies to the table only; the stats above stay
+        // round-scoped but status-independent.
+        if ($status !== null) {
+            $invitations = $invitations->filter(function (ReviewerRoundInvitation $invitation) use ($status): bool {
+                $declaration = $invitation->currentDeclaration;
+
+                return match ($status) {
+                    'revoked' => ! $invitation->isActive(),
+                    'awaiting' => $invitation->isActive() && $declaration === null,
+                    'update_required' => $invitation->isActive() && $declaration !== null && $declaration->isStale(),
+                    'declared' => $invitation->isActive() && $declaration !== null && ! $declaration->isStale(),
+                    default => true,
+                };
+            })->values();
+        }
+
+        return view('admin.review-invitations.index', compact('invitations', 'rounds', 'eligibleReviewers', 'roundId', 'status', 'stats'));
     }
 
     public function store(Request $request): RedirectResponse

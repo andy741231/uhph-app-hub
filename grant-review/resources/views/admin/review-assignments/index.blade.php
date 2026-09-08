@@ -5,7 +5,7 @@
 <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
     <div>
         <h1 class="text-2xl font-bold text-uh-fg">Reviewer assignments</h1>
-        <p class="text-sm text-gray-500 mt-1">Assign active reviewers to submitted proposals. Screening status is shown per reviewer — reported conflicts are advisory; the decision to assign remains yours.</p>
+        <p class="text-sm text-gray-500 mt-1">Assign active reviewers to submitted proposals. COI status is shown per reviewer — reported conflicts are advisory; the decision to assign remains yours.</p>
     </div>
     <form method="GET" action="{{ route('admin.review-assignments.index') }}" class="flex items-end gap-2">
         <div>
@@ -116,9 +116,9 @@
                                             @elseif ($status === 'awaiting')
                                                 <span class="inline-flex items-center rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">Awaiting declaration</span>
                                             @elseif ($status === 'unscreened')
-                                                <span class="inline-flex items-center rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">Not screened for this proposal</span>
+                                                <span class="inline-flex items-center rounded-full border border-gray-300 bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">COI declaration does not cover this proposal</span>
                                             @elseif ($status === 'not_invited')
-                                                <span class="inline-flex items-center rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-gray-400">Not invited to screen this round</span>
+                                                <span class="inline-flex items-center rounded-full border border-gray-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-gray-400">COI invitation not sent</span>
                                             @endif
                                         </span>
                                         @if ($isConflict && filled($screen['description'] ?? null))

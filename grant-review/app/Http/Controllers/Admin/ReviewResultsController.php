@@ -30,6 +30,8 @@ class ReviewResultsController extends Controller
             ->latest('submitted_at');
 
         $search = trim((string) $request->query('q', ''));
+        $roundId = $request->integer('round_id') ?: null;
+        $state = (string) $request->query('state', '');
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
@@ -47,7 +49,43 @@ class ReviewResultsController extends Controller
 
         $submissions = $this->aggregateSubmissions($query->get());
 
-        return view('admin.review-results.index', compact('submissions', 'search'));
+        if ($roundId) {
+            $submissions = $submissions
+                ->filter(fn (array $item) => $item['submission']->round_id === $roundId)
+                ->values();
+        }
+
+        if ($state !== '') {
+            $submissions = $submissions
+                ->filter(fn (array $item) => $this->matchesState($item, $state))
+                ->values();
+        }
+
+        $rounds = Round::query()->latest('opens_at')->get(['id', 'name']);
+
+        return view('admin.review-results.index', compact('submissions', 'search', 'roundId', 'state', 'rounds'));
+    }
+
+    /**
+     * Workflow states used by the results filter. A submission can
+     * match several states at once (e.g. released and decided); the
+     * filter simply selects the rows matching the chosen one.
+     */
+    private function matchesState(array $item, string $state): bool
+    {
+        $submission = $item['submission'];
+        $assigned = $item['assigned'];
+        $completed = $item['completed'];
+
+        return match ($state) {
+            'awaiting_assignment' => $assigned === 0,
+            'reviews_incomplete' => $assigned > 0 && $completed < $assigned,
+            'ready_to_release' => ! $submission->reviewsReleased() && $assigned > 0 && $completed === $assigned,
+            'released' => $submission->reviewsReleased(),
+            'decision_pending' => $submission->decision === null,
+            'decided' => $submission->decision !== null,
+            default => true,
+        };
     }
 
     public function show(Submission $submission): View
