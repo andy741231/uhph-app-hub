@@ -8,6 +8,10 @@
     <h1>Sign in to {{ $loginApplication?->name ?? 'UHPH App Hub' }}</h1>
     <p class="lede">Use your administrator-provided account to access {{ $loginApplication?->name ?? 'your assigned applications' }}.</p>
 
+    @if (session('error'))
+        <div class="alert alert-error" role="alert">{{ session('error') }}</div>
+    @endif
+
     @if (session('status'))
         <div class="alert alert-success" role="status">{{ session('status') }}</div>
     @endif

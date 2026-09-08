@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Session\TokenMismatchException;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -22,6 +24,34 @@ class AuthenticationTest extends TestCase
         $this->get('/login')
             ->assertOk()
             ->assertSee('Sign in to UHPH App Hub');
+    }
+
+    public function test_login_screen_is_not_cached_by_the_browser(): void
+    {
+        $this->get('/login')->assertHeader('Cache-Control', 'no-store, private');
+    }
+
+    public function test_expired_csrf_token_redirects_guests_to_a_fresh_login(): void
+    {
+        Route::post('force-csrf-failure', fn () => throw new TokenMismatchException);
+
+        $this->post('/force-csrf-failure')
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('error', 'Your session has expired. Please sign in again.');
+
+        $this->get('/login')->assertOk()->assertSee('Your session has expired. Please sign in again.');
+    }
+
+    public function test_expired_csrf_token_returns_authenticated_users_to_the_previous_page(): void
+    {
+        $user = User::factory()->create();
+        Route::post('force-csrf-failure', fn () => throw new TokenMismatchException);
+
+        $this->actingAs($user)
+            ->from('/dashboard')
+            ->post('/force-csrf-failure')
+            ->assertRedirect('/dashboard')
+            ->assertSessionHas('error', 'Your session expired while the page was open. Please try again.');
     }
 
     public function test_login_uses_a_dedicated_cookie_scoped_to_the_hub(): void

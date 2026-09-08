@@ -8,19 +8,21 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Models\Application;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
-    public function create(Request $request): View
+    public function create(Request $request): Response
     {
         $application = Application::query()
             ->where('key', $request->string('application')->toString())
             ->where('enabled', true)
             ->first();
 
-        return view('auth.login', ['loginApplication' => $application]);
+        return response()
+            ->view('auth.login', ['loginApplication' => $application])
+            ->header('Cache-Control', 'no-store');
     }
 
     public function store(LoginRequest $request): RedirectResponse

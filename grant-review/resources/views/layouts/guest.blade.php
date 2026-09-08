@@ -21,6 +21,12 @@
         </div>
     </div>
 
+    @if (session('error'))
+        <div role="alert" class="mb-6 w-full max-w-md bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">
+            {{ session('error') }}
+        </div>
+    @endif
+
     @isset($slot)
         {{ $slot }}
     @endisset

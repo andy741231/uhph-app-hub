@@ -7,21 +7,23 @@ use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
-use Illuminate\View\View;
 
 class SetPasswordController extends Controller
 {
-    public function create(Request $request, string $token): View
+    public function create(Request $request, string $token): Response
     {
-        return view('auth.set-password', [
-            'token' => $token,
-            'email' => $request->string('email')->toString(),
-        ]);
+        return response()
+            ->view('auth.set-password', [
+                'token' => $token,
+                'email' => $request->string('email')->toString(),
+            ])
+            ->header('Cache-Control', 'no-store');
     }
 
     public function store(Request $request): RedirectResponse

@@ -8,7 +8,9 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class AuthenticationTest extends TestCase
@@ -385,6 +387,27 @@ class AuthenticationTest extends TestCase
             ->assertSessionHas('url.intended', url($deepLink));
 
         $this->assertGuest();
+    }
+
+    public function test_expired_csrf_token_redirects_guests_to_a_fresh_login(): void
+    {
+        Route::post('force-csrf-failure', fn () => throw new HttpException(419));
+
+        $this->post('/force-csrf-failure')
+            ->assertRedirect(route('login'))
+            ->assertSessionHas('error', 'Your session has expired. Please sign in again.');
+    }
+
+    public function test_expired_csrf_token_returns_authenticated_users_to_the_previous_page(): void
+    {
+        Route::post('force-csrf-failure', fn () => throw new HttpException(419));
+        $reviewer = User::factory()->create(['role' => 'reviewer']);
+
+        $this->actingAs($reviewer)
+            ->from(route('reviewer.dashboard'))
+            ->post('/force-csrf-failure')
+            ->assertRedirect(route('reviewer.dashboard'))
+            ->assertSessionHas('error', 'Your session expired while the page was open. Please try again.');
     }
 
     public function test_all_applications_link_is_only_shown_to_multi_app_users(): void

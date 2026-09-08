@@ -75,6 +75,13 @@
     </nav>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        @if (session('error'))
+            <div role="alert" class="mb-6 flex items-start gap-3 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+                <x-heroicon-o-exclamation-triangle class="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <span class="text-sm">{{ session('error') }}</span>
+            </div>
+        @endif
+
         @if (session('status'))
             <div role="alert" class="mb-6 flex items-start gap-3 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
                 <x-heroicon-o-check-circle class="w-5 h-5 flex-shrink-0 mt-0.5" />
