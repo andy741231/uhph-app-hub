@@ -1,18 +1,18 @@
 @extends('layouts.admin')
-@section('title', 'Review Invitations')
+@section('title', 'COI Invitations')
 
 @section('content')
 <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
     <div>
         <p class="text-sm font-semibold uppercase tracking-wider text-uh-red">Review oversight</p>
-        <h1 class="text-2xl font-bold text-uh-fg mt-1">Review invitations</h1>
-        <p class="text-sm text-gray-500 mt-1">Invite reviewers to screen a round for conflicts of interest before assigning proposals.</p>
+        <h1 class="text-2xl font-bold text-uh-fg mt-1">COI invitations</h1>
+        <p class="text-sm text-gray-500 mt-1">Invite reviewers to declare conflicts of interest for a round before assigning proposals.</p>
     </div>
 </div>
 
 {{-- Invite form --}}
 <div class="card p-5 mb-6">
-    <h2 class="text-sm font-bold uppercase tracking-wider text-uh-fg mb-4">Send screening invitation</h2>
+    <h2 class="text-sm font-bold uppercase tracking-wider text-uh-fg mb-4">Send COI invitation</h2>
     <form action="{{ route('admin.review-invitations.store') }}" method="POST" class="grid grid-cols-1 md:grid-cols-[16rem_1fr_auto] gap-3 items-end">
         @csrf
         <div>
@@ -119,7 +119,7 @@
                                 </form>
                                 <span class="text-gray-300 mx-1">·</span>
                                 <form action="{{ route('admin.review-invitations.revoke', $invitation) }}" method="POST" class="inline"
-                                    onsubmit="return confirm('Revoke the screening invitation for {{ $invitation->reviewer->full_name }}? Existing assignments and reviews are preserved.');">
+                                    onsubmit="return confirm('Revoke the COI invitation for {{ $invitation->reviewer->full_name }}? Existing assignments and reviews are preserved.');">
                                     @csrf
                                     <button type="submit" class="text-xs font-semibold text-gray-500 hover:text-red-600 hover:underline">Revoke</button>
                                 </form>
@@ -131,7 +131,7 @@
                 @empty
                     <tr>
                         <td colspan="6" class="py-12 text-center text-gray-500">
-                            <p class="font-medium text-gray-700">No screening invitations yet</p>
+                            <p class="font-medium text-gray-700">No COI invitations yet</p>
                             <p class="text-sm mt-1">Invite reviewers above so they can declare conflicts of interest before you assign proposals.</p>
                         </td>
                     </tr>

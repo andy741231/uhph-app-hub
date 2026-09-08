@@ -115,7 +115,7 @@ class ReviewInvitationController extends Controller
 
         $this->sendInvitationEmail($invitation);
 
-        return back()->with('status', 'Screening invitation re-sent to '.$invitation->reviewer->full_name.'.');
+        return back()->with('status', 'COI invitation re-sent to '.$invitation->reviewer->full_name.'.');
     }
 
     public function revoke(Request $request, ReviewerRoundInvitation $invitation): RedirectResponse

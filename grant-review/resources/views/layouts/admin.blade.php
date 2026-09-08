@@ -33,6 +33,8 @@
                     <x-heroicon-o-home class="w-5 h-5" />
                     Dashboard
                 </a>
+
+                <div class="pt-4 pb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-white/50" aria-hidden="true">Setup</div>
                 <a href="{{ route('admin.rounds.index') }}"
                    class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150
                           {{ request()->routeIs('admin.rounds.*') ? 'bg-white/20 text-white font-semibold' : 'text-white/85 hover:text-white hover:bg-white/10' }}">
@@ -45,23 +47,13 @@
                     <x-heroicon-o-users class="w-5 h-5" />
                     Users
                 </a>
-                <a href="{{ route('admin.review-assignments.index') }}"
-                   class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150
-                          {{ request()->routeIs('admin.review-assignments.*') ? 'bg-white/20 text-white font-semibold' : 'text-white/85 hover:text-white hover:bg-white/10' }}">
-                    <x-heroicon-o-user-plus class="w-5 h-5" />
-                    Assign reviewers
-                </a>
+
+                <div class="pt-4 pb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-white/50" aria-hidden="true">Review workflow</div>
                 <a href="{{ route('admin.review-invitations.index') }}"
                    class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150
                           {{ request()->routeIs('admin.review-invitations.*') ? 'bg-white/20 text-white font-semibold' : 'text-white/85 hover:text-white hover:bg-white/10' }}">
                     <x-heroicon-o-envelope-open class="w-5 h-5" />
-                    Review invitations
-                </a>
-                <a href="{{ route('admin.review-results.index') }}"
-                   class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150
-                          {{ request()->routeIs('admin.review-results.*') ? 'bg-white/20 text-white font-semibold' : 'text-white/85 hover:text-white hover:bg-white/10' }}">
-                    <x-heroicon-o-chart-bar class="w-5 h-5" />
-                    Review results
+                    COI invitations
                 </a>
                 <a href="{{ route('admin.conflicts.index') }}"
                    class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150
@@ -69,6 +61,20 @@
                     <x-heroicon-o-exclamation-triangle class="w-5 h-5" />
                     Conflicts of interest
                 </a>
+                <a href="{{ route('admin.review-assignments.index') }}"
+                   class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150
+                          {{ request()->routeIs('admin.review-assignments.*') ? 'bg-white/20 text-white font-semibold' : 'text-white/85 hover:text-white hover:bg-white/10' }}">
+                    <x-heroicon-o-user-plus class="w-5 h-5" />
+                    Assign reviewers
+                </a>
+                <a href="{{ route('admin.review-results.index') }}"
+                   class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150
+                          {{ request()->routeIs('admin.review-results.*') ? 'bg-white/20 text-white font-semibold' : 'text-white/85 hover:text-white hover:bg-white/10' }}">
+                    <x-heroicon-o-chart-bar class="w-5 h-5" />
+                    Review results
+                </a>
+
+                <div class="pt-4 pb-1 text-[11px] font-semibold uppercase tracking-wider text-white/50" aria-hidden="true">Preferences</div>
                 <a href="{{ route('settings.edit') }}"
                    class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150
                           {{ request()->routeIs('settings.*') ? 'bg-white/20 text-white font-semibold' : 'text-white/85 hover:text-white hover:bg-white/10' }}">
@@ -128,7 +134,7 @@
                 <a href="{{ route('admin.rounds.index') }}" class="{{ request()->routeIs('admin.rounds.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Rounds</a>
                 <a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Users</a>
                 <a href="{{ route('admin.review-assignments.index') }}" class="{{ request()->routeIs('admin.review-assignments.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Assignments</a>
-                <a href="{{ route('admin.review-invitations.index') }}" class="{{ request()->routeIs('admin.review-invitations.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Invitations</a>
+                <a href="{{ route('admin.review-invitations.index') }}" class="{{ request()->routeIs('admin.review-invitations.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">COI invites</a>
                 <a href="{{ route('admin.review-results.index') }}" class="{{ request()->routeIs('admin.review-results.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Results</a>
                 <a href="{{ route('admin.conflicts.index') }}" class="{{ request()->routeIs('admin.conflicts.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">COI</a>
                 <a href="{{ route('settings.edit') }}" class="{{ request()->routeIs('settings.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Settings</a>
@@ -136,6 +142,13 @@
 
             {{-- Page content --}}
             <main class="flex-1 p-6 md:p-8 max-w-7xl mx-auto w-full">
+                @if (session('error'))
+                    <div role="alert" class="mb-6 flex items-start gap-3 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+                        <x-heroicon-o-exclamation-triangle class="w-5 h-5 flex-shrink-0 mt-0.5" />
+                        <span class="text-sm">{{ session('error') }}</span>
+                    </div>
+                @endif
+
                 @if (session('status'))
                     <div role="alert" class="mb-6 flex items-start gap-3 bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
                         <x-heroicon-o-check-circle class="w-5 h-5 flex-shrink-0 mt-0.5" />

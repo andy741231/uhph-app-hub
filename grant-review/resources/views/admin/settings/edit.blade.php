@@ -62,7 +62,7 @@
                             'roles' => ['reviewer'],
                         ],
                         'notify_reviewer_screening_invited' => [
-                            'label' => 'Screening invitation',
+                            'label' => 'COI invitation',
                             'desc' => 'When you are invited to declare conflicts of interest for a review round.',
                             'roles' => ['reviewer'],
                         ],

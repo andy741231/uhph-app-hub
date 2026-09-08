@@ -6,7 +6,7 @@
     <div>
         <p class="text-sm font-semibold uppercase tracking-wider text-uh-red">Review oversight</p>
         <h1 class="text-2xl font-bold text-uh-fg mt-1">Conflicts of interest</h1>
-        <p class="text-sm text-gray-500 mt-1">Screening invitations, declarations, and proposal-specific conflicts across all rounds.</p>
+        <p class="text-sm text-gray-500 mt-1">COI invitations, declarations, and proposal-specific conflicts across all rounds.</p>
     </div>
 </div>
 

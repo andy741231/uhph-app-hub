@@ -6,10 +6,10 @@
 @endif
 
 @if ($user->role === 'reviewer')
-A new reviewer has completed their profile. Please send them a conflict-of-interest screening invitation so they can be assigned proposals.
+A new reviewer has completed their profile. Please send them a conflict-of-interest (COI) invitation so they can be assigned proposals.
 
 <x-mail::button :url="route('admin.review-invitations.index')" color="red">
-Send Review Invitations
+Send COI Invitations
 </x-mail::button>
 @else
 A new user has completed their profile.
