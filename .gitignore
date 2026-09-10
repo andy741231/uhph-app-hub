@@ -38,3 +38,6 @@ Thumbs.db
 
 # ===== Excluded subprojects =====
 phpmyadmin/
+
+# Contains a live Entra client secret — keep local only
+grant-review/SSO-SETUP.md
