@@ -193,7 +193,7 @@
                             <label class="cursor-pointer">
                                 <input type="radio" name="score" value="{{ $i }}" class="sr-only peer"
                                     {{ (int) old('score', $review->score) === $i ? 'checked' : '' }} required>
-                                <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-uh-border bg-white text-sm font-bold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red peer-focus-visible:ring-2 peer-focus-visible:ring-uh-red peer-focus-visible:ring-offset-1 hover:border-uh-red hover:bg-uh-muted">{{ $i }}</span>
+                                <span class="inline-flex items-center justify-center w-10 h-10 rounded-lg border border-uh-border bg-white text-sm font-bold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red peer-focus-visible:ring-2 peer-focus-visible:ring-uh-red peer-focus-visible:ring-offset-1 hover:border-uh-red hover:bg-uh-muted">{{ $i }}</span>
                             </label>
                         @endfor
                     </div>
@@ -233,7 +233,7 @@
                                 <label class="cursor-pointer">
                                     <input type="radio" name="factor1_score" value="{{ $i }}" class="sr-only peer"
                                         {{ (int) old('factor1_score', $review->factor1_score) === $i ? 'checked' : '' }} required>
-                                    <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-uh-border bg-white text-sm font-bold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red peer-focus-visible:ring-2 peer-focus-visible:ring-uh-red peer-focus-visible:ring-offset-1 hover:border-uh-red hover:bg-uh-muted">{{ $i }}</span>
+                                    <span class="inline-flex items-center justify-center w-10 h-10 rounded-lg border border-uh-border bg-white text-sm font-bold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red peer-focus-visible:ring-2 peer-focus-visible:ring-uh-red peer-focus-visible:ring-offset-1 hover:border-uh-red hover:bg-uh-muted">{{ $i }}</span>
                                 </label>
                             @endfor
                         </div>
@@ -255,7 +255,7 @@
                                 <label class="cursor-pointer">
                                     <input type="radio" name="factor2_score" value="{{ $i }}" class="sr-only peer"
                                         {{ (int) old('factor2_score', $review->factor2_score) === $i ? 'checked' : '' }} required>
-                                    <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-uh-border bg-white text-sm font-bold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red peer-focus-visible:ring-2 peer-focus-visible:ring-uh-red peer-focus-visible:ring-offset-1 hover:border-uh-red hover:bg-uh-muted">{{ $i }}</span>
+                                    <span class="inline-flex items-center justify-center w-10 h-10 rounded-lg border border-uh-border bg-white text-sm font-bold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red peer-focus-visible:ring-2 peer-focus-visible:ring-uh-red peer-focus-visible:ring-offset-1 hover:border-uh-red hover:bg-uh-muted">{{ $i }}</span>
                                 </label>
                             @endfor
                         </div>
@@ -459,7 +459,9 @@
     </div>
 
     {{-- RIGHT COLUMN: High-Definition Document Inspection Panel (7 of 12 cols) --}}
-    <div class="lg:col-span-7">
+    {{-- order-first on mobile so the document is read before the long form;
+         sticky on desktop so it stays visible while the form scrolls --}}
+    <div class="lg:col-span-7 order-first lg:order-none lg:sticky lg:top-5">
         <div class="card overflow-hidden shadow-sm border border-uh-border flex flex-col h-full">
 
             {{-- PDF Toolbar Header --}}
@@ -472,7 +474,7 @@
                 <div class="flex items-center gap-2 text-xs">
                     <button type="button"
                             onclick="togglePdfFullscreen()"
-                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-white border border-uh-border hover:bg-gray-50 text-gray-700 font-medium transition-colors cursor-pointer shadow-2xs"
+                            class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-white border border-uh-border hover:bg-gray-50 text-gray-700 font-medium transition-colors cursor-pointer shadow-2xs lg:hidden"
                             title="Expand PDF viewer">
                         <svg id="fullscreenIcon" class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/>
@@ -493,11 +495,10 @@
             </div>
 
             {{-- Document Viewport --}}
-            <div id="pdfContainer" class="relative w-full bg-gray-200 min-h-[620px] h-[780px] lg:h-[calc(100vh-14rem)] transition-all duration-200">
+            <div id="pdfContainer" class="relative w-full bg-gray-200 min-h-[620px] lg:min-h-[480px] h-[780px] lg:h-[calc(100vh-3rem)] transition-all duration-200">
                 <iframe src="{{ route('submissions.pdf', $submission->id) }}"
                         title="Submission Proposal Document"
-                        class="w-full h-full border-0"
-                        loading="lazy">
+                        class="w-full h-full border-0">
                     <div class="p-8 text-center text-gray-600 bg-white m-4 rounded-lg border border-uh-border">
                         <p class="font-medium text-base mb-2">Inline PDF preview not supported by your browser.</p>
                         <a href="{{ route('submissions.pdf', $submission->id) }}"
@@ -549,12 +550,12 @@
 
         isExpanded = !isExpanded;
         if (isExpanded) {
-            container.classList.remove('h-[780px]', 'lg:h-[calc(100vh-14rem)]');
+            container.classList.remove('h-[780px]');
             container.classList.add('h-[1100px]');
             if (text) text.textContent = 'Standard';
         } else {
             container.classList.remove('h-[1100px]');
-            container.classList.add('h-[780px]', 'lg:h-[calc(100vh-14rem)]');
+            container.classList.add('h-[780px]');
             if (text) text.textContent = 'Full Height';
         }
     }
