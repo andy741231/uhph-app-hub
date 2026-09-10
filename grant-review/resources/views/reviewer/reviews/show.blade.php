@@ -85,11 +85,15 @@
     </div>
 </div>
 
-{{-- Two-Column Reviewer Workstation --}}
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+{{-- Two-Column Reviewer Workstation (left panel collapsible on desktop) --}}
+<div class="flex flex-col lg:flex-row gap-6 items-start"
+     x-data="{ panelOpen: localStorage.getItem('reviewer.panelOpen') !== '0' }"
+     x-init="$watch('panelOpen', v => localStorage.setItem('reviewer.panelOpen', v ? '1' : '0'))">
 
-    {{-- LEFT COLUMN: Evaluation & Scoring (5 of 12 cols on desktop) --}}
-    <div class="lg:col-span-5 space-y-6">
+    {{-- LEFT COLUMN: Evaluation & Scoring (5/12 width on desktop) --}}
+    <div class="w-full transition-all duration-200 ease-in-out"
+         :class="panelOpen ? 'lg:w-5/12 lg:shrink-0' : 'lg:w-12 lg:shrink-0'">
+        <div class="space-y-6" :class="{ 'lg:hidden': ! panelOpen }">
 
         {{-- Abstract & Proposal Information --}}
         @if ($submission->abstract)
@@ -455,13 +459,22 @@
                 </div>
             </div>
         @endif
+        </div>
 
+        {{-- Collapsed rail — slim affordance to reopen the evaluation panel --}}
+        <button type="button" @click="panelOpen = true"
+                class="hidden flex-col items-center gap-3 w-12 py-4 rounded-md border border-uh-border bg-white text-uh-slate hover:bg-uh-muted hover:text-uh-fg shadow-xs transition-colors cursor-pointer"
+                :class="{ 'lg:flex': ! panelOpen }"
+                title="Show evaluation panel" aria-label="Show evaluation panel" aria-expanded="false">
+            <x-heroicon-o-chevron-double-right class="w-4 h-4" />
+            <span class="text-[10px] font-bold uppercase tracking-widest" style="writing-mode: vertical-rl;">Evaluation</span>
+        </button>
     </div>
 
-    {{-- RIGHT COLUMN: High-Definition Document Inspection Panel (7 of 12 cols) --}}
+    {{-- RIGHT COLUMN: High-Definition Document Inspection Panel (fills remaining width) --}}
     {{-- order-first on mobile so the document is read before the long form;
          sticky on desktop so it stays visible while the form scrolls --}}
-    <div class="lg:col-span-7 order-first lg:order-none lg:sticky lg:top-5">
+    <div class="w-full lg:flex-1 lg:min-w-0 order-first lg:order-none lg:sticky lg:top-5">
         <div class="card overflow-hidden shadow-sm border border-uh-border flex flex-col h-full">
 
             {{-- PDF Toolbar Header --}}
@@ -472,6 +485,16 @@
                 </div>
 
                 <div class="flex items-center gap-2 text-xs">
+                    <button type="button"
+                            @click="panelOpen = ! panelOpen"
+                            class="hidden lg:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-white border border-uh-border hover:bg-gray-50 text-gray-700 font-medium transition-colors cursor-pointer shadow-2xs"
+                            :title="panelOpen ? 'Hide evaluation panel' : 'Show evaluation panel'"
+                            :aria-expanded="panelOpen.toString()">
+                        <x-heroicon-o-chevron-double-left x-show="panelOpen" class="w-3.5 h-3.5" />
+                        <x-heroicon-o-chevron-double-right x-show="! panelOpen" class="w-3.5 h-3.5" style="display:none" />
+                        <span x-text="panelOpen ? 'Hide panel' : 'Show panel'"></span>
+                    </button>
+
                     <button type="button"
                             onclick="togglePdfFullscreen()"
                             class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-white border border-uh-border hover:bg-gray-50 text-gray-700 font-medium transition-colors cursor-pointer shadow-2xs lg:hidden"
