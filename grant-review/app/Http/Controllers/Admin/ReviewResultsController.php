@@ -80,7 +80,8 @@ class ReviewResultsController extends Controller
         return match ($state) {
             'awaiting_assignment' => $assigned === 0,
             'reviews_incomplete' => $assigned > 0 && $completed < $assigned,
-            'ready_to_release' => ! $submission->reviewsReleased() && $assigned > 0 && $completed === $assigned,
+            'ready_to_release' => (! $submission->reviewsReleasedToReviewers() || ! $submission->reviewsReleasedToSubmitter())
+                && $assigned > 0 && $completed === $assigned,
             'released' => $submission->reviewsReleased(),
             'decision_pending' => $submission->decision === null,
             'decided' => $submission->decision !== null,
@@ -135,12 +136,20 @@ class ReviewResultsController extends Controller
         return view('admin.review-results.timeline', compact('submission', 'review', 'revisions'));
     }
 
-    public function approve(Request $request, Submission $submission): RedirectResponse
+    /**
+     * Release the completed reviews to a single audience: the assigned
+     * reviewers (who then see each other's anonymized feedback) or the
+     * submitter. Each audience is released and notified independently.
+     */
+    public function release(Request $request, Submission $submission, string $audience): RedirectResponse
     {
-        $released = DB::transaction(function () use ($request, $submission): bool {
+        [$atColumn, $byColumn] = $this->releaseColumns($audience);
+        $label = $audience === 'reviewers' ? 'reviewers' : 'the submitter';
+
+        $released = DB::transaction(function () use ($request, $submission, $atColumn, $byColumn): bool {
             $lockedSubmission = Submission::query()->lockForUpdate()->findOrFail($submission->id);
 
-            if ($lockedSubmission->reviewsReleased()) {
+            if ($lockedSubmission->{$atColumn} !== null) {
                 return false;
             }
 
@@ -149,8 +158,8 @@ class ReviewResultsController extends Controller
             }
 
             $lockedSubmission->update([
-                'reviews_released_at' => now(),
-                'reviews_released_by' => $request->user()->id,
+                $atColumn => now(),
+                $byColumn => $request->user()->id,
             ]);
 
             return true;
@@ -159,64 +168,92 @@ class ReviewResultsController extends Controller
         if (! $released) {
             $submission->refresh();
 
-            if ($submission->reviewsReleased()) {
+            if ($submission->{$atColumn} !== null) {
                 return redirect()
                     ->route('admin.review-results.index')
-                    ->with('status', 'Reviews were already approved for release.');
+                    ->with('status', "Reviews were already released to {$label}.");
             }
 
             return redirect()
                 ->route('admin.review-results.index')
-                ->withErrors(['reviews' => 'All assigned reviews must be submitted before they can be approved for release.']);
+                ->withErrors(['reviews' => 'All assigned reviews must be submitted before they can be released.']);
         }
 
-        $submission->load(['round', 'submitter', 'reviewAssignments.reviewer', 'reviewAssignments.review']);
-        $recipients = $submission->reviewAssignments
-            ->pluck('reviewer')
-            ->filter()
-            ->push($submission->submitter)
-            ->filter()
-            ->unique('id');
-
-        foreach ($recipients as $recipient) {
-            if (! $recipient->wantsEmail('notify_reviews_available')) {
-                continue;
-            }
-
-            $viewUrl = $recipient->isReviewer()
-                ? route('reviewer.reviews.show', $submission->reviewAssignments->firstWhere('reviewer_id', $recipient->id)->review)
-                : route('submitter.submissions.show', $submission);
-
-            Mail::to($recipient)->send(new ReviewsAvailable($recipient, $submission, $viewUrl));
-        }
+        $this->notifyAudience($submission, $audience);
 
         return redirect()
             ->route('admin.review-results.index')
-            ->with('status', 'Reviews approved for release. Submitter and reviewers have been notified according to their preferences.');
+            ->with('status', "Reviews released to {$label}. Notifications sent according to email preferences.");
     }
 
-    public function unrelease(Request $request, Submission $submission): RedirectResponse
+    public function unrelease(Request $request, Submission $submission, string $audience): RedirectResponse
     {
+        [$atColumn, $byColumn] = $this->releaseColumns($audience);
+        $label = $audience === 'reviewers' ? 'reviewers' : 'the submitter';
+
         if ($submission->status === 'decided') {
             return redirect()
                 ->route('admin.review-results.index')
                 ->with('error', 'Reviews for '.$submission->title.' cannot be un-released after a funding decision has been recorded.');
         }
 
-        if (! $submission->reviewsReleased()) {
+        if ($submission->{$atColumn} === null) {
             return redirect()
                 ->route('admin.review-results.index')
-                ->with('error', 'Reviews for '.$submission->title.' are not currently released.');
+                ->with('error', 'Reviews for '.$submission->title." are not currently released to {$label}.");
         }
 
         $submission->forceFill([
-            'reviews_released_at' => null,
-            'reviews_released_by' => null,
+            $atColumn => null,
+            $byColumn => null,
         ])->save();
+
+        $message = $audience === 'reviewers'
+            ? 'Reviews un-released for reviewers of '.$submission->title.'. Reviewers no longer see the released peer feedback.'
+            : 'Reviews un-released for the submitter of '.$submission->title.'. The submitter no longer sees the released feedback.';
+
+        if (! $submission->reviewsReleased()) {
+            $message .= ' Reviewers can edit their reviews again.';
+        }
 
         return redirect()
             ->route('admin.review-results.index')
-            ->with('status', 'Reviews un-released for '.$submission->title.'. The submitter and reviewers no longer see the released feedback, and reviewers can edit their reviews again.');
+            ->with('status', $message);
+    }
+
+    /**
+     * Column pair storing release state for an audience. Audience values
+     * are constrained to 'reviewers' and 'submitter' by the route.
+     */
+    private function releaseColumns(string $audience): array
+    {
+        return ["reviews_released_to_{$audience}_at", "reviews_released_to_{$audience}_by"];
+    }
+
+    /**
+     * Notify just the audience the reviews were released to: reviewers get
+     * a link to their own review (peer feedback is shown alongside it);
+     * the submitter gets a link to their submission.
+     */
+    private function notifyAudience(Submission $submission, string $audience): void
+    {
+        $submission->load(['round', 'submitter', 'reviewAssignments.reviewer', 'reviewAssignments.review']);
+
+        $recipients = $audience === 'reviewers'
+            ? $submission->reviewAssignments->pluck('reviewer')->filter()->unique('id')
+            : collect([$submission->submitter])->filter();
+
+        foreach ($recipients as $recipient) {
+            if (! $recipient->wantsEmail('notify_reviews_available')) {
+                continue;
+            }
+
+            $viewUrl = $audience === 'reviewers'
+                ? route('reviewer.reviews.show', $submission->reviewAssignments->firstWhere('reviewer_id', $recipient->id)->review)
+                : route('submitter.submissions.show', $submission);
+
+            Mail::to($recipient)->send(new ReviewsAvailable($recipient, $submission, $viewUrl));
+        }
     }
 
     public function exportCsv(?int $roundId = null): StreamedResponse

@@ -45,37 +45,24 @@
 
             {{-- Status badge + PDF + release --}}
             <div class="flex items-center gap-3 shrink-0 flex-wrap">
-                @if ($submission->reviewsReleased() && $submission->status !== 'decided')
-                    <span class="badge-green px-3 py-1.5">Reviews released</span>
-                    <form action="{{ route('admin.review-results.unrelease', $submission) }}" method="POST">
-                        @csrf
-                        <button type="submit" class="btn-secondary text-xs py-2 px-3 inline-flex items-center gap-1.5 shadow-xs"
-                                onclick="return confirm('Un-release these reviews? The submitter and reviewers will immediately lose access to the released feedback, and reviewers can edit their reviews again. Email notifications already sent cannot be withdrawn.')">
-                            <x-heroicon-o-lock-open class="w-4 h-4" />
-                            Un-release
-                        </button>
-                    </form>
-                @elseif ($submission->reviewsReleased())
-                    <span class="badge-green px-3 py-1.5">Reviews released</span>
-                @elseif ($stats['assigned'] > 0 && $stats['completed'] === $stats['assigned'])
-                    <form action="{{ route('admin.review-results.approve', $submission) }}" method="POST">
-                        @csrf
-                        <button type="submit" class="btn-primary text-xs py-2 px-3 inline-flex items-center gap-1.5"
-                                onclick="return confirm('Release these completed reviews to the submitter and all reviewers? This cannot be undone.')">
-                            <x-heroicon-o-check-circle class="w-4 h-4" />
-                            Release reviews
-                        </button>
-                    </form>
-                @elseif ($submission->status === 'under_review')
-                    <span class="badge-yellow px-3 py-1.5">Under Review</span>
-                @elseif ($submission->status === 'decided')
-                    <span class="badge-green px-3 py-1.5">Decided</span>
-                @else
-                    <span class="badge-blue px-3 py-1.5">Awaiting assignment</span>
+                @php
+                    $releaseControlsVisible = $submission->status !== 'decided'
+                        ? ($submission->reviewsComplete() || $submission->reviewsReleased())
+                        : $submission->reviewsReleased();
+                @endphp
+                @include('admin.review-results.partials.release-controls', ['submission' => $submission])
+                @if (! $releaseControlsVisible || $submission->status === 'decided')
+                    @if ($submission->status === 'decided')
+                        <span class="badge-green px-3 py-1.5">Decided</span>
+                    @elseif ($submission->status === 'under_review')
+                        <span class="badge-yellow px-3 py-1.5">Under Review</span>
+                    @else
+                        <span class="badge-blue px-3 py-1.5">Awaiting assignment</span>
+                    @endif
                 @endif
                 <a href="{{ route('submissions.pdf', $submission) }}" target="_blank" rel="noopener"
-                   class="btn-secondary text-xs py-2 px-3 inline-flex items-center gap-1.5 shadow-xs">
-                    <x-heroicon-o-document-text class="w-4 h-4 text-uh-red" />
+                   class="btn bg-uh-muted text-uh-fg border border-uh-border hover:bg-uh-border text-xs py-2 px-3 inline-flex items-center gap-1.5 shadow-xs">
+                    <x-heroicon-o-document-text class="w-4 h-4 text-uh-slate" />
                     View PDF
                 </a>
             </div>

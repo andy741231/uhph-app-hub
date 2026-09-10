@@ -144,7 +144,7 @@ class DashboardController extends Controller
         // Load other submitted reviews for the same submission, anonymized.
         // The current reviewer's own review is excluded — they see their own
         // form directly. Only submitted reviews are shown (drafts are private).
-        $otherReviews = $review->reviewAssignment->submission->reviewsReleased()
+        $otherReviews = $review->reviewAssignment->submission->reviewsReleasedToReviewers()
             ? $review->reviewAssignment->submission
                 ->reviewAssignments()
                 ->with('review')

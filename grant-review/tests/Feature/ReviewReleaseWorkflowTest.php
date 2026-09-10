@@ -18,7 +18,7 @@ class ReviewReleaseWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_can_release_completed_reviews_and_notify_opted_in_participants(): void
+    public function test_admin_can_release_to_reviewers_and_notify_only_reviewers(): void
     {
         Mail::fake();
         [$admin, $submitter, $reviewers, $submission] = $this->workflow();
@@ -26,57 +26,97 @@ class ReviewReleaseWorkflowTest extends TestCase
             'email_preferences' => array_merge(User::defaultEmailPreferences(), ['notify_reviews_available' => false]),
         ]);
 
-        $response = $this->actingAs($admin)->post(route('admin.review-results.approve', $submission));
+        $response = $this->actingAs($admin)->post(route('admin.review-results.release', [$submission, 'reviewers']));
 
         $response->assertRedirect(route('admin.review-results.index'));
-        $this->assertNotNull($submission->fresh()->reviews_released_at);
-        $this->assertTrue($submission->fresh()->reviewsReleasedBy->is($admin));
-        Mail::assertSent(ReviewsAvailable::class, 2);
-        Mail::assertSent(ReviewsAvailable::class, fn (ReviewsAvailable $mail): bool => $mail->recipient->is($submitter));
+        $this->assertNotNull($submission->fresh()->reviews_released_to_reviewers_at);
+        $this->assertTrue($submission->fresh()->reviewsReleasedToReviewersBy->is($admin));
+        $this->assertNull($submission->fresh()->reviews_released_to_submitter_at);
+        Mail::assertSent(ReviewsAvailable::class, 1);
         Mail::assertSent(ReviewsAvailable::class, fn (ReviewsAvailable $mail): bool => $mail->recipient->is($reviewers[0]));
+        Mail::assertNotSent(ReviewsAvailable::class, fn (ReviewsAvailable $mail): bool => $mail->recipient->is($submitter));
         Mail::assertNotSent(ReviewsAvailable::class, fn (ReviewsAvailable $mail): bool => $mail->recipient->is($reviewers[1]));
+    }
+
+    public function test_admin_can_release_to_submitter_and_notify_only_submitter(): void
+    {
+        Mail::fake();
+        [$admin, $submitter, $reviewers, $submission] = $this->workflow();
+
+        $response = $this->actingAs($admin)->post(route('admin.review-results.release', [$submission, 'submitter']));
+
+        $response->assertRedirect(route('admin.review-results.index'));
+        $this->assertNotNull($submission->fresh()->reviews_released_to_submitter_at);
+        $this->assertTrue($submission->fresh()->reviewsReleasedToSubmitterBy->is($admin));
+        $this->assertNull($submission->fresh()->reviews_released_to_reviewers_at);
+        Mail::assertSent(ReviewsAvailable::class, 1);
+        Mail::assertSent(ReviewsAvailable::class, fn (ReviewsAvailable $mail): bool => $mail->recipient->is($submitter));
+        Mail::assertNotSent(ReviewsAvailable::class, fn (ReviewsAvailable $mail): bool => $mail->recipient->is($reviewers[0]));
     }
 
     public function test_admin_cannot_release_reviews_until_every_assignment_is_complete(): void
     {
         [$admin, , , $submission] = $this->workflow(complete: false);
 
-        $response = $this->actingAs($admin)->post(route('admin.review-results.approve', $submission));
+        foreach (['reviewers', 'submitter'] as $audience) {
+            $response = $this->actingAs($admin)->post(route('admin.review-results.release', [$submission, $audience]));
 
-        $response->assertSessionHasErrors('reviews');
-        $this->assertNull($submission->fresh()->reviews_released_at);
+            $response->assertSessionHasErrors('reviews');
+        }
+
+        $this->assertNull($submission->fresh()->reviews_released_to_reviewers_at);
+        $this->assertNull($submission->fresh()->reviews_released_to_submitter_at);
     }
 
-    public function test_review_release_is_idempotent(): void
+    public function test_review_release_is_idempotent_per_audience(): void
     {
         Mail::fake();
         [$admin, , , $submission] = $this->workflow();
 
-        $this->actingAs($admin)->post(route('admin.review-results.approve', $submission));
-        $releasedAt = $submission->fresh()->reviews_released_at;
-        $this->actingAs($admin)->post(route('admin.review-results.approve', $submission));
+        $this->actingAs($admin)->post(route('admin.review-results.release', [$submission, 'reviewers']));
+        $releasedAt = $submission->fresh()->reviews_released_to_reviewers_at;
+        $this->actingAs($admin)->post(route('admin.review-results.release', [$submission, 'reviewers']));
 
-        $this->assertTrue($releasedAt->equalTo($submission->fresh()->reviews_released_at));
-        Mail::assertSent(ReviewsAvailable::class, 3);
+        $this->assertTrue($releasedAt->equalTo($submission->fresh()->reviews_released_to_reviewers_at));
+        Mail::assertSent(ReviewsAvailable::class, 2);
     }
 
-    public function test_admin_can_unrelease_reviews_and_reviewers_regain_edit_access(): void
+    public function test_admin_can_unrelease_each_audience_independently(): void
     {
         Mail::fake();
         [$admin, $submitter, $reviewers, $submission, $reviews] = $this->workflow();
 
-        $this->actingAs($admin)->post(route('admin.review-results.approve', $submission));
+        $this->actingAs($admin)->post(route('admin.review-results.release', [$submission, 'reviewers']));
+        $this->actingAs($admin)->post(route('admin.review-results.release', [$submission, 'submitter']));
         $this->assertTrue($submission->fresh()->reviewsReleased());
 
-        $this->actingAs($admin)->post(route('admin.review-results.unrelease', $submission));
+        $this->actingAs($admin)->post(route('admin.review-results.unrelease', [$submission, 'submitter']));
 
-        $this->assertNull($submission->fresh()->reviews_released_at);
-        $this->assertNull($submission->fresh()->reviews_released_by);
+        $this->assertNull($submission->fresh()->reviews_released_to_submitter_at);
+        $this->assertNotNull($submission->fresh()->reviews_released_to_reviewers_at);
 
         $this->actingAs($submitter)
             ->get(route('submitter.submissions.show', $submission))
             ->assertOk()
             ->assertDontSee('Peer review feedback alpha');
+
+        // Reviewers still released — reviews remain locked for editing.
+        $this->actingAs($reviewers[0])
+            ->post(route('reviewer.reviews.save', $reviews[0]), [
+                'score' => 4,
+                'factor1_score' => 4,
+                'factor2_score' => 4,
+                'factor3_sufficient' => '1',
+                'additional_human_subjects' => 'na',
+                'additional_vertebrate_animals' => 'na',
+                'additional_biohazards' => 'na',
+            ])
+            ->assertForbidden();
+
+        $this->actingAs($admin)->post(route('admin.review-results.unrelease', [$submission, 'reviewers']));
+
+        $this->assertNull($submission->fresh()->reviews_released_to_reviewers_at);
+        $this->assertNull($submission->fresh()->reviews_released_to_reviewers_by);
 
         $this->actingAs($reviewers[0])
             ->post(route('reviewer.reviews.save', $reviews[0]), [
@@ -98,12 +138,15 @@ class ReviewReleaseWorkflowTest extends TestCase
         Mail::fake();
         [$admin, , , $submission] = $this->workflow();
 
-        $this->actingAs($admin)
-            ->post(route('admin.review-results.unrelease', $submission))
-            ->assertRedirect(route('admin.review-results.index'))
-            ->assertSessionHas('error');
+        foreach (['reviewers', 'submitter'] as $audience) {
+            $this->actingAs($admin)
+                ->post(route('admin.review-results.unrelease', [$submission, $audience]))
+                ->assertRedirect(route('admin.review-results.index'))
+                ->assertSessionHas('error');
+        }
 
-        $this->assertNull($submission->fresh()->reviews_released_at);
+        $this->assertNull($submission->fresh()->reviews_released_to_reviewers_at);
+        $this->assertNull($submission->fresh()->reviews_released_to_submitter_at);
     }
 
     public function test_reviews_cannot_be_unreleased_after_a_decision(): void
@@ -111,18 +154,22 @@ class ReviewReleaseWorkflowTest extends TestCase
         Mail::fake();
         [$admin, , , $submission] = $this->workflow();
 
-        $this->actingAs($admin)->post(route('admin.review-results.approve', $submission));
+        $this->actingAs($admin)->post(route('admin.review-results.release', [$submission, 'reviewers']));
+        $this->actingAs($admin)->post(route('admin.review-results.release', [$submission, 'submitter']));
         $submission->update(['status' => 'decided']);
 
-        $this->actingAs($admin)
-            ->post(route('admin.review-results.unrelease', $submission))
-            ->assertRedirect(route('admin.review-results.index'))
-            ->assertSessionHas('error');
+        foreach (['reviewers', 'submitter'] as $audience) {
+            $this->actingAs($admin)
+                ->post(route('admin.review-results.unrelease', [$submission, $audience]))
+                ->assertRedirect(route('admin.review-results.index'))
+                ->assertSessionHas('error');
+        }
 
-        $this->assertNotNull($submission->fresh()->reviews_released_at);
+        $this->assertNotNull($submission->fresh()->reviews_released_to_reviewers_at);
+        $this->assertNotNull($submission->fresh()->reviews_released_to_submitter_at);
     }
 
-    public function test_submitter_cannot_see_reviews_before_release_but_can_after_release(): void
+    public function test_submitter_cannot_see_reviews_until_released_to_submitter(): void
     {
         [, $submitter, , $submission] = $this->workflow();
 
@@ -132,7 +179,15 @@ class ReviewReleaseWorkflowTest extends TestCase
             ->assertDontSee('Peer review feedback alpha')
             ->assertSee('awaiting administrator approval');
 
-        $submission->update(['reviews_released_at' => now()]);
+        // Releasing to reviewers alone does not expose feedback to the submitter.
+        $submission->update(['reviews_released_to_reviewers_at' => now()]);
+
+        $this->actingAs($submitter)
+            ->get(route('submitter.submissions.show', $submission))
+            ->assertOk()
+            ->assertDontSee('Peer review feedback alpha');
+
+        $submission->update(['reviews_released_to_submitter_at' => now()]);
 
         $this->actingAs($submitter)
             ->get(route('submitter.submissions.show', $submission))
@@ -140,7 +195,7 @@ class ReviewReleaseWorkflowTest extends TestCase
             ->assertSee('Peer review feedback alpha');
     }
 
-    public function test_reviewer_cannot_see_peer_reviews_before_release_but_can_after_release(): void
+    public function test_reviewer_cannot_see_peer_reviews_until_released_to_reviewers(): void
     {
         [, , $reviewers, $submission, $reviews] = $this->workflow();
 
@@ -149,7 +204,15 @@ class ReviewReleaseWorkflowTest extends TestCase
             ->assertOk()
             ->assertDontSee('Peer review feedback beta');
 
-        $submission->update(['reviews_released_at' => now()]);
+        // Releasing to the submitter alone does not expose peer feedback.
+        $submission->update(['reviews_released_to_submitter_at' => now()]);
+
+        $this->actingAs($reviewers[0])
+            ->get(route('reviewer.reviews.show', $reviews[0]))
+            ->assertOk()
+            ->assertDontSee('Peer review feedback beta');
+
+        $submission->update(['reviews_released_to_reviewers_at' => now()]);
 
         $this->actingAs($reviewers[0])
             ->get(route('reviewer.reviews.show', $reviews[0]))
@@ -180,7 +243,9 @@ class ReviewReleaseWorkflowTest extends TestCase
     public function test_released_reviews_can_no_longer_be_changed(): void
     {
         [, , $reviewers, $submission, $reviews] = $this->workflow();
-        $submission->update(['reviews_released_at' => now()]);
+        // Release to either audience locks the review — even a release that
+        // only exposes feedback to the submitter prevents further edits.
+        $submission->update(['reviews_released_to_submitter_at' => now()]);
 
         $this->actingAs($reviewers[0])
             ->post(route('reviewer.reviews.save', $reviews[0]), [

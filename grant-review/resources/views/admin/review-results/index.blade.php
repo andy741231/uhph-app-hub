@@ -110,8 +110,12 @@
                         <td>
                             @if ($submission->status === 'decided')
                                 <span class="badge-green">Decided</span>
-                            @elseif ($submission->reviewsReleased())
+                            @elseif ($submission->reviewsReleasedToReviewers() && $submission->reviewsReleasedToSubmitter())
                                 <span class="badge-green">Reviews released</span>
+                            @elseif ($submission->reviewsReleasedToReviewers())
+                                <span class="badge-green">Released to reviewers</span>
+                            @elseif ($submission->reviewsReleasedToSubmitter())
+                                <span class="badge-green">Released to submitter</span>
                             @elseif ($assigned > 0 && $completed === $assigned)
                                 <span class="badge-green">Ready to release</span>
                             @elseif ($assigned > 0)
@@ -151,27 +155,19 @@
                                 <span class="text-sm text-gray-400">Pending</span>
                             @endif
                         </td>
-                        <td class="text-right min-w-[280px]">
-                            <div class="flex items-center justify-end gap-2 flex-wrap">
-                                @if (! $submission->reviewsReleased() && $assigned > 0 && $completed === $assigned)
-                                    <form action="{{ route('admin.review-results.approve', $submission) }}" method="POST" class="inline">
-                                        @csrf
-                                        <button type="submit" class="btn-primary text-xs" onclick="return confirm('Release these completed reviews to the submitter and all reviewers? This cannot be undone.')">
-                                            <x-heroicon-o-check-circle class="w-4 h-4 mr-1.5" />
-                                            Release reviews
-                                        </button>
-                                    </form>
-                                @elseif ($submission->reviewsReleased() && $submission->status !== 'decided')
-                                    <form action="{{ route('admin.review-results.unrelease', $submission) }}" method="POST" class="inline">
-                                        @csrf
-                                        <button type="submit" class="btn-secondary text-xs" onclick="return confirm('Un-release these reviews? The submitter and reviewers will immediately lose access to the released feedback, and reviewers can edit their reviews again. Email notifications already sent cannot be withdrawn.')">
-                                            <x-heroicon-o-lock-open class="w-4 h-4 mr-1.5" />
-                                            Un-release
-                                        </button>
-                                    </form>
-                                @endif
-                                <a href="{{ route('admin.review-results.show', $submission) }}" class="text-sm text-uh-red hover:underline font-medium cursor-pointer">View details</a>
-                                <a href="{{ $assignUrl }}" class="text-sm text-uh-slate hover:underline font-medium cursor-pointer">Assign reviewers</a>
+                        <td class="text-right">
+                            <div class="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                                @include('admin.review-results.partials.release-controls', ['submission' => $submission])
+                                <a href="{{ route('admin.review-results.show', $submission) }}"
+                                   class="inline-flex items-center justify-center w-8 h-8 rounded-md border border-uh-border bg-white text-uh-slate hover:bg-uh-muted hover:text-uh-fg transition-colors duration-150"
+                                   title="View details" aria-label="View details for {{ $submission->title }}">
+                                    <x-heroicon-o-chevron-right class="w-4 h-4" />
+                                </a>
+                                <a href="{{ $assignUrl }}"
+                                   class="inline-flex items-center justify-center w-8 h-8 rounded-md border border-uh-border bg-white text-uh-slate hover:bg-uh-muted hover:text-uh-fg transition-colors duration-150"
+                                   title="Assign reviewers" aria-label="Assign reviewers for {{ $submission->title }}">
+                                    <x-heroicon-o-user-plus class="w-4 h-4" />
+                                </a>
                             </div>
                         </td>
                     </tr>

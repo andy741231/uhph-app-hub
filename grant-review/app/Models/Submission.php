@@ -23,8 +23,10 @@ class Submission extends Model
         'pdf_path',
         'status',
         'submitted_at',
-        'reviews_released_at',
-        'reviews_released_by',
+        'reviews_released_to_reviewers_at',
+        'reviews_released_to_reviewers_by',
+        'reviews_released_to_submitter_at',
+        'reviews_released_to_submitter_by',
     ];
 
     protected function casts(): array
@@ -32,7 +34,8 @@ class Submission extends Model
         return [
             'amount_requested' => 'decimal:2',
             'submitted_at' => 'datetime',
-            'reviews_released_at' => 'datetime',
+            'reviews_released_to_reviewers_at' => 'datetime',
+            'reviews_released_to_submitter_at' => 'datetime',
         ];
     }
 
@@ -56,9 +59,14 @@ class Submission extends Model
         return $this->hasOne(Decision::class);
     }
 
-    public function reviewsReleasedBy(): BelongsTo
+    public function reviewsReleasedToReviewersBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'reviews_released_by');
+        return $this->belongsTo(User::class, 'reviews_released_to_reviewers_by');
+    }
+
+    public function reviewsReleasedToSubmitterBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviews_released_to_submitter_by');
     }
 
     public function reviewsComplete(): bool
@@ -71,9 +79,24 @@ class Submission extends Model
             && $assignments->every(fn (ReviewAssignment $assignment): bool => $assignment->review?->submitted_at !== null);
     }
 
+    public function reviewsReleasedToReviewers(): bool
+    {
+        return $this->reviews_released_to_reviewers_at !== null;
+    }
+
+    public function reviewsReleasedToSubmitter(): bool
+    {
+        return $this->reviews_released_to_submitter_at !== null;
+    }
+
+    /**
+     * Whether reviews are visible to at least one audience. Also the
+     * edit-lock condition: once feedback is released to anyone, the
+     * underlying reviews must not change underneath that audience.
+     */
     public function reviewsReleased(): bool
     {
-        return $this->reviews_released_at !== null;
+        return $this->reviewsReleasedToReviewers() || $this->reviewsReleasedToSubmitter();
     }
 
     public function conflictOfInterestEntries(): HasMany

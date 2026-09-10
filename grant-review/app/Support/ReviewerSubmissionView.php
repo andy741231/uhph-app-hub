@@ -35,6 +35,8 @@ final class ReviewerSubmissionView
 
     public readonly bool $reviewsReleased;
 
+    public readonly bool $reviewLocked;
+
     private function __construct(Submission $submission, bool $blind)
     {
         $this->id = $submission->id;
@@ -45,7 +47,11 @@ final class ReviewerSubmissionView
             : null;
         $this->roundName = $submission->round->name;
         $this->status = $submission->status;
-        $this->reviewsReleased = $submission->reviewsReleased();
+        // Peer feedback is visible to reviewers only when released to the
+        // reviewer audience. The reviewer's own review locks as soon as it
+        // is released to anyone (reviewers or the submitter) or decided.
+        $this->reviewsReleased = $submission->reviewsReleasedToReviewers();
+        $this->reviewLocked = $submission->reviewsReleased() || $submission->status === 'decided';
 
         // The only fields blind review withholds. Everything else about
         // the submission's own content is always visible to an assigned

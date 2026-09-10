@@ -129,7 +129,7 @@ class SubmissionController extends Controller
 
         // Anonymize reviewer names: "Reviewer 1", "Reviewer 2", etc.
         // Pass full Review objects so the structured-review-summary partial can render.
-        $reviewsReleased = $submission->reviewsReleased();
+        $reviewsReleased = $submission->reviewsReleasedToSubmitter();
         $reviews = $reviewsReleased
             ? $submittedReviews->map(function ($review, $index) {
                 return [

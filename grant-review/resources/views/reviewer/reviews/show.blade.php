@@ -116,7 +116,7 @@
                     <p class="text-xs text-gray-500 mt-0.5">
                         @if ($submission->status === 'decided')
                             This proposal has been decided — your review is locked.
-                        @elseif ($submission->reviewsReleased)
+                        @elseif ($submission->reviewLocked)
                             Reviews have been released — your review is locked.
                         @else
                             NIH simplified review framework — score each criterion 1 (exceptional) to 9 (very poor)
@@ -150,7 +150,7 @@
                 </div>
             @endif
 
-            @if ($submission->status === 'decided' || $submission->reviewsReleased)
+            @if ($submission->reviewLocked)
                 {{-- Read-only view: submission has been decided, review is locked --}}
                 <div class="space-y-5">
                     <div class="bg-uh-muted border border-uh-border rounded-xl p-4 flex items-start gap-3">
@@ -160,7 +160,7 @@
                         <div>
                             <p class="text-sm font-bold text-uh-fg">Review locked</p>
                             <p class="text-xs text-gray-600 mt-1 leading-relaxed">
-                                {{ $submission->reviewsReleased
+                                {{ $submission->status !== 'decided'
                                     ? 'The completed reviews have been approved for release. Your submitted review is preserved below and can no longer be edited.'
                                     : 'A decision has been recorded for this proposal. Your submitted review is preserved below and remains visible to administrators, but it can no longer be edited.' }}
                             </p>
@@ -497,8 +497,7 @@
                 <iframe src="{{ route('submissions.pdf', $submission->id) }}"
                         title="Submission Proposal Document"
                         class="w-full h-full border-0"
-                        loading="lazy"
-                        sandbox="allow-scripts allow-same-origin allow-forms allow-popups">
+                        loading="lazy">
                     <div class="p-8 text-center text-gray-600 bg-white m-4 rounded-lg border border-uh-border">
                         <p class="font-medium text-base mb-2">Inline PDF preview not supported by your browser.</p>
                         <a href="{{ route('submissions.pdf', $submission->id) }}"

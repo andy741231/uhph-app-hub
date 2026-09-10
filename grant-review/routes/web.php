@@ -48,8 +48,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('conflicts', [AdminConflictOfInterestController::class, 'index'])->name('conflicts.index');
     Route::get('review-results/export', [ReviewResultsController::class, 'exportCsv'])->name('review-results.export');
     Route::get('review-results/export/{roundId}', [ReviewResultsController::class, 'exportCsv'])->name('review-results.export.round');
-    Route::post('review-results/{submission}/approve', [ReviewResultsController::class, 'approve'])->name('review-results.approve')->whereNumber('submission');
-    Route::post('review-results/{submission}/unrelease', [ReviewResultsController::class, 'unrelease'])->name('review-results.unrelease')->whereNumber('submission');
+    Route::post('review-results/{submission}/release/{audience}', [ReviewResultsController::class, 'release'])->name('review-results.release')->whereNumber('submission')->whereIn('audience', ['reviewers', 'submitter']);
+    Route::post('review-results/{submission}/unrelease/{audience}', [ReviewResultsController::class, 'unrelease'])->name('review-results.unrelease')->whereNumber('submission')->whereIn('audience', ['reviewers', 'submitter']);
     Route::get('review-results/{submission}/reviews/{review}/timeline', [ReviewResultsController::class, 'reviewTimeline'])->name('review-results.timeline')->whereNumber(['submission', 'review']);
     Route::get('review-results/{submission}', [ReviewResultsController::class, 'show'])->name('review-results.show')->whereNumber('submission');
     Route::post('decisions/{submission}', [DecisionController::class, 'store'])->name('decisions.store');
