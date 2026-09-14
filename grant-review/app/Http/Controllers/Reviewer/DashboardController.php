@@ -144,6 +144,10 @@ class DashboardController extends Controller
         // Load other submitted reviews for the same submission, anonymized.
         // The current reviewer's own review is excluded — they see their own
         // form directly. Only submitted reviews are shown (drafts are private).
+        // Full Review models are passed so the shared structured-review-summary
+        // partial can render the complete evaluation; Review records carry no
+        // reviewer identity (that lives on the assignment), so anonymized
+        // "Reviewer N" labels are the only peer identifier exposed.
         $otherReviews = $review->reviewAssignment->submission->reviewsReleasedToReviewers()
             ? $review->reviewAssignment->submission
                 ->reviewAssignments()
@@ -154,17 +158,10 @@ class DashboardController extends Controller
                 ->filter(fn ($r) => $r && $r->submitted_at !== null)
                 ->sortBy('submitted_at')
                 ->values()
-                ->map(function ($r, $i) {
-                    return [
-                        'label' => 'Reviewer '.($i + 1),
-                        'score' => $r->score !== null ? (float) $r->score : null,
-                        'comments' => $r->comments,
-                        'factor1_score' => $r->factor1_score,
-                        'factor2_score' => $r->factor2_score,
-                        'factor3_sufficient' => $r->factor3_sufficient,
-                        'submitted_at' => $r->submitted_at,
-                    ];
-                })
+                ->map(fn ($r, $i) => [
+                    'label' => 'Reviewer '.($i + 1),
+                    'review' => $r,
+                ])
             : collect();
 
         // Count of this reviewer's submitted revisions (for timeline button)

@@ -397,9 +397,7 @@
             <div class="card p-5 shadow-xs">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-sm font-bold uppercase tracking-wider text-uh-fg flex items-center gap-1.5">
-                        <svg class="w-4 h-4 text-uh-red" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A5.978 5.978 0 0 1 5.999 18m0 0a5.978 5.978 0 0 1-1.037-3.464 5.978 5.978 0 0 1 1.037-3.464m0 0L5.999 11.04A11.944 11.944 0 0 1 12 9c2.17 0 4.207.576 5.963 1.584M18 18.72V18m0 0V11.04m0 7.66a5.978 5.978 0 0 0 1.037-3.464M18 11.04a5.978 5.978 0 0 0-1.037-3.464m-11.964 0L5.999 6m0 0a5.978 5.978 0 0 1 1.037-3.464M5.999 6a5.978 5.978 0 0 0 1.037 3.464M18 11.04 18 6m0 0a5.978 5.978 0 0 0-1.037-3.464M18 6a5.978 5.978 0 0 1 1.037 3.464"/>
-                        </svg>
+                        <x-heroicon-o-user-group class="w-4 h-4 text-uh-red" />
                         Peer Reviews
                     </h3>
                     <span class="text-xs text-gray-400">{{ $otherReviews->count() }} submitted</span>
@@ -407,53 +405,32 @@
 
                 <div class="space-y-3">
                     @foreach ($otherReviews as $peerReview)
-                        <div class="border border-uh-border rounded-lg p-4 bg-white">
-                            <div class="flex items-start justify-between gap-3 mb-2">
-                                <div>
+                        <div class="border border-uh-border rounded-lg bg-white overflow-hidden" x-data="{ open: false }">
+                            <button type="button" @click="open = ! open"
+                                    class="w-full flex items-start justify-between gap-3 p-4 text-left cursor-pointer hover:bg-uh-muted/50 transition-colors"
+                                    :aria-expanded="open.toString()">
+                                <div class="min-w-0">
                                     <p class="font-semibold text-uh-fg text-sm">{{ $peerReview['label'] }}</p>
                                     <p class="text-xs text-gray-500 mt-0.5">
-                                        Submitted {{ $peerReview['submitted_at']->format('M j, Y') }}
+                                        Submitted {{ $peerReview['review']->submitted_at->format('M j, Y') }}
                                     </p>
                                 </div>
-                                @if ($peerReview['score'] !== null)
-                                    <span class="text-2xl font-black text-uh-red leading-none">
-                                        {{ $peerReview['score'] }}
-                                    </span>
-                                @else
-                                    <span class="text-xs text-gray-400">No score</span>
-                                @endif
-                            </div>
-                            @if ($peerReview['comments'])
-                                <div class="mt-2 bg-uh-muted rounded-md p-3 text-sm text-gray-700 whitespace-pre-wrap leading-relaxed border border-uh-border">
-                                    {{ $peerReview['comments'] }}
+                                <div class="flex items-center gap-2 shrink-0">
+                                    @if ($peerReview['review']->score !== null)
+                                        <span class="text-2xl font-black text-uh-red leading-none">
+                                            {{ $peerReview['review']->score }}
+                                        </span>
+                                    @else
+                                        <span class="text-xs text-gray-400">No score</span>
+                                    @endif
+                                    <x-heroicon-o-chevron-down class="w-4 h-4 text-gray-400 transition-transform duration-200" ::class="{ 'rotate-180': open }" />
                                 </div>
-                            @else
-                                <p class="text-xs text-gray-400 italic mt-2">No written comments provided.</p>
-                            @endif
+                            </button>
 
-                            {{-- Factor scores summary --}}
-                            @if ($peerReview['factor1_score'] !== null || $peerReview['factor2_score'] !== null || $peerReview['factor3_sufficient'] !== null)
-                                <div class="mt-2 flex flex-wrap gap-1.5">
-                                    @if ($peerReview['factor1_score'] !== null)
-                                        <span class="text-xs font-semibold px-2 py-1 rounded-md bg-gray-50 text-gray-600 border border-uh-border">
-                                            Factor 1: {{ $peerReview["factor1_score"] }}
-                                        </span>
-                                    @endif
-                                    @if ($peerReview['factor2_score'] !== null)
-                                        <span class="text-xs font-semibold px-2 py-1 rounded-md bg-gray-50 text-gray-600 border border-uh-border">
-                                            Factor 2: {{ $peerReview["factor2_score"] }}
-                                        </span>
-                                    @endif
-                                    @if ($peerReview['factor3_sufficient'] !== null)
-                                        <span class="text-xs font-semibold px-2 py-1 rounded-md border
-                                            {{ $peerReview['factor3_sufficient']
-                                                ? 'bg-green-50 text-green-700 border-green-200'
-                                                : 'bg-red-50 text-red-700 border-red-200' }}">
-                                            Factor 3: {{ $peerReview['factor3_sufficient'] ? 'Sufficient' : 'Not Sufficient' }}
-                                        </span>
-                                    @endif
-                                </div>
-                            @endif
+                            {{-- Full evaluation, same structured detail as the review timeline --}}
+                            <div x-show="open" x-cloak class="px-4 pb-4 border-t border-uh-border/70">
+                                @include('reviews.partials.structured-review-summary', ['review' => $peerReview['review'], 'showOverall' => true, 'compact' => true])
+                            </div>
                         </div>
                     @endforeach
                 </div>

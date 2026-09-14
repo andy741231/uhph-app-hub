@@ -111,6 +111,10 @@
     }
 }
 
+[x-cloak] {
+    display: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
