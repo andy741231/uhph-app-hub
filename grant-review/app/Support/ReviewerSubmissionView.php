@@ -48,10 +48,11 @@ final class ReviewerSubmissionView
         $this->roundName = $submission->round->name;
         $this->status = $submission->status;
         // Peer feedback is visible to reviewers only when released to the
-        // reviewer audience. The reviewer's own review locks as soon as it
-        // is released to anyone (reviewers or the submitter) or decided.
+        // reviewer audience, and the reviewer audience release is also what
+        // locks their own review — a submitter-only release leaves the
+        // review editable. A recorded decision always locks it.
         $this->reviewsReleased = $submission->reviewsReleasedToReviewers();
-        $this->reviewLocked = $submission->reviewsReleased() || $submission->status === 'decided';
+        $this->reviewLocked = $submission->reviewsReleasedToReviewers() || $submission->status === 'decided';
 
         // The only fields blind review withholds. Everything else about
         // the submission's own content is always visible to an assigned

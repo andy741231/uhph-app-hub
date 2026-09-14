@@ -146,7 +146,7 @@ class ReviewResultsController extends Controller
         [$atColumn, $byColumn] = $this->releaseColumns($audience);
         $label = $audience === 'reviewers' ? 'reviewers' : 'the submitter';
 
-        $released = DB::transaction(function () use ($request, $submission, $atColumn, $byColumn): bool {
+        $released = DB::transaction(function () use ($request, $submission, $audience, $atColumn, $byColumn): bool {
             $lockedSubmission = Submission::query()->lockForUpdate()->findOrFail($submission->id);
 
             if ($lockedSubmission->{$atColumn} !== null) {
@@ -157,10 +157,18 @@ class ReviewResultsController extends Controller
                 return false;
             }
 
-            $lockedSubmission->update([
+            $updates = [
                 $atColumn => now(),
                 $byColumn => $request->user()->id,
-            ]);
+            ];
+
+            // Releasing to the submitter locks the proposal — clear the
+            // un-release override so the edit window is fully button-driven.
+            if ($audience === 'submitter') {
+                $updates['submission_edit_unlocked_at'] = null;
+            }
+
+            $lockedSubmission->update($updates);
 
             return true;
         });
@@ -203,18 +211,22 @@ class ReviewResultsController extends Controller
                 ->with('error', 'Reviews for '.$submission->title." are not currently released to {$label}.");
         }
 
-        $submission->forceFill([
+        $updates = [
             $atColumn => null,
             $byColumn => null,
-        ])->save();
+        ];
+
+        // Un-releasing to the submitter reopens proposal editing — the
+        // button overrides the round deadline in both directions.
+        if ($audience === 'submitter') {
+            $updates['submission_edit_unlocked_at'] = now();
+        }
+
+        $submission->forceFill($updates)->save();
 
         $message = $audience === 'reviewers'
-            ? 'Reviews un-released for reviewers of '.$submission->title.'. Reviewers no longer see the released peer feedback.'
-            : 'Reviews un-released for the submitter of '.$submission->title.'. The submitter no longer sees the released feedback.';
-
-        if (! $submission->reviewsReleased()) {
-            $message .= ' Reviewers can edit their reviews again.';
-        }
+            ? 'Reviews un-released for reviewers of '.$submission->title.'. Reviewers no longer see the released peer feedback and can edit their reviews again.'
+            : 'Reviews un-released for the submitter of '.$submission->title.'. The submitter no longer sees the released feedback and can edit their proposal again.';
 
         return redirect()
             ->route('admin.review-results.index')

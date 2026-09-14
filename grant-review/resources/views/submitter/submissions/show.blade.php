@@ -48,7 +48,11 @@
             @endif
         </div>
     @else
-        <p class="mt-4 text-sm text-gray-500">The round deadline has passed — this submission can no longer be edited.</p>
+        <p class="mt-4 text-sm text-gray-500">
+            {{ $submission->reviewsReleasedToSubmitter()
+                ? 'Reviews have been released for this proposal — it can no longer be edited.'
+                : 'The round deadline has passed — this submission can no longer be edited.' }}
+        </p>
     @endif
 </div>
 

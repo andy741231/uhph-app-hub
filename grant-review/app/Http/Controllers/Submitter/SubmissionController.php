@@ -225,20 +225,13 @@ class SubmissionController extends Controller
      * records submitted_at. Works for both drafts and already-submitted
      * submissions (re-submitting updates the timestamp).
      *
-     * Server-side deadline enforcement: rejects if the round's deadline
-     * has passed, regardless of what rounds.status says.
+     * Edit-window enforcement lives in SubmissionPolicy::update — the
+     * Submitter release button and the round deadline together decide
+     * whether the proposal can still be changed.
      */
     public function submit(Submission $submission): RedirectResponse
     {
         $this->authorize('update', $submission);
-
-        $round = $submission->round;
-
-        if (now()->gt($round->deadline_at)) {
-            return redirect()
-                ->route('submitter.submissions.show', $submission)
-                ->withErrors(['submit' => 'The deadline for this round ('.$round->deadline_at->format('M j, Y g:i A').') has passed.']);
-        }
 
         if (! $submission->pdf_path || ! Storage::disk('local')->exists($submission->pdf_path)) {
             return redirect()

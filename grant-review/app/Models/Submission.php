@@ -27,6 +27,7 @@ class Submission extends Model
         'reviews_released_to_reviewers_by',
         'reviews_released_to_submitter_at',
         'reviews_released_to_submitter_by',
+        'submission_edit_unlocked_at',
     ];
 
     protected function casts(): array
@@ -36,6 +37,7 @@ class Submission extends Model
             'submitted_at' => 'datetime',
             'reviews_released_to_reviewers_at' => 'datetime',
             'reviews_released_to_submitter_at' => 'datetime',
+            'submission_edit_unlocked_at' => 'datetime',
         ];
     }
 
@@ -90,13 +92,30 @@ class Submission extends Model
     }
 
     /**
-     * Whether reviews are visible to at least one audience. Also the
-     * edit-lock condition: once feedback is released to anyone, the
-     * underlying reviews must not change underneath that audience.
+     * Whether reviews are visible to at least one audience.
      */
     public function reviewsReleased(): bool
     {
         return $this->reviewsReleasedToReviewers() || $this->reviewsReleasedToSubmitter();
+    }
+
+    /**
+     * Whether the submitter may edit the proposal right now.
+     *
+     * The Submitter release button is king: releasing locks the proposal
+     * immediately (even before the deadline), and un-releasing reopens it —
+     * even after the deadline, since the un-release is recorded in
+     * submission_edit_unlocked_at. The round deadline only locks proposals
+     * whose reviews were never released to the submitter.
+     */
+    public function submitterEditAllowed(): bool
+    {
+        if ($this->reviewsReleasedToSubmitter()) {
+            return false;
+        }
+
+        return $this->submission_edit_unlocked_at !== null
+            || ($this->round !== null && ! now()->gt($this->round->deadline_at));
     }
 
     public function conflictOfInterestEntries(): HasMany

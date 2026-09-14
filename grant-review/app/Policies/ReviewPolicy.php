@@ -22,15 +22,16 @@ class ReviewPolicy
      * (update score/comments) at any time — even after submitting.
      * Reviewers can continually revise and re-submit their review.
      *
-     * Once the submission has been decided, the review is locked:
-     * reviewers can still view their prior evaluation but can no
-     * longer save drafts or re-submit.
+     * The review locks once reviews are released to the reviewer
+     * audience (releasing to the submitter alone does not lock it)
+     * or once the submission has been decided. Reviewers can still
+     * view a locked review but can no longer save drafts or re-submit.
      */
     public function update(User $user, Review $review): bool
     {
         return $this->view($user, $review)
             && ! $this->submissionIsDecided($review)
-            && ! $review->reviewAssignment->submission->reviewsReleased();
+            && ! $review->reviewAssignment->submission->reviewsReleasedToReviewers();
     }
 
     /**

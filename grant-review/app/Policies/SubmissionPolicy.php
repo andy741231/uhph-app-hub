@@ -57,20 +57,18 @@ class SubmissionPolicy
     /**
      * Determine whether the user may update the submission (edit fields, re-upload PDF).
      *
-     * The owning submitter may edit as long as the round deadline has not
-     * passed. This applies to all statuses (draft, submitted, under_review,
-     * decided) — the submitter can always revise or re-upload until the
-     * deadline expires.
+     * The owning submitter may edit while the submission's edit window is
+     * open — see Submission::submitterEditAllowed(). The Submitter release
+     * button takes priority over the round deadline in both directions:
+     * release locks the proposal early, un-release reopens it even after
+     * the deadline.
      */
     public function update(User $user, Submission $submission): bool
     {
-        $ownerId = $submission->submitter_id;
-
-        if (! $user->isSubmitter() || $ownerId !== $user->id) {
+        if (! $user->isSubmitter() || $submission->submitter_id !== $user->id) {
             return false;
         }
 
-        // Locked after the round deadline
-        return $submission->round && ! now()->gt($submission->round->deadline_at);
+        return $submission->submitterEditAllowed();
     }
 }

@@ -63,12 +63,7 @@
                     </div>
 
                     @php
-                        $deadlinePassed = $submission->round && now()->gt($submission->round->deadline_at);
-                        $canEdit = ! $deadlinePassed;
-                    @endphp
-                    @php
-                        $deadlinePassed = $submission->round && now()->gt($submission->round->deadline_at);
-                        $canEdit = ! $deadlinePassed;
+                        $canEdit = $submission->submitterEditAllowed();
                         $awaitingAssignment = in_array($submission->status, ['submitted', 'under_review'])
                             && $submission->reviewAssignments->isEmpty();
                     @endphp
@@ -106,7 +101,9 @@
                         </div>
                     @else
                         <div class="mt-3 pt-3 border-t border-uh-border">
-                            <span class="text-xs text-gray-500">Deadline passed — submission locked</span>
+                            <span class="text-xs text-gray-500">
+                                {{ $submission->reviewsReleasedToSubmitter() ? 'Reviews released — submission locked' : 'Deadline passed — submission locked' }}
+                            </span>
                         </div>
                     @endif
                 </article>

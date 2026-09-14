@@ -243,8 +243,9 @@ class ReviewReleaseWorkflowTest extends TestCase
     public function test_released_reviews_can_no_longer_be_changed(): void
     {
         [, , $reviewers, $submission, $reviews] = $this->workflow();
-        // Release to either audience locks the review — even a release that
-        // only exposes feedback to the submitter prevents further edits.
+
+        // A submitter-only release does not lock reviewer editing — the
+        // reviewer audience release is the lock.
         $submission->update(['reviews_released_to_submitter_at' => now()]);
 
         $this->actingAs($reviewers[0])
@@ -257,9 +258,101 @@ class ReviewReleaseWorkflowTest extends TestCase
                 'additional_vertebrate_animals' => 'na',
                 'additional_biohazards' => 'na',
             ])
+            ->assertRedirect();
+
+        $this->assertSame(1, $reviews[0]->fresh()->score);
+
+        // Releasing to reviewers locks every assigned review.
+        $submission->update(['reviews_released_to_reviewers_at' => now()]);
+
+        $this->actingAs($reviewers[0])
+            ->post(route('reviewer.reviews.save', $reviews[0]), [
+                'score' => 5,
+                'factor1_score' => 5,
+                'factor2_score' => 5,
+                'factor3_sufficient' => '1',
+                'additional_human_subjects' => 'na',
+                'additional_vertebrate_animals' => 'na',
+                'additional_biohazards' => 'na',
+            ])
             ->assertForbidden();
 
-        $this->assertSame(3, $reviews[0]->fresh()->score);
+        $this->assertSame(1, $reviews[0]->fresh()->score);
+    }
+
+    public function test_submitter_release_locks_and_unlocks_proposal_editing(): void
+    {
+        [$admin, $submitter, , $submission] = $this->workflow();
+
+        // Editable before release (deadline hasn't passed).
+        $this->actingAs($submitter)
+            ->put(route('submitter.submissions.update', $submission), ['title' => 'New Title'])
+            ->assertRedirect();
+        $this->assertSame('New Title', $submission->fresh()->title);
+
+        // Releasing to the submitter locks the proposal immediately.
+        $this->actingAs($admin)->post(route('admin.review-results.release', [$submission, 'submitter']));
+
+        $this->actingAs($submitter)
+            ->put(route('submitter.submissions.update', $submission), ['title' => 'Blocked'])
+            ->assertForbidden();
+        $this->assertSame('New Title', $submission->fresh()->title);
+
+        // Un-releasing reopens editing.
+        $this->actingAs($admin)->post(route('admin.review-results.unrelease', [$submission, 'submitter']));
+
+        $this->actingAs($submitter)
+            ->put(route('submitter.submissions.update', $submission), ['title' => 'Reopened'])
+            ->assertRedirect();
+        $this->assertSame('Reopened', $submission->fresh()->title);
+    }
+
+    public function test_releasing_to_reviewers_does_not_lock_proposal(): void
+    {
+        [$admin, $submitter, , $submission] = $this->workflow();
+
+        $this->actingAs($admin)->post(route('admin.review-results.release', [$submission, 'reviewers']));
+
+        $this->actingAs($submitter)
+            ->put(route('submitter.submissions.update', $submission), ['title' => 'Still Editable'])
+            ->assertRedirect();
+        $this->assertSame('Still Editable', $submission->fresh()->title);
+    }
+
+    public function test_deadline_locks_proposal_never_released_to_submitter(): void
+    {
+        [, $submitter, , $submission] = $this->workflow();
+
+        // Released to reviewers only — the submitter release button was
+        // never used, so the deadline fallback still applies.
+        $submission->update(['reviews_released_to_reviewers_at' => now()]);
+        $submission->round->update(['deadline_at' => now()->subHour()]);
+
+        $this->actingAs($submitter)
+            ->put(route('submitter.submissions.update', $submission), ['title' => 'Blocked'])
+            ->assertForbidden();
+    }
+
+    public function test_unrelease_to_submitter_reopens_editing_after_deadline(): void
+    {
+        [$admin, $submitter, , $submission] = $this->workflow();
+
+        $this->actingAs($admin)->post(route('admin.review-results.release', [$submission, 'submitter']));
+
+        // Deadline passes while the proposal is locked by the release.
+        $submission->round->update(['deadline_at' => now()->subHour()]);
+
+        $this->actingAs($submitter)
+            ->put(route('submitter.submissions.update', $submission), ['title' => 'Blocked'])
+            ->assertForbidden();
+
+        // The button is king: un-release reopens editing even after the deadline.
+        $this->actingAs($admin)->post(route('admin.review-results.unrelease', [$submission, 'submitter']));
+
+        $this->actingAs($submitter)
+            ->put(route('submitter.submissions.update', $submission), ['title' => 'Post Deadline Edit'])
+            ->assertRedirect();
+        $this->assertSame('Post Deadline Edit', $submission->fresh()->title);
     }
 
     public function test_all_reviews_complete_email_respects_admin_preference(): void

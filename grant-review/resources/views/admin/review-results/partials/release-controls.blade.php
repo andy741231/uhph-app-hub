@@ -3,7 +3,7 @@
 
     - Off (eye icon, neutral): click releases the completed reviews to that
       audience and emails them.
-    - On (check icon, green): reviews are released to that audience; click
+    - On (check icon, UH red): reviews are released to that audience; click
       un-releases for that audience only.
     - Decided: renders disabled so the final release state stays visible.
 
@@ -29,8 +29,12 @@
                     ? $submission->reviewsReleasedToReviewers()
                     : $submission->reviewsReleasedToSubmitter();
                 $confirm = $released
-                    ? "Un-release these reviews for {$audienceLabel}? They immediately lose access to the released feedback. Email notifications already sent cannot be withdrawn."
-                    : "Release the completed reviews to {$audienceLabel}? They will be able to view the anonymized feedback and will be notified by email.";
+                    ? ($audience === 'reviewers'
+                        ? "Un-release these reviews for {$audienceLabel}? They lose access to the released peer feedback and their reviews become editable again. Email notifications already sent cannot be withdrawn."
+                        : "Un-release these reviews for the submitter? They lose access to the released feedback and their proposal becomes editable again — even after the round deadline. Email notifications already sent cannot be withdrawn.")
+                    : ($audience === 'reviewers'
+                        ? "Release the completed reviews to {$audienceLabel}? They will see the anonymized peer feedback, their reviews become locked, and they will be notified by email."
+                        : "Release the completed reviews to the submitter? They will see the feedback, their proposal becomes locked, and they will be notified by email.");
             @endphp
             <form method="POST"
                   action="{{ $released
@@ -45,7 +49,7 @@
                         @if (! $decided) onclick="return confirm('{{ $confirm }}')" @endif
                         class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-uh-red focus-visible:ring-offset-0
                             {{ $released
-                                ? 'bg-[#00866C]/10 text-[#00866C] hover:bg-[#00866C]/20'
+                                ? 'bg-uh-red text-white hover:bg-uh-brick'
                                 : 'bg-white text-uh-slate hover:bg-uh-muted hover:text-uh-fg' }}
                             {{ $decided ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer' }}">
                     @if ($released)
