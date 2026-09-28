@@ -44,7 +44,7 @@ class ApplicationAdminManagementTest extends TestCase
             ->get('/admin/users/create')
             ->assertOk()
             ->assertSee('Add User')
-            ->assertDontSee('CSV Bulk Import');
+            ->assertSee('CSV Bulk Import');
     }
 
     public function test_grant_review_admin_can_create_and_immediately_synchronize_a_hub_user(): void

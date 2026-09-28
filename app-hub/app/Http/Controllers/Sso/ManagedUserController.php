@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Sso;
 use App\Http\Controllers\Controller;
 use App\Models\ApplicationAdminAudit;
 use App\Models\User;
+use App\Services\InvitationSender;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -44,6 +44,7 @@ class ManagedUserController extends Controller
         Request $request,
         ApplicationClientAuthenticator $clients,
         ApplicationActorToken $tokens,
+        InvitationSender $invitations,
     ): JsonResponse {
         [$application, $actor] = $this->context($request, $clients, $tokens);
         $request->merge([
@@ -82,7 +83,7 @@ class ManagedUserController extends Controller
                 $target = User::create([
                     'name' => trim($input['name']),
                     'email' => $input['email'],
-                    'password' => Str::random(64),
+                    'password' => null,
                     'email_verified_at' => now(),
                     'status' => User::STATUS_ACTIVE,
                     'is_admin' => false,
@@ -112,11 +113,7 @@ class ManagedUserController extends Controller
 
         $invitationSent = false;
         if ($result['created']) {
-            try {
-                $invitationSent = Password::sendResetLink(['email' => $result['target']->email]) === Password::RESET_LINK_SENT;
-            } catch (\Throwable) {
-                $invitationSent = false;
-            }
+            $invitationSent = $invitations->send($result['target'], [$application]);
         }
         $target = $result['target'];
 

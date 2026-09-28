@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Reviewer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreConflictOfInterestRequest;
 use App\Mail\ConflictOfInterestDeclared;
+use App\Models\ConfidentialityAgreement;
 use App\Models\ConflictOfInterestDeclaration;
 use App\Models\ConflictOfInterestResponse;
 use App\Models\ReviewerRoundInvitation;
 use App\Models\Round;
 use App\Models\Submission;
 use App\Models\User;
+use App\Support\ConfidentialityAgreementDocument;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -106,6 +108,19 @@ class ConflictOfInterestController extends Controller
                 ]);
             }
 
+            // Record the confidentiality acceptance for this cycle and
+            // document version — first agreement wins, so resubmissions
+            // keep the original timestamp and a new document version
+            // creates a fresh record.
+            ConfidentialityAgreement::firstOrCreate(
+                [
+                    'user_id' => $reviewer->id,
+                    'round_id' => $round->id,
+                    'version' => ConfidentialityAgreementDocument::VERSION,
+                ],
+                ['content' => ConfidentialityAgreementDocument::text()]
+            );
+
             return $declaration->load('responses.submission.submitter', 'round');
         });
 
@@ -149,7 +164,7 @@ class ConflictOfInterestController extends Controller
             ->whereHas('reviewAssignments', fn ($q) => $q->where('reviewer_id', $request->user()->id))
             ->exists();
 
-        abort_unless($hasAssignment, 403, 'You have not been invited to screen this round.');
+        abort_unless($hasAssignment, 403, 'You have not been invited to screen this cycle.');
     }
 
     /**

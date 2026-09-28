@@ -34,14 +34,17 @@ class SetPasswordController extends Controller
             'password' => ['required', 'confirmed', PasswordRule::min(8)->letters()->numbers()],
         ]);
         $resetUser = null;
-        $status = Password::reset($credentials, function (User $user, string $password) use (&$resetUser): void {
-            $user->forceFill([
-                'password' => Hash::make($password),
-                'remember_token' => Str::random(60),
-            ])->save();
-            $resetUser = $user;
-            event(new PasswordReset($user));
-        });
+        $status = Password::reset(
+            [...$credentials, 'status' => User::STATUS_ACTIVE],
+            function (User $user, string $password) use (&$resetUser): void {
+                $user->forceFill([
+                    'password' => Hash::make($password),
+                    'remember_token' => Str::random(60),
+                ])->save();
+                $resetUser = $user;
+                event(new PasswordReset($user));
+            },
+        );
 
         if ($status !== Password::PASSWORD_RESET || ! $resetUser) {
             return back()->withInput($request->only('email'))->withErrors(['email' => __($status)]);
@@ -49,6 +52,7 @@ class SetPasswordController extends Controller
 
         Auth::login($resetUser);
         $request->session()->regenerate();
+        $request->session()->put(config('hub.login_method_session_key', 'hub_login_method'), 'local');
         $applications = $resetUser->applications()->where('enabled', true)->get();
 
         return $applications->count() === 1

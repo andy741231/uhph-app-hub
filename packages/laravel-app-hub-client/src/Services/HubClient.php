@@ -58,6 +58,7 @@ class HubClient
             'application' => ['required', Rule::in([config('hub.application_key')])],
             'role' => ['required', Rule::in(config('hub.roles', []))],
             'application_count' => ['required', 'integer', 'min:1'],
+            'login_mode' => ['required', Rule::in(['sso', 'local', 'hybrid'])],
             'logout_url' => ['required', 'url', 'max:2048'],
             'actor_token' => ['required', 'string', 'max:2048'],
         ]);
@@ -112,7 +113,7 @@ class HubClient
         abort_unless(is_array($payload), 502);
         $validated = Validator::make($payload, [
             'application' => ['required', Rule::in([config('hub.application_key')])],
-            'users' => ['required', 'array', 'max:5000'],
+            'users' => ['present', 'array', 'max:5000'],
             'users.*.subject' => ['required', 'uuid'],
             'users.*.email' => ['required', 'email', 'max:255'],
             'users.*.name' => ['required', 'string', 'max:255'],

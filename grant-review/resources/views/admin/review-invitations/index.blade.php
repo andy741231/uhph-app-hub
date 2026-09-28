@@ -6,7 +6,7 @@
     <div>
         <p class="text-sm font-semibold uppercase tracking-wider text-uh-red">Review oversight</p>
         <h1 class="text-2xl font-bold text-uh-fg mt-1">COI invitations</h1>
-        <p class="text-sm text-gray-500 mt-1">Invite reviewers to declare conflicts of interest for a round before assigning proposals.</p>
+        <p class="text-sm text-gray-500 mt-1">Invite reviewers to declare conflicts of interest for a cycle before assigning proposals.</p>
     </div>
     <a href="{{ route('admin.conflicts.index', $roundId ? ['round_id' => $roundId] : []) }}" class="btn-secondary">
         <x-heroicon-o-clipboard-document-check class="w-4 h-4 mr-1.5" />
@@ -21,9 +21,9 @@
         @csrf
         <div class="grid grid-cols-1 md:grid-cols-[16rem_1fr] gap-3 items-end mb-4">
             <div>
-                <label for="invite-round" class="label">Round</label>
+                <label for="invite-round" class="label">Cycle</label>
                 <select id="invite-round" name="round_id" class="input mt-1.5" required data-round-select>
-                    <option value="">Select a round…</option>
+                    <option value="">Select a cycle…</option>
                     @foreach ($rounds as $round)
                         <option value="{{ $round->id }}" @selected($roundId === $round->id)>{{ $round->name }}</option>
                     @endforeach
@@ -55,7 +55,7 @@
             @endif
         </fieldset>
         <div class="mt-4 flex items-center justify-between gap-3">
-            <p class="text-xs text-gray-500">Reviewers with an active invitation for the round will receive the email again.</p>
+            <p class="text-xs text-gray-500">Reviewers with an active invitation for the cycle will receive the email again.</p>
             <button type="submit" class="btn-primary shrink-0" @disabled($eligibleReviewers->isEmpty() || $rounds->isEmpty())>
                 <x-heroicon-o-paper-airplane class="w-4 h-4 mr-1.5" />
                 <span data-send-label>Send invitation</span>
@@ -91,9 +91,9 @@
 <div class="card overflow-hidden">
     <form method="GET" action="{{ route('admin.review-invitations.index') }}" class="px-4 py-3 border-b border-uh-border grid grid-cols-1 md:grid-cols-[14rem_14rem_auto] gap-3 items-end bg-uh-muted/40">
         <div>
-            <label for="invitation-round" class="label">Round</label>
+            <label for="invitation-round" class="label">Cycle</label>
             <select id="invitation-round" name="round_id" class="input mt-1" onchange="this.form.submit()">
-                <option value="">All rounds</option>
+                <option value="">All cycles</option>
                 @foreach ($rounds as $round)
                     <option value="{{ $round->id }}" @selected($roundId === $round->id)>{{ $round->name }}</option>
                 @endforeach
@@ -120,7 +120,7 @@
             <thead>
                 <tr>
                     <th>Reviewer</th>
-                    <th>Round</th>
+                    <th>Cycle</th>
                     <th>Invited</th>
                     <th>Notified</th>
                     <th>Status</th>
@@ -266,7 +266,7 @@
             });
 
             if (alreadyInvited.length > 0 && ! window.confirm(
-                alreadyInvited.length + ' of the selected reviewer(s) already have an active COI invitation for this round. ' +
+                alreadyInvited.length + ' of the selected reviewer(s) already have an active COI invitation for this cycle. ' +
                 'Sending will re-send the invitation email. Continue?'
             )) {
                 event.preventDefault();

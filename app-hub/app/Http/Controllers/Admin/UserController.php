@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Application;
 use App\Models\User;
+use App\Support\LoginMode;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -24,7 +25,12 @@ class UserController extends Controller
 
     public function create(): View
     {
-        return view('admin.users.create');
+        $mode = LoginMode::current();
+
+        return view('admin.users.create', [
+            'ssoEnabled' => $mode->allowsSso(),
+            'localEnabled' => $mode->allowsLocal(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -32,10 +38,11 @@ class UserController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'confirmed', Password::min(8)->letters()->numbers()],
+            'password' => ['nullable', 'confirmed', Password::min(8)->letters()->numbers()],
             'status' => ['required', Rule::in([User::STATUS_ACTIVE, User::STATUS_DISABLED])],
             'is_admin' => ['nullable', 'boolean'],
         ]);
+        $data['password'] = filled($data['password'] ?? null) ? $data['password'] : null;
 
         User::create([
             ...$data,
@@ -48,9 +55,13 @@ class UserController extends Controller
 
     public function edit(User $user): View
     {
+        $mode = LoginMode::current();
+
         return view('admin.users.edit', [
             'managedUser' => $user->load('applications'),
             'applications' => Application::query()->orderBy('sort_order')->orderBy('name')->get(),
+            'ssoEnabled' => $mode->allowsSso(),
+            'localEnabled' => $mode->allowsLocal(),
         ]);
     }
 
@@ -62,8 +73,12 @@ class UserController extends Controller
             'password' => ['nullable', 'confirmed', Password::min(8)->letters()->numbers()],
             'status' => ['required', Rule::in([User::STATUS_ACTIVE, User::STATUS_DISABLED])],
             'is_admin' => ['nullable', 'boolean'],
+            'external_subject' => ['nullable', 'string', 'max:255', Rule::unique('users', 'external_subject')->ignore($user)],
         ]);
         $isAdmin = $request->boolean('is_admin');
+        $data['external_subject'] = filled($data['external_subject'] ?? null)
+            ? trim($data['external_subject'])
+            : null;
 
         if ($request->user()->is($user) && ($data['status'] !== User::STATUS_ACTIVE || ! $isAdmin)) {
             throw ValidationException::withMessages([

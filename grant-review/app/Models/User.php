@@ -129,6 +129,11 @@ class User extends Authenticatable
         return $this->hasMany(ConflictOfInterestDeclaration::class, 'reviewer_id');
     }
 
+    public function confidentialityAgreements(): HasMany
+    {
+        return $this->hasMany(ConfidentialityAgreement::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';

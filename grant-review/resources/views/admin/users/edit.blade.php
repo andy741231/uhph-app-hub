@@ -4,7 +4,7 @@
 @section('content')
 <div class="mb-6">
     <h1 class="text-2xl font-bold text-uh-fg">Edit User</h1>
-    <p class="text-sm text-gray-500 mt-1">{{ config('hub.enabled') ? 'Update the Pilot Central role, profile, and round invitations. Identity status remains managed by UHPH App Hub.' : 'Update profile, role, status, and round invitations' }}</p>
+    <p class="text-sm text-gray-500 mt-1">{{ config('hub.enabled') ? 'Update the Pilot Central role, profile, and cycle invitations. Identity status remains managed by UHPH App Hub.' : 'Update profile, role, status, and cycle invitations' }}</p>
 </div>
 
 <div class="card p-6 max-w-2xl">
@@ -75,7 +75,7 @@
         @endif
 
         <div>
-            <span class="label">Round Invitations</span>
+            <span class="label">Cycle Invitations</span>
             <div class="max-h-40 overflow-y-auto border border-uh-border rounded-md p-3 space-y-2">
                 @forelse ($rounds as $round)
                     <label class="flex items-center gap-2 text-sm cursor-pointer">
@@ -88,7 +88,7 @@
                         @endif
                     </label>
                 @empty
-                    <p class="text-sm text-gray-400">No rounds available.</p>
+                    <p class="text-sm text-gray-400">No cycles available.</p>
                 @endforelse
             </div>
         </div>

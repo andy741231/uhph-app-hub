@@ -12,6 +12,13 @@
         @error('key')<p class="field-error">{{ $message }}</p>@enderror
     </div>
     <div class="field field-full">
+        <label class="label" for="invitation_message">Invitation message</label>
+        <textarea class="input" id="invitation_message" name="invitation_message" rows="3" maxlength="1000" @error('invitation_message') aria-invalid="true" @enderror>{{ old('invitation_message', $application->invitation_message ?? '') }}</textarea>
+        <div id="invitation-editor" data-invitation-editor></div>
+        <p class="hint">Optional app-specific text included in new-user invitation emails. Rich formatting (bold, italic, links, lists) is supported; up to 1,000 characters including markup.</p>
+        @error('invitation_message')<p class="field-error">{{ $message }}</p>@enderror
+    </div>
+    <div class="field field-full">
         <label class="label" for="path">Application path</label>
         <input class="input" id="path" name="path" value="{{ old('path', $application->path ?? '') }}" required placeholder="/apps/grant-review" @error('path') aria-invalid="true" @enderror>
         <p class="hint">Must be an internal path beginning with /apps/.</p>
@@ -47,3 +54,45 @@
         @error('enabled')<p class="field-error">{{ $message }}</p>@enderror
     </div>
 </div>
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@toast-ui/editor@3.2.2/dist/toastui-editor.css" integrity="sha384-iONCORmrrRFYjYipi1NS4bgFEpQ8vCnQSTma1tan96M0nM1EZOWsRoW5sy3Q/hEl" crossorigin="anonymous">
+<style>
+    .toastui-editor-defaultUI { border-color: #aeb2b4; border-radius: 8px; font-family: inherit; }
+    .toastui-editor-defaultUI-toolbar { border-radius: 8px 8px 0 0; }
+    .toastui-editor-contents { font-family: inherit; font-size: 15px; }
+    @error('invitation_message')
+    .toastui-editor-defaultUI { border-color: var(--red); }
+    @enderror
+</style>
+@endpush
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/@toast-ui/editor@3.2.2/dist/toastui-editor.js" integrity="sha384-eZofczSR5bdafMBF3vhYYKhz1AToDffTgjDAYYHOf49gKXTkavAtTWBhKAILUIiR" crossorigin="anonymous"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var field = document.getElementById('invitation_message');
+        var host = document.querySelector('[data-invitation-editor]');
+        if (!field || !host || typeof toastui === 'undefined' || !toastui.Editor) {
+            return;
+        }
+        var editor = new toastui.Editor({
+            el: host,
+            height: '220px',
+            initialEditType: 'wysiwyg',
+            hideModeSwitch: true,
+            usageStatistics: false,
+            toolbarItems: [['bold', 'italic'], ['ul', 'ol'], ['link'], ['quote']],
+            initialValue: field.value,
+            events: {
+                change: function () {
+                    field.value = editor.getMarkdown();
+                },
+            },
+        });
+        field.value = editor.getMarkdown();
+        field.style.display = 'none';
+        field.closest('form').addEventListener('submit', function () {
+            field.value = editor.getMarkdown();
+        });
+    });
+</script>
+@endpush

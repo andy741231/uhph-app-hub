@@ -46,9 +46,11 @@ class LoginRequest extends FormRequest
 
         if (! Auth::attempt($credentials, $this->boolean('remember'))) {
             $user = User::where('email', $email)->first();
-            $reason = $user && ! $user->isActive() && Hash::check($credentials['password'], $user->password)
-                ? 'disabled'
-                : 'invalid_credentials';
+            $reason = match (true) {
+                $user && blank($user->password) => 'local_password_not_set',
+                $user && ! $user->isActive() && Hash::check($credentials['password'], $user->password) => 'disabled',
+                default => 'invalid_credentials',
+            };
 
             $this->audit($user, false, $reason);
             RateLimiter::hit($this->throttleKey());
@@ -69,6 +71,7 @@ class LoginRequest extends FormRequest
         LoginAudit::create([
             'user_id' => $user?->id,
             'email' => $this->string('email')->toString(),
+            'method' => 'password',
             'succeeded' => $succeeded,
             'failure_reason' => $reason,
             'ip_address' => $this->ip(),

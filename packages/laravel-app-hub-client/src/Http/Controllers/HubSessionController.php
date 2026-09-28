@@ -40,6 +40,7 @@ class HubSessionController
         $request->session()->regenerate();
         $request->session()->put(config('hub.authenticated_at_session_key', 'hub_authenticated_at'), now()->timestamp);
         $request->session()->put(config('hub.application_count_session_key', 'hub_application_count'), $identity['application_count']);
+        $request->session()->put(config('hub.login_mode_session_key', 'hub_login_mode'), $identity['login_mode']);
         $request->session()->put(config('hub.logout_url_session_key', 'hub_logout_url'), $identity['logout_url']);
         $request->session()->put(config('hub.actor_token_session_key', 'hub_actor_token'), $identity['actor_token']);
 

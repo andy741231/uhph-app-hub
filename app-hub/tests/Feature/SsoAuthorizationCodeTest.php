@@ -26,11 +26,11 @@ class SsoAuthorizationCodeTest extends TestCase
         $this->assertNull(session('login_application_name'));
         $this->get(route('login', ['application' => $application->key]))
             ->assertOk()
-            ->assertSee('Sign in to Grant Review');
+            ->assertSee('<h1>Grant Review</h1>', false);
         $this->get(route('login'))
             ->assertOk()
-            ->assertSee('Sign in to UHPH App Hub')
-            ->assertDontSee('Sign in to Grant Review');
+            ->assertSee('<h1>UHPH App Hub</h1>', false)
+            ->assertDontSee('<h1>Grant Review</h1>', false);
     }
 
     public function test_assigned_users_receive_a_short_lived_one_time_code(): void
@@ -106,6 +106,7 @@ class SsoAuthorizationCodeTest extends TestCase
                 'application' => $application->key,
                 'role' => 'reviewer',
                 'application_count' => 1,
+                'login_mode' => 'local',
             ]);
 
         $this->assertStringStartsWith(route('sso.logout'), $response->json('logout_url'));
@@ -157,11 +158,11 @@ class SsoAuthorizationCodeTest extends TestCase
         $this->assertNull(session('login_application_name'));
         $this->get(route('login', ['application' => $application->key]))
             ->assertOk()
-            ->assertSee('Sign in to Grant Review');
+            ->assertSee('<h1>Grant Review</h1>', false);
         $this->get(route('login'))
             ->assertOk()
-            ->assertSee('Sign in to UHPH App Hub')
-            ->assertDontSee('Sign in to Grant Review');
+            ->assertSee('<h1>UHPH App Hub</h1>', false)
+            ->assertDontSee('<h1>Grant Review</h1>', false);
         $this->post('/login', [
             'email' => $user->email,
             'password' => 'password',
@@ -287,6 +288,41 @@ class SsoAuthorizationCodeTest extends TestCase
         $this->exchange($application, 'test-client-secret', $code)
             ->assertBadRequest()
             ->assertJson(['error' => 'invalid_grant']);
+    }
+
+    public function test_authorization_code_for_a_now_disallowed_login_method_is_rejected(): void
+    {
+        $user = User::factory()->create();
+        $application = $this->application();
+        $this->assign($user, $application, 'reviewer');
+
+        $response = $this->actingAs($user)
+            ->withSession(['hub_login_method' => 'local'])
+            ->get($this->authorizationUrl($application));
+        parse_str((string) parse_url($response->headers->get('Location'), PHP_URL_QUERY), $query);
+        $this->assertSame('local', AuthorizationCode::firstOrFail()->login_method);
+
+        config()->set('hub.login_mode', 'sso');
+
+        $this->exchange($application, 'test-client-secret', $query['code'])
+            ->assertBadRequest()
+            ->assertJson(['error' => 'invalid_grant']);
+        $this->assertNull(AuthorizationCode::firstOrFail()->consumed_at);
+    }
+
+    public function test_authorization_code_without_a_login_method_remains_valid_after_a_mode_change(): void
+    {
+        $user = User::factory()->create();
+        $application = $this->application();
+        $this->assign($user, $application, 'reviewer');
+        $code = $this->issueCode($user, $application);
+        $this->assertNull(AuthorizationCode::firstOrFail()->login_method);
+
+        config()->set('hub.login_mode', 'sso');
+
+        $this->exchange($application, 'test-client-secret', $code)
+            ->assertOk()
+            ->assertJson(['token_type' => 'hub_identity']);
     }
 
     public function test_administrators_can_rotate_client_credentials(): void

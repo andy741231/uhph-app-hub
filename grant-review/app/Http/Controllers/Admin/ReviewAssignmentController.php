@@ -97,7 +97,7 @@ class ReviewAssignmentController extends Controller
 
                 throw ValidationException::withMessages([
                     'reviewer_ids' => "{$names} ha".($uninvited->count() === 1 ? 's' : 've')
-                        .' not been invited to complete a COI declaration for this round. Send a COI invitation first (COI invitations).',
+                        .' not been invited to complete a COI declaration for this cycle. Send a COI invitation first (COI invitations).',
                 ]);
             }
         }

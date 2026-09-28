@@ -16,6 +16,7 @@ return [
     'roles' => ['admin', 'submitter', 'reviewer'],
     'verify_tls' => env('HUB_VERIFY_TLS', true),
     'session_revalidation_minutes' => (int) env('HUB_SESSION_REVALIDATION_MINUTES', 15),
+    'login_mode_session_key' => 'hub_login_mode',
     'emergency_login' => [
         'enabled' => env('EMERGENCY_LOGIN_ENABLED', false),
         'allowed_ips' => array_values(array_filter(array_map(

@@ -164,7 +164,7 @@ class SubmissionController extends Controller
         if ($existing) {
             return redirect()
                 ->route('submitter.submissions.show', $existing)
-                ->with('status', 'You already have a submission for this round.');
+                ->with('status', 'You already have a submission for this cycle.');
         }
 
         $path = $this->files->store(

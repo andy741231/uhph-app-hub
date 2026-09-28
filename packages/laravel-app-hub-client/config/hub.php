@@ -22,6 +22,7 @@ return [
     'state_session_key' => 'hub_sso_state_hash',
     'authenticated_at_session_key' => 'hub_authenticated_at',
     'application_count_session_key' => 'hub_application_count',
+    'login_mode_session_key' => 'hub_login_mode',
     'logout_url_session_key' => 'hub_logout_url',
     'actor_token_session_key' => 'hub_actor_token',
     'emergency_authenticated_session_key' => 'emergency_authenticated',

@@ -39,7 +39,7 @@
                    class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150
                           {{ request()->routeIs('admin.rounds.*') ? 'bg-white/20 text-white font-semibold' : 'text-white/85 hover:text-white hover:bg-white/10' }}">
                     <x-heroicon-o-calendar class="w-5 h-5" />
-                    Rounds
+                    Cycles
                 </a>
                 <a href="{{ route('admin.users.index') }}"
                    class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150
@@ -80,6 +80,12 @@
                           {{ request()->routeIs('settings.*') ? 'bg-white/20 text-white font-semibold' : 'text-white/85 hover:text-white hover:bg-white/10' }}">
                     <x-heroicon-o-cog-6-tooth class="w-5 h-5" />
                     Settings
+                </a>
+                <a href="{{ route('admin.workflow') }}"
+                   class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-150
+                          {{ request()->routeIs('admin.workflow') ? 'bg-white/20 text-white font-semibold' : 'text-white/85 hover:text-white hover:bg-white/10' }}">
+                    <x-heroicon-o-map class="w-5 h-5" />
+                    Workflow Chart
                 </a>
             </nav>
 
@@ -131,7 +137,7 @@
             {{-- Mobile nav --}}
             <nav class="md:hidden bg-white border-b border-uh-border px-4 py-2 flex gap-4 text-sm" aria-label="Mobile navigation">
                 <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Dashboard</a>
-                <a href="{{ route('admin.rounds.index') }}" class="{{ request()->routeIs('admin.rounds.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Rounds</a>
+                <a href="{{ route('admin.rounds.index') }}" class="{{ request()->routeIs('admin.rounds.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Cycles</a>
                 <a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Users</a>
                 <a href="{{ route('admin.review-assignments.index') }}" class="{{ request()->routeIs('admin.review-assignments.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">Assignments</a>
                 <a href="{{ route('admin.review-invitations.index') }}" class="{{ request()->routeIs('admin.review-invitations.*') ? 'text-uh-red font-semibold' : 'text-gray-600' }}">COI invites</a>

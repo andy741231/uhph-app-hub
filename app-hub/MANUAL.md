@@ -48,6 +48,8 @@ If the database has been seeded, a test account exists:
 
 This account is intended for local development only.
 
+Every active user may also have an optional local password for `/apps/login` when the login mode allows it (see §10). `users.password = NULL` means the account has no local password; in modes that offer CougarNet those users sign in with CougarNet only. Users can set one later from the **Set up or reset password** link on the login page, and admins can set one on the user edit page. Existing password hashes are preserved as-is — only newly provisioned accounts default to NULL.
+
 For a safe, real administrator account, run the interactive command so the password is not exposed in shell history:
 
 ```bash
@@ -65,6 +67,7 @@ composer exec --working-dir="E:/apps/app-hub" -- php artisan hub:create-admin
 | Field | Purpose |
 | --- | --- |
 | `name` | Display name on the dashboard. |
+| `invitation_message` | Optional intro added to new-user invitation emails for this app, edited with a rich-text editor (bold, italic, links, lists — stored as Markdown, up to 1,000 characters including markup). |
 | `key` | URL-safe identifier, e.g. `grant-review`. Must match `^[a-z0-9]+(?:-[a-z0-9]+)*$`. |
 | `path` | Physical path under `/apps`, e.g. `/apps/grant-review`. Must not contain `.` or `..` segments. |
 | `callback_url` | Required only for SSO. Must match the path pattern above and must be saved before credentials can be generated. |
@@ -117,7 +120,15 @@ Rules:
 - `application` must match an existing and enabled application `key`.
 - `role` must be one of the roles defined for that application.
 
-New users are created with a random password and are sent a **Set password** email. Existing users keep their password and simply get the new application assignment.
+New users are created without a local password (`password = NULL`) and are sent a single invitation email naming every application assigned in the import. Existing users keep their credentials and simply get the new application assignment.
+
+Invitation emails are app-aware:
+
+- **One assigned app:** the subject is `<App name> — set your UHPH App Hub password` in `local` mode (or `<App name> — your account is ready` in `sso`/`hybrid`) and the body names the app. Each app's optional `invitation_message` is included as an intro line.
+- **Multiple assigned apps:** the subject is `Set your UHPH App Hub password` (or `Your UHPH App Hub account is ready` in `sso`/`hybrid`), the body lists the app names in alphabetical order, and each custom message is prefixed with `<App name>:`.
+- **Self-service setup/reset:** requests made from the login page have no application context and use the generic `Set up or reset your UHPH App Hub password` wording.
+
+In `sso` mode the invitation contains only the CougarNet sign-in action. In `hybrid` mode it leads with CougarNet and also offers an optional link to set up a local Hub password (7-day expiry); the invitee can later use the **Set up or reset password** link on `/apps/login` to create or replace a local password.
 
 ## 8. The mini-OAuth / one-time-code flow
 
@@ -135,7 +146,7 @@ UHPH App Hub uses a tiny OAuth2-style code flow. This lets a child application v
    - `state` must be at least 16 characters.
 
 2. UHPH App Hub validates the user is assigned to the application and the application is enabled.
-3. UHPH App Hub creates a single-use authorization code, valid for `HUB_AUTHORIZATION_CODE_TTL` seconds.
+3. UHPH App Hub creates a single-use authorization code, valid for `HUB_AUTHORIZATION_CODE_TTL` seconds. The code snapshots the Hub session's login method (`sso` or `local`, or null for sessions without a marker).
 4. It redirects the browser back to:
 
    ```
@@ -164,7 +175,8 @@ UHPH App Hub uses a tiny OAuth2-style code flow. This lets a child application v
        "email": "user@uh.edu",
        "name": "User Name",
        "application": "grant-review",
-       "role": "submitter"
+       "role": "submitter",
+       "login_mode": "hybrid"
    }
    ```
 
@@ -178,7 +190,7 @@ UHPH App Hub uses a tiny OAuth2-style code flow. This lets a child application v
 ### Security notes
 
 - HTTPS is required in production for `/sso/authorize` and `/sso/token`.
-- Each authorization code can be used exactly once and expires quickly.
+- Each authorization code can be used exactly once and expires quickly. Token exchange also rejects a code whose snapshotted `login_method` is disallowed by a later `HUB_LOGIN_MODE` change; codes without a snapshotted method (legacy sessions) remain valid until expiration.
 - The `redirect_uri` / `callback_url` must match exactly and may not contain path-traversal segments.
 
 ## 9. Adding a new Laravel or other application under `/apps`
@@ -207,16 +219,27 @@ A web developer can add a new application without touching UHPH App Hub code. Th
 
 The `app-hub` directory is hidden from the web. New applications must be siblings of `app-hub` under `E:\apps\`, not inside it. Do not name a new directory `app-hub`.
 
-## 10. Implementing full SSO in the future
+## 10. Login modes (CougarNet and local passwords)
 
-The current flow is intentionally small. To move to a full enterprise SSO later (for example, SAML 2.0 or an OIDC provider), the usual path is:
+`HUB_LOGIN_MODE` controls which sign-in methods `/apps/login` offers:
 
-1. Keep the application registration in UHPH App Hub so launch and role management do not change.
-2. Replace or augment the current login page (`/apps/login`) with an external identity provider, storing the returned `external_subject` in the `users` table.
-3. Keep `public_id` as the stable identifier passed to child apps, so child apps do not need to change.
-4. Continue to enforce application and role assignments in UHPH App Hub after authentication.
+| Value | Sign-in methods | Invitations |
+| --- | --- | --- |
+| `sso` | CougarNet (Microsoft Entra ID) only | CougarNet sign-in instructions; no password token is created |
+| `local` | Hub-local password only | Set-password invitation with a one-time `/apps/set-password/{token}` link |
+| `hybrid` | CougarNet plus an optional local password | CougarNet instructions plus an optional local-password setup link (7-day expiry) |
 
-Because the child apps already receive a stable `subject` UUID, the underlying authentication source can be swapped without requiring every child app to change.
+Set `HUB_LOGIN_MODE` in `.env` together with `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, and `ENTRA_CLIENT_SECRET` (required for CougarNet), then run `php artisan config:clear`. When `HUB_LOGIN_MODE` is absent, the legacy `ENTRA_SSO_ENABLED` flag still applies: `true` behaves as `hybrid`, `false` as `local`.
+
+- In modes with CougarNet, `/apps/login` shows "Sign in with CougarNet", which runs an OIDC authorization-code flow against the tenant's v2.0 endpoints and returns to `/apps/auth/oidc/callback`. In `local` mode the `/apps/auth/oidc/*` routes are hidden (404); in `sso` mode `POST /apps/login`, `/apps/forgot-password`, and `/apps/set-password` are hidden (404).
+- The Entra `sub` claim is stored in `users.external_subject`. First sign-in links an existing account by **exact** email match — `@cougarnet.uh.edu` and `@central.uh.edu` are different addresses. If a sign-in fails with a link error, an admin can paste the subject from the failed `login_audits` entry into the **SSO subject** field on the user edit page.
+- Accounts stay invite-only: unknown UH accounts are denied until an admin imports or creates them.
+- In `hybrid`, `/apps/login` presents both choices: "Sign in with CougarNet" and a local password form. Every active user with a configured password may use either path; accounts created through imports or the managed-users API start with `password = NULL` and use CougarNet until they set one. The password column became nullable by migration — existing hashes were preserved untouched.
+- The **Set up or reset password** link on `/apps/login` (modes that allow local passwords) emails a one-time `/apps/set-password/{token}` link for active accounts. Its response is always the same generic confirmation, so it cannot reveal whether an address has an account, and disabled accounts can neither request nor redeem links.
+- New-user emails follow the mode table above. A single-app invitation uses the subject `<App name> — your account is ready` in `sso`/`hybrid` and `<App name> — set your UHPH App Hub password` in `local`. In `sso`/`hybrid`, the CougarNet sign-in link carries `?application=<key>` so the login page names the app; in `local`, the action is the one-time `/apps/set-password/{token}` link. Multi-app invitations use `Your UHPH App Hub account is ready` (or `Set your UHPH App Hub password` in `local`) and list every assigned app (each with its optional `invitation_message`, prefixed `<App name>:`).
+- Child applications are unaffected: they still receive the Hub `public_id` subject and go through `/apps/sso/authorize` in every mode. The identity response also reports `login_mode`; clients such as Grant Review store it in their session and adapt onboarding text and email previews after the next Hub authorization or revalidation — at most `HUB_SESSION_REVALIDATION_MINUTES` unless the user signs out and back in.
+- Each successful sign-in tags the Hub session with the method used (`sso` or `local`). If `HUB_LOGIN_MODE` later changes so that method is no longer allowed, the session is signed out on its next protected Hub request or child authorization and the user is asked to sign in again; sessions created before this feature carry no marker and stay valid until normal reauthentication.
+- To roll back to password-only sign-in, set `HUB_LOGIN_MODE=local` and clear the config cache; CougarNet sign-in is removed and local-password sign-in becomes the only Hub login method.
 
 ## 11. Common admin tasks
 

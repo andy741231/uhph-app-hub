@@ -1,12 +1,12 @@
 <x-mail::message>
-# Review submitted
+# Review Submitted
 
 A review has been submitted.
 
 <x-mail::panel>
 **Reviewer:** {{ $reviewer->full_name }}
 **Submission:** {{ $submission->title }}
-**Round:** {{ $submission->round->name }}
+**Cycle:** {{ $submission->round->name }}
 **Review score:** {{ $review->score }}
 </x-mail::panel>
 
@@ -15,6 +15,5 @@ View Submission
 </x-mail::button>
 
 Thanks,<br>
-**Pilot Central**<br>
 UH RCMI
 </x-mail::message>

@@ -31,11 +31,41 @@ class AdminManagementTest extends TestCase
         ]);
 
         $this->actingAs($admin)->get('/admin/users')->assertOk()->assertSee('Users');
-        $this->actingAs($admin)->get('/admin/users/create')->assertOk()->assertSee('Create user');
+        $this->actingAs($admin)->get('/admin/users/create')->assertOk()->assertSee('Create user')->assertSee('Password (optional)');
         $this->actingAs($admin)->get("/admin/users/{$admin->id}/edit")->assertOk()->assertSee('Application access');
         $this->actingAs($admin)->get('/admin/applications')->assertOk()->assertSee('Grant Review');
-        $this->actingAs($admin)->get('/admin/applications/create')->assertOk()->assertSee('Register application');
+        $this->actingAs($admin)->get('/admin/applications/create')->assertOk()->assertSee('Register application')->assertSee('Invitation message');
         $this->actingAs($admin)->get("/admin/applications/{$application->key}/edit")->assertOk()->assertSee('Supported roles');
+    }
+
+    public function test_user_form_password_hint_reflects_login_mode(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $managed = User::factory()->create();
+        $normalHint = 'Leave blank to create the account without a local password. The user can set one later from the Hub login page.';
+        $disabledHint = 'Local sign-in is currently disabled. A stored password becomes usable only after switching to local or hybrid mode.';
+
+        config()->set('hub.login_mode', 'sso');
+
+        $this->actingAs($admin)->get('/admin/users/create')
+            ->assertOk()
+            ->assertSee($disabledHint)
+            ->assertDontSee($normalHint);
+        $this->actingAs($admin)->get("/admin/users/{$managed->id}/edit")
+            ->assertOk()
+            ->assertSee($disabledHint)
+            ->assertDontSee($normalHint);
+
+        config()->set('hub.login_mode', 'local');
+
+        $this->actingAs($admin)->get('/admin/users/create')
+            ->assertOk()
+            ->assertSee($normalHint)
+            ->assertDontSee($disabledHint);
+        $this->actingAs($admin)->get("/admin/users/{$managed->id}/edit")
+            ->assertOk()
+            ->assertSee($normalHint)
+            ->assertDontSee($disabledHint);
     }
 
     public function test_administrator_can_create_a_user(): void
@@ -54,6 +84,20 @@ class AdminManagementTest extends TestCase
         $user = User::where('email', 'reviewer@example.edu')->firstOrFail();
         $this->assertTrue(Hash::check('abcd1234', $user->password));
         $this->assertFalse($user->is_admin);
+    }
+
+    public function test_administrator_can_create_a_user_without_a_password(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->post('/admin/users', [
+            'name' => 'CougarNet User',
+            'email' => 'cougarnet@example.edu',
+            'status' => User::STATUS_ACTIVE,
+            'is_admin' => false,
+        ])->assertRedirect(route('admin.users.index'));
+
+        $this->assertNull(User::where('email', 'cougarnet@example.edu')->firstOrFail()->password);
     }
 
     public function test_user_password_must_have_at_least_eight_characters(): void
@@ -81,15 +125,38 @@ class AdminManagementTest extends TestCase
             'key' => 'grant-review',
             'path' => '/apps/grant-review',
             'frontchannel_logout_path' => '/apps/grant-review/auth/hub/logout',
+            'invitation_message' => 'Complete your Pilot Central profile after signing in.',
             'roles' => 'admin, submitter, reviewer',
             'enabled' => true,
             'sort_order' => 10,
         ])->assertRedirect(route('admin.applications.index'));
 
         $application = Application::where('key', 'grant-review')->firstOrFail();
+        $this->assertSame('Complete your Pilot Central profile after signing in.', $application->invitation_message);
         $this->assertSame(['admin', 'submitter', 'reviewer'], $application->roles);
         $this->assertSame('/apps/grant-review/auth/hub/logout', $application->frontchannel_logout_path);
         $this->assertTrue($application->enabled);
+    }
+
+    public function test_application_form_loads_the_rich_text_invitation_editor(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $application = Application::create([
+            'key' => 'grant-review',
+            'name' => 'Grant Review',
+            'path' => '/apps/grant-review',
+            'roles' => ['reviewer'],
+        ]);
+
+        foreach (['/admin/applications/create', "/admin/applications/{$application->key}/edit"] as $url) {
+            $this->actingAs($admin)->get($url)
+                ->assertOk()
+                ->assertSee('toastui-editor.css')
+                ->assertSee('toastui-editor.js')
+                ->assertSee('data-invitation-editor', false)
+                ->assertSee('initialEditType', false)
+                ->assertSee('usageStatistics: false', false);
+        }
     }
 
     public function test_application_roles_in_use_cannot_be_removed(): void

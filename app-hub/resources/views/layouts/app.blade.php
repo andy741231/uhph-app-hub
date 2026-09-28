@@ -47,6 +47,7 @@
         .login-card { padding: 34px; }
         .eyebrow { margin: 0 0 9px; color: var(--red); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
         h1 { margin: 0; font-size: clamp(28px, 5vw, 38px); line-height: 1.12; letter-spacing: -.035em; }
+        .login-card h1 { margin-bottom: 28px; text-align: center; }
         .lede { margin: 12px 0 28px; color: var(--muted); line-height: 1.6; }
         .field { margin-bottom: 20px; }
         .label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 700; }
@@ -54,7 +55,7 @@
         .input:hover { border-color: var(--slate); }
         .input[aria-invalid="true"] { border-color: var(--red); }
         .field-error { margin: 7px 0 0; color: var(--error-text); font-size: 13px; }
-        .form-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 4px 0 24px; }
+        .form-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 4px 0 24px; }
         .check { display: inline-flex; align-items: center; gap: 9px; color: var(--muted); font-size: 14px; }
         .check input { width: 18px; height: 18px; accent-color: var(--red); }
         .button { min-height: 46px; display: inline-flex; align-items: center; justify-content: center; padding: 10px 18px; border: 0; border-radius: 8px; cursor: pointer; font-weight: 750; text-decoration: none; }
@@ -66,6 +67,13 @@
         .alert-success { color: var(--success-text); background: var(--success-bg); }
         .alert-error { color: var(--error-text); background: var(--error-bg); }
         .support { margin: 22px 0 0; color: var(--muted); text-align: center; font-size: 13px; line-height: 1.5; }
+        .auth-divider { display: flex; align-items: center; gap: 12px; margin: 24px 0 18px; color: var(--muted); font-size: 13px; }
+        .auth-divider::before, .auth-divider::after { content: ""; height: 1px; flex: 1; background: var(--line); }
+        .local-login-heading { margin: 0; text-align: center; font-size: 18px; }
+        .local-login-copy { margin: 8px 0 20px; color: var(--muted); text-align: center; font-size: 13px; line-height: 1.5; }
+        .local-login-form { margin-top: 0; }
+        .local-login-button { width: 100%; }
+        .password-help { min-height: 44px; display: inline-flex; align-items: center; font-size: 13px; }
         .page-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
         .page-heading p { margin: 8px 0 0; color: var(--muted); }
         .empty { padding: 56px 32px; text-align: center; }
@@ -153,6 +161,7 @@
             *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
         }
     </style>
+    @stack('styles')
 </head>
 <body>
 <div class="shell">
@@ -192,5 +201,6 @@
         @yield('content')
     </main>
 </div>
+@stack('scripts')
 </body>
 </html>

@@ -57,14 +57,17 @@ class ApplicationController extends Controller
     {
         $callback = trim((string) $request->input('callback_url'));
         $frontchannelLogout = trim((string) $request->input('frontchannel_logout_path'));
+        $invitationMessage = trim((string) $request->input('invitation_message'));
         $request->merge([
             'key' => Str::lower(trim((string) $request->input('key'))),
             'path' => rtrim(trim((string) $request->input('path')), '/'),
             'callback_url' => $callback === '' ? null : rtrim($callback, '/'),
             'frontchannel_logout_path' => $frontchannelLogout === '' ? null : rtrim($frontchannelLogout, '/'),
+            'invitation_message' => $invitationMessage === '' ? null : $invitationMessage,
         ]);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'invitation_message' => ['nullable', 'string', 'max:1000'],
             'key' => ['required', 'string', 'max:100', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('applications')->ignore($application)],
             'path' => ['required', 'string', 'max:2048', 'regex:#^/apps/[A-Za-z0-9_~-]+(?:/[A-Za-z0-9._~-]+)*$#', 'not_regex:#(?:^|/)\.{1,2}(?:/|$)#'],
             'callback_url' => ['nullable', 'string', 'max:2048', 'regex:#^/apps/[A-Za-z0-9_~-]+(?:/[A-Za-z0-9._~-]+)*$#', 'not_regex:#(?:^|/)\.{1,2}(?:/|$)#'],

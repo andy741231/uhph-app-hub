@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\ConflictOfInterestController as AdminConflictOfInterestController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DecisionController;
+use App\Http\Controllers\Admin\EmailPreviewController;
 use App\Http\Controllers\Admin\ReviewAssignmentController;
 use App\Http\Controllers\Admin\ReviewInvitationController;
 use App\Http\Controllers\Admin\ReviewResultsController;
@@ -36,7 +37,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('users/{user}/revoke', [UserController::class, 'revoke'])->name('users.revoke');
     Route::post('users/{user}/restore', [UserController::class, 'restore'])->name('users.restore');
     Route::delete('users/{user}', [UserController::class, 'destroy'])->middleware('hub-sso-disabled')->name('users.destroy');
-    Route::post('users/import', [UserController::class, 'import'])->middleware('hub-sso-disabled')->name('users.import');
+    Route::post('users/import', [UserController::class, 'import'])->name('users.import');
+    Route::get('users/import/template', [UserController::class, 'importTemplate'])->name('users.import.template');
     Route::post('users/{user}/resend-invite', [UserController::class, 'resendInvite'])->middleware('hub-sso-disabled')->name('users.resend-invite');
     Route::get('review-assignments', [ReviewAssignmentController::class, 'index'])->name('review-assignments.index');
     Route::put('review-assignments/{submission}', [ReviewAssignmentController::class, 'update'])->name('review-assignments.update');
@@ -53,6 +55,9 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('review-results/{submission}/reviews/{review}/timeline', [ReviewResultsController::class, 'reviewTimeline'])->name('review-results.timeline')->whereNumber(['submission', 'review']);
     Route::get('review-results/{submission}', [ReviewResultsController::class, 'show'])->name('review-results.show')->whereNumber('submission');
     Route::post('decisions/{submission}', [DecisionController::class, 'store'])->name('decisions.store');
+    Route::view('workflow', 'admin.workflow')->name('workflow');
+    Route::get('email-previews/{key}', [EmailPreviewController::class, 'show'])->name('email-preview');
+    Route::get('email-previews/{key}/raw', [EmailPreviewController::class, 'raw'])->name('email-preview.raw');
 });
 
 // Settings (all authenticated users — admin sees global settings too)

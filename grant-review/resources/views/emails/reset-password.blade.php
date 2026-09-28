@@ -20,6 +20,5 @@ If the button above doesn't work, copy and paste this link into your browser:
 </x-mail::panel>
 
 Thanks,<br>
-**Pilot Central**<br>
 UH RCMI
 </x-mail::message>

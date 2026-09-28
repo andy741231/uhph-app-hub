@@ -1,8 +1,8 @@
 <x-mail::message>
 @if ($user->role === 'reviewer')
-# New reviewer profile completed
+# New Reviewer Profile Completed
 @else
-# New user profile completed
+# New User Profile Completed
 @endif
 
 @if ($user->role === 'reviewer')
@@ -27,6 +27,5 @@ View Users
 </x-mail::button>
 
 Thanks,<br>
-**Pilot Central**<br>
 UH RCMI
 </x-mail::message>

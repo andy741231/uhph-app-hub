@@ -1,9 +1,9 @@
 @extends('layouts.admin')
-@section('title', 'Edit Round')
+@section('title', 'Edit Cycle')
 
 @section('content')
 <div class="mb-6">
-    <h1 class="text-2xl font-bold text-uh-fg">Edit Round</h1>
+    <h1 class="text-2xl font-bold text-uh-fg">Edit Cycle</h1>
     <p class="text-sm text-gray-500 mt-1">{{ $round->name }}</p>
 </div>
 
@@ -12,7 +12,7 @@
         @csrf @method('PUT')
         <div class="space-y-5">
             <div>
-                <label for="name" class="label">Round Name</label>
+                <label for="name" class="label">Cycle Name</label>
                 <input type="text" id="name" name="name" value="{{ old('name', $round->name) }}" required
                     class="input">
             </div>

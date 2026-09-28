@@ -12,6 +12,8 @@ class LoginAudit extends Model
     protected $fillable = [
         'user_id',
         'email',
+        'external_subject',
+        'method',
         'succeeded',
         'failure_reason',
         'ip_address',

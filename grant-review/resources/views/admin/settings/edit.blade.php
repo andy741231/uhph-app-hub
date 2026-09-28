@@ -63,7 +63,7 @@
                         ],
                         'notify_reviewer_screening_invited' => [
                             'label' => 'COI invitation',
-                            'desc' => 'When you are invited to declare conflicts of interest for a review round.',
+                            'desc' => 'When you are invited to declare conflicts of interest for a review cycle.',
                             'roles' => ['reviewer'],
                         ],
                         'notify_submission_confirmation' => [

@@ -97,7 +97,7 @@
                 @forelse ($users as $user)
                     <tr>
                         <td class="font-medium text-uh-fg">
-                            <a href="{{ route('admin.users.show', $user) }}" class="hover:text-uh-red hover:underline">{{ $user->full_name }}</a>
+                            <a href="{{ route('admin.users.show', $user) }}" class="hover:text-uh-red hover:underline">{{ $user->full_name !== '' ? $user->full_name : $user->email }}</a>
                         </td>
                         <td class="text-gray-600">{{ $user->email }}</td>
                         <td>

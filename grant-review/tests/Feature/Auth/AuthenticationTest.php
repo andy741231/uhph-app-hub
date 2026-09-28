@@ -122,6 +122,7 @@ class AuthenticationTest extends TestCase
         $this->assertNull($user->password_hash);
         $this->assertNull($user->invite_token_hash);
         $this->assertSame(1, session('hub_application_count'));
+        $this->assertSame('hybrid', session('hub_login_mode'));
         $this->assertSame('https://hub.test/apps/sso/logout?application=grant-review&signature=test', session('hub_logout_url'));
         $this->assertSame('encrypted-actor-token', session('hub_actor_token'));
     }
@@ -231,6 +232,20 @@ class AuthenticationTest extends TestCase
         $state = Str::random(64);
         Http::fake([
             'https://hub.test/apps/sso/token' => Http::response($this->identity(['role' => 'owner'])),
+        ]);
+
+        $this->withSession(['hub_sso_state_hash' => hash('sha256', $state)])
+            ->get('/auth/hub/callback?'.http_build_query(['code' => 'valid-code', 'state' => $state]))
+            ->assertStatus(502);
+
+        $this->assertGuest();
+    }
+
+    public function test_callback_rejects_an_unknown_hub_login_mode(): void
+    {
+        $state = Str::random(64);
+        Http::fake([
+            'https://hub.test/apps/sso/token' => Http::response($this->identity(['login_mode' => 'oauth'])),
         ]);
 
         $this->withSession(['hub_sso_state_hash' => hash('sha256', $state)])
@@ -553,6 +568,7 @@ class AuthenticationTest extends TestCase
             'application' => 'grant-review',
             'role' => 'reviewer',
             'application_count' => 1,
+            'login_mode' => 'hybrid',
             'logout_url' => 'https://hub.test/apps/sso/logout?application=grant-review&signature=test',
             'actor_token' => 'encrypted-actor-token',
         ], $overrides);

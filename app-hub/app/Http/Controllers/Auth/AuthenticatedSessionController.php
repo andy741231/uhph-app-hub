@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\Sso\GlobalLogout;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\Application;
+use App\Services\EntraOidcClient;
+use App\Support\LoginMode;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -13,15 +15,25 @@ use Illuminate\Support\Facades\Auth;
 
 class AuthenticatedSessionController extends Controller
 {
-    public function create(Request $request): Response
+    public function create(Request $request, EntraOidcClient $entra): Response
     {
         $application = Application::query()
             ->where('key', $request->string('application')->toString())
             ->where('enabled', true)
             ->first();
 
+        $mode = LoginMode::current();
+        $ssoEnabled = $mode->allowsSso() && $entra->configured();
+        $localEnabled = $mode->allowsLocal();
+
+        abort_unless($ssoEnabled || $localEnabled, 503);
+
         return response()
-            ->view('auth.login', ['loginApplication' => $application])
+            ->view('auth.login', [
+                'loginApplication' => $application,
+                'ssoEnabled' => $ssoEnabled,
+                'localEnabled' => $localEnabled,
+            ])
             ->header('Cache-Control', 'no-store');
     }
 
@@ -29,6 +41,7 @@ class AuthenticatedSessionController extends Controller
     {
         $request->authenticate();
         $request->session()->regenerate();
+        $request->session()->put(config('hub.login_method_session_key', 'hub_login_method'), 'local');
 
         return redirect()->intended(route('dashboard'));
     }

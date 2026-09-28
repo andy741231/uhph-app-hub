@@ -218,6 +218,8 @@ class ReviewInvitationTest extends TestCase
 
         $this->actingAs($reviewer)
             ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'confidentiality_acknowledged' => '1',
                 'conflicts' => [
                     $submission->id => ['submission_id' => $submission->id, 'has_conflict' => false, 'description' => ''],
                 ],

@@ -1,5 +1,5 @@
 <x-mail::message>
-# Conflict of interest declaration submitted
+# Conflict of Interest Declaration Submitted
 
 Reviewer **{{ $reviewer->full_name }}** ({{ $reviewer->email }}) has submitted a conflict of interest declaration for **{{ $declaration->round->name }}**.
 
@@ -32,7 +32,7 @@ Description: {{ $response->description }}
 @if ($conflicts->isNotEmpty())
 **{{ $conflicts->count() }}** potential conflict{{ $conflicts->count() === 1 ? '' : 's' }} reported and **{{ $clear->count() }}** proposal{{ $clear->count() === 1 ? '' : 's' }} declared with no conflict. Reported conflicts are advisory — the assignment decision remains with the administrator.
 @else
-The reviewer reported **no potential conflicts** for this round.
+The reviewer reported **no potential conflicts** for this cycle.
 @endif
 @elseif ($declaration->entries->isNotEmpty())
 The reviewer declared **{{ $declaration->entries->count() }}** conflict(s):
@@ -52,7 +52,7 @@ Description: {{ $entry->description }}
 @endforeach
 </x-mail::panel>
 @else
-The reviewer declared **no conflicts of interest** for this round.
+The reviewer declared **no conflicts of interest** for this cycle.
 @endif
 
 Declaration submitted at {{ $declaration->declared_at->format('M j, Y g:i A') }}.
@@ -62,6 +62,5 @@ Review Declarations
 </x-mail::button>
 
 Thanks,<br>
-**Pilot Central**<br>
 UH RCMI
 </x-mail::message>

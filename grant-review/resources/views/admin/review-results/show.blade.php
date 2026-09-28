@@ -119,7 +119,7 @@
                     <span class="font-medium text-uh-fg">{{ $submitter->department ?? '—' }}</span>
                 </div>
                 <div class="flex items-center justify-between py-2 border-b border-uh-border">
-                    <span class="text-gray-500">Round</span>
+                    <span class="text-gray-500">Cycle</span>
                     <span class="font-medium text-uh-fg">{{ $submission->round->name }}</span>
                 </div>
                 <div class="flex items-center justify-between py-2">

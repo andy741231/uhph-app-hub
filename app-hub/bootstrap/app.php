@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'active' => \App\Http\Middleware\EnsureUserIsActive::class,
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'login-mode' => \App\Http\Middleware\EnsureLoginModeAllows::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -11,14 +11,14 @@
     </a>
     <p class="text-sm font-semibold text-uh-red mb-1">Submitter workspace</p>
     <h1 class="text-2xl sm:text-3xl font-bold text-uh-fg">Edit submission</h1>
-    <p class="text-gray-600 mt-1 max-w-2xl">Update your proposal details or replace the PDF. Changes can be made until the round deadline.</p>
+    <p class="text-gray-600 mt-1 max-w-2xl">Update your proposal details or replace the PDF. Changes can be made until the cycle deadline.</p>
 </div>
 
 <div class="max-w-2xl">
     <div class="card p-6">
-        {{-- Display the round (read-only) --}}
+        {{-- Display the cycle (read-only) --}}
         <div class="mb-5 pb-4 border-b border-uh-border">
-            <p class="text-xs text-gray-500 uppercase tracking-wide">Funding round</p>
+            <p class="text-xs text-gray-500 uppercase tracking-wide">Funding cycle</p>
             <p class="text-lg font-semibold text-uh-fg mt-1">{{ $submission->round->name }}</p>
             <p class="text-sm text-gray-500 mt-0.5">
                 Deadline: {{ $submission->round->deadline_at->format('M j, Y g:i A') }}

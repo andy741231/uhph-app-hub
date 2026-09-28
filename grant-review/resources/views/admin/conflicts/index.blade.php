@@ -6,7 +6,7 @@
     <div>
         <p class="text-sm font-semibold uppercase tracking-wider text-uh-red">Review oversight</p>
         <h1 class="text-2xl font-bold text-uh-fg mt-1">Conflicts of interest</h1>
-        <p class="text-sm text-gray-500 mt-1">COI invitations, declarations, and proposal-specific conflicts across all rounds.</p>
+        <p class="text-sm text-gray-500 mt-1">COI invitations, declarations, and proposal-specific conflicts across all cycles.</p>
     </div>
 </div>
 
@@ -47,9 +47,9 @@
         <input id="coi-search" type="search" name="q" value="{{ $search }}" class="input mt-1.5" placeholder="Reviewer, email, or proposal">
     </div>
     <div>
-        <label for="coi-round" class="label">Round</label>
+        <label for="coi-round" class="label">Cycle</label>
         <select id="coi-round" name="round_id" class="input mt-1.5">
-            <option value="">All rounds</option>
+            <option value="">All cycles</option>
             @foreach ($rounds as $round)
                 <option value="{{ $round->id }}" @selected($roundId === $round->id)>{{ $round->name }}</option>
             @endforeach
@@ -79,7 +79,7 @@
             <thead>
                 <tr>
                     <th>Reviewer</th>
-                    <th>Round</th>
+                    <th>Cycle</th>
                     <th>Date</th>
                     <th>Status</th>
                     <th>COI details</th>
@@ -141,7 +141,7 @@
                                     <p class="text-xs text-gray-500 mt-2">{{ $clearCount }} other proposal{{ $clearCount === 1 ? '' : 's' }} screened with no conflict reported.</p>
                                 @endif
                             @else
-                                <span class="text-sm text-gray-500">Reviewer reported no potential conflicts for this round.</span>
+                                <span class="text-sm text-gray-500">Reviewer reported no potential conflicts for this cycle.</span>
                             @endif
                         </td>
                         <td class="text-right whitespace-nowrap">

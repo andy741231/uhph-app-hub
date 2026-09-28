@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Sso;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuthorizationCode;
+use App\Support\LoginMode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -51,7 +52,9 @@ class TokenController extends Controller
                 || $authorizationCode->consumed_at
                 || $authorizationCode->expires_at->isPast()
                 || ! hash_equals($authorizationCode->redirect_uri, $input['redirect_uri'])
-                || ! hash_equals((string) $application->callback_url, $input['redirect_uri'])) {
+                || ! hash_equals((string) $application->callback_url, $input['redirect_uri'])
+                || (is_string($authorizationCode->login_method)
+                    && ! LoginMode::current()->allows($authorizationCode->login_method))) {
                 return null;
             }
 
@@ -80,6 +83,7 @@ class TokenController extends Controller
                 'application' => $application->key,
                 'role' => $assignment->pivot->role,
                 'application_count' => $assignments->count(),
+                'login_mode' => LoginMode::current()->value,
                 'logout_url' => URL::signedRoute('sso.logout', ['application' => $application->key]),
                 'actor_token' => $actorTokens->issue($user, $application),
             ];

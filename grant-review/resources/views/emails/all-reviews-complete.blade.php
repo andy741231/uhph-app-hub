@@ -1,5 +1,5 @@
 <x-mail::message>
-# All reviews complete
+# All Reviews Complete
 
 All assigned reviews have been submitted for this proposal. Reviews are ready to be released.
 
@@ -12,7 +12,7 @@ All assigned reviews have been submitted for this proposal. Reviews are ready to
 
 <x-mail::panel>
 **Submission:** {{ $submission->title }}
-**Round:** {{ $submission->round->name }}
+**Cycle:** {{ $submission->round->name }}
 **Number of reviews:** {{ $reviewCount }}
 **Average score:** {{ $averageScore !== null ? $averageScore : 'N/A' }}
 </x-mail::panel>
@@ -22,6 +22,5 @@ Review Results
 </x-mail::button>
 
 Thanks,<br>
-**Pilot Central**<br>
 UH RCMI
 </x-mail::message>

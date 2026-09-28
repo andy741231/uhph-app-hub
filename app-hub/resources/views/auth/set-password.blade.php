@@ -4,9 +4,9 @@
 
 @section('content')
 <div class="card login-card">
-    <p class="eyebrow">Account invitation</p>
+    <p class="eyebrow">Local sign-in</p>
     <h1>Set your password</h1>
-    <p class="lede">Create a password for your App Hub account.</p>
+    <p class="lede">Create or replace your optional UHPH App Hub password. You can continue using CougarNet instead.</p>
 
     @if ($errors->any())
         <div class="alert alert-error" role="alert">We could not set your password. Check the details below and try again.</div>

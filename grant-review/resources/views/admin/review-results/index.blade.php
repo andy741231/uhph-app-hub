@@ -16,7 +16,7 @@
                 </svg>
             </span>
             <input id="review-results-search" type="search" name="q" value="{{ $search ?? '' }}"
-                   placeholder="Search title, submitter, round..."
+                   placeholder="Search title, submitter, cycle..."
                    class="input pl-9 w-64 text-sm">
             @if (isset($search) && $search !== '')
                 <a href="{{ route('admin.review-results.index') }}"
@@ -41,9 +41,9 @@
         <input type="hidden" name="q" value="{{ $search }}">
     @endif
     <div>
-        <label for="results-round" class="label">Round</label>
+        <label for="results-round" class="label">Cycle</label>
         <select id="results-round" name="round_id" class="input mt-1.5" onchange="this.form.submit()">
-            <option value="">All rounds</option>
+            <option value="">All cycles</option>
             @foreach ($rounds as $round)
                 <option value="{{ $round->id }}" @selected($roundId === $round->id)>{{ $round->name }}</option>
             @endforeach
@@ -82,7 +82,7 @@
                 <tr>
                     <th>Proposal</th>
                     <th>Submitter</th>
-                    <th>Round</th>
+                    <th>Cycle</th>
                     <th>Status</th>
                     <th>Review progress</th>
                     <th title="Mean of Overall Impact, Factor 1, and Factor 2 scores across submitted reviews">Average score</th>

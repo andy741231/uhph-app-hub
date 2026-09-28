@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Mail\ConflictOfInterestDeclared;
+use App\Models\ConfidentialityAgreement;
 use App\Models\ConflictOfInterestDeclaration;
 use App\Models\ConflictOfInterestResponse;
 use App\Models\Review;
@@ -10,6 +11,7 @@ use App\Models\ReviewAssignment;
 use App\Models\Round;
 use App\Models\Submission;
 use App\Models\User;
+use App\Support\ConfidentialityAgreementDocument;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -225,6 +227,8 @@ class ConflictOfInterestTest extends TestCase
 
         $response = $this->actingAs($reviewer)
             ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'confidentiality_acknowledged' => '1',
                 'conflicts' => [
                     $submission1->id => [
                         'submission_id' => $submission1->id,
@@ -265,16 +269,23 @@ class ConflictOfInterestTest extends TestCase
     public function test_coi_submission_notifies_admins_by_email(): void
     {
         Mail::fake();
-        [$reviewer, $round, $submission1] = $this->setupRoundWithAssignedReviewer();
+        [$reviewer, $round, $submission1, $submission2] = $this->setupRoundWithAssignedReviewer();
         $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
 
         $this->actingAs($reviewer)
             ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'confidentiality_acknowledged' => '1',
                 'conflicts' => [
                     $submission1->id => [
                         'submission_id' => $submission1->id,
                         'has_conflict' => true,
                         'description' => 'Departmental colleague.',
+                    ],
+                    $submission2->id => [
+                        'submission_id' => $submission2->id,
+                        'has_conflict' => false,
+                        'description' => '',
                     ],
                 ],
             ]);
@@ -292,6 +303,8 @@ class ConflictOfInterestTest extends TestCase
 
         $this->actingAs($reviewer)
             ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'confidentiality_acknowledged' => '1',
                 'conflicts' => [
                     $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => false, 'description' => ''],
                     $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => false, 'description' => ''],
@@ -332,7 +345,10 @@ class ConflictOfInterestTest extends TestCase
         ]);
 
         $response = $this->actingAs($reviewer)
-            ->post(route('reviewer.conflicts.store', $round), []);
+            ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'confidentiality_acknowledged' => '1',
+            ]);
 
         $response->assertForbidden();
     }
@@ -345,8 +361,11 @@ class ConflictOfInterestTest extends TestCase
         // First declaration: conflict on submission1
         $this->actingAs($reviewer)
             ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'confidentiality_acknowledged' => '1',
                 'conflicts' => [
                     $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => true, 'description' => 'Old reason.'],
+                    $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => false, 'description' => ''],
                 ],
             ]);
 
@@ -365,6 +384,8 @@ class ConflictOfInterestTest extends TestCase
         // Second declaration: remove conflict on submission1, add on submission2
         $this->actingAs($reviewer)
             ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'confidentiality_acknowledged' => '1',
                 'conflicts' => [
                     $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => false, 'description' => ''],
                     $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => true, 'description' => 'New reason.'],
@@ -396,14 +417,17 @@ class ConflictOfInterestTest extends TestCase
     public function test_return_to_redirects_back_to_review_after_coi_submission(): void
     {
         Mail::fake();
-        [$reviewer, $round, $submission1, , $review] = $this->setupRoundWithAssignedReviewer();
+        [$reviewer, $round, $submission1, $submission2, $review] = $this->setupRoundWithAssignedReviewer();
 
         $returnTo = route('reviewer.reviews.show', $review, false);
 
         $response = $this->actingAs($reviewer)
             ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'confidentiality_acknowledged' => '1',
                 'conflicts' => [
                     $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => false, 'description' => ''],
+                    $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => false, 'description' => ''],
                 ],
                 'return_to' => $returnTo,
             ]);
@@ -469,4 +493,167 @@ class ConflictOfInterestTest extends TestCase
             ->assertOk()
             ->assertSee('Recent research collaborator.');
     }
+
+    public function test_coi_form_shows_policy_link_and_per_proposal_choices(): void
+    {
+        [$reviewer, $round] = $this->setupRoundWithAssignedReviewer();
+
+        $this->actingAs($reviewer)
+            ->get(route('reviewer.conflicts.create', $round))
+            ->assertOk()
+            ->assertSee('View COI Policy')
+            ->assertSee('I have read and agree to the COI Policy')
+            ->assertSee('View Confidentiality')
+            ->assertSee('I have read and agree to the Confidentiality Statement')
+            ->assertSee('No conflict')
+            ->assertSee('coi_policy_acknowledged')
+            ->assertSee('confidentiality_acknowledged');
+    }
+
+    public function test_coi_submission_requires_policy_acknowledgement(): void
+    {
+        Mail::fake();
+        [$reviewer, $round, $submission1, $submission2] = $this->setupRoundWithAssignedReviewer();
+
+        $this->actingAs($reviewer)
+            ->post(route('reviewer.conflicts.store', $round), [
+                'confidentiality_acknowledged' => '1',
+                'conflicts' => [
+                    $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => false, 'description' => ''],
+                    $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => false, 'description' => ''],
+                ],
+            ])
+            ->assertSessionHasErrors('coi_policy_acknowledged');
+
+        $this->assertDatabaseCount('conflict_of_interest_declarations', 0);
+    }
+
+    public function test_coi_submission_requires_confidentiality_acknowledgement(): void
+    {
+        Mail::fake();
+        [$reviewer, $round, $submission1, $submission2] = $this->setupRoundWithAssignedReviewer();
+
+        $this->actingAs($reviewer)
+            ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'conflicts' => [
+                    $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => false, 'description' => ''],
+                    $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => false, 'description' => ''],
+                ],
+            ])
+            ->assertSessionHasErrors('confidentiality_acknowledged');
+
+        $this->assertDatabaseCount('conflict_of_interest_declarations', 0);
+        $this->assertDatabaseCount('confidentiality_agreements', 0);
+    }
+
+    public function test_coi_submission_records_confidentiality_agreement(): void
+    {
+        Mail::fake();
+        [$reviewer, $round, $submission1, $submission2] = $this->setupRoundWithAssignedReviewer();
+
+        $this->actingAs($reviewer)
+            ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'confidentiality_acknowledged' => '1',
+                'conflicts' => [
+                    $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => '0', 'description' => ''],
+                    $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => '0', 'description' => ''],
+                ],
+            ])
+            ->assertRedirect();
+
+        $agreement = ConfidentialityAgreement::where('user_id', $reviewer->id)
+            ->where('round_id', $round->id)
+            ->sole();
+
+        $this->assertSame(ConfidentialityAgreementDocument::VERSION, $agreement->version);
+        $this->assertSame(ConfidentialityAgreementDocument::text(), $agreement->content);
+        $this->assertStringContainsString('Strict Non-Disclosure', $agreement->content);
+    }
+
+    public function test_coi_resubmission_does_not_duplicate_the_confidentiality_agreement(): void
+    {
+        Mail::fake();
+        [$reviewer, $round, $submission1, $submission2] = $this->setupRoundWithAssignedReviewer();
+
+        $payload = [
+            'coi_policy_acknowledged' => '1',
+            'confidentiality_acknowledged' => '1',
+            'conflicts' => [
+                $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => '0', 'description' => ''],
+                $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => '0', 'description' => ''],
+            ],
+        ];
+
+        $this->actingAs($reviewer)->post(route('reviewer.conflicts.store', $round), $payload);
+        $this->actingAs($reviewer)->post(route('reviewer.conflicts.store', $round), $payload);
+
+        $this->assertDatabaseCount('confidentiality_agreements', 1);
+        $this->assertDatabaseCount('conflict_of_interest_declarations', 2);
+    }
+
+    public function test_admin_user_profile_shows_confidentiality_agreement_record(): void
+    {
+        Mail::fake();
+        [$reviewer, $round, $submission1, $submission2] = $this->setupRoundWithAssignedReviewer();
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($reviewer)
+            ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'confidentiality_acknowledged' => '1',
+                'conflicts' => [
+                    $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => '0', 'description' => ''],
+                    $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => '0', 'description' => ''],
+                ],
+            ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.users.show', $reviewer))
+            ->assertOk()
+            ->assertSee('Confidentiality & Code of Conduct')
+            ->assertSee($round->name)
+            ->assertSee('Version '.ConfidentialityAgreementDocument::VERSION)
+            ->assertSee('View agreed text');
+    }
+
+    public function test_coi_submission_requires_a_choice_for_every_proposal(): void
+    {
+        Mail::fake();
+        [$reviewer, $round, $submission1, $submission2] = $this->setupRoundWithAssignedReviewer();
+
+        $this->actingAs($reviewer)
+            ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'confidentiality_acknowledged' => '1',
+                'conflicts' => [
+                    $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => false, 'description' => ''],
+                    $submission2->id => ['submission_id' => $submission2->id],
+                ],
+            ])
+            ->assertSessionHasErrors("conflicts.{$submission2->id}.has_conflict");
+
+        $this->assertDatabaseCount('conflict_of_interest_declarations', 0);
+    }
+
+    public function test_coi_submission_requires_a_description_when_conflict_is_selected(): void
+    {
+        Mail::fake();
+        [$reviewer, $round, $submission1, $submission2] = $this->setupRoundWithAssignedReviewer();
+
+        $this->actingAs($reviewer)
+            ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'confidentiality_acknowledged' => '1',
+                'conflicts' => [
+                    $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => '1', 'description' => ''],
+                    $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => '0', 'description' => ''],
+                ],
+            ])
+            ->assertSessionHasErrors("conflicts.{$submission1->id}.description");
+
+        $this->assertDatabaseCount('conflict_of_interest_declarations', 0);
+    }
+
 }

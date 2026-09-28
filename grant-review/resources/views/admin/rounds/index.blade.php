@@ -1,17 +1,17 @@
 @extends('layouts.admin')
-@section('title', 'Rounds')
+@section('title', 'Cycles')
 
 @section('content')
 <div class="flex items-center justify-between mb-6">
     <div>
-        <h1 class="text-2xl font-bold text-uh-fg">Funding Rounds</h1>
+        <h1 class="text-2xl font-bold text-uh-fg">Funding Cycles</h1>
         <p class="text-sm text-gray-500 mt-1">Manage grant funding cycles</p>
     </div>
     <a href="{{ route('admin.rounds.create') }}" class="btn-primary">
         <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
         </svg>
-        New Round
+        New Cycle
     </a>
 </div>
 
@@ -21,8 +21,8 @@
             <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/>
             </svg>
-            <p class="text-gray-500 text-sm mb-4">No funding rounds yet.</p>
-            <a href="{{ route('admin.rounds.create') }}" class="btn-primary">Create First Round</a>
+            <p class="text-gray-500 text-sm mb-4">No funding cycles yet.</p>
+            <a href="{{ route('admin.rounds.create') }}" class="btn-primary">Create First Cycle</a>
         </div>
     @else
         <div class="table-wrapper">
@@ -61,7 +61,7 @@
                                         </svg>
                                         Edit
                                     </a>
-                                    <form action="{{ route('admin.rounds.destroy', $round) }}" method="POST" onsubmit="return confirm('Delete round &quot;{{ $round->name }}&quot;? This will also delete all submissions and reviews in this round.')" class="inline">
+                                    <form action="{{ route('admin.rounds.destroy', $round) }}" method="POST" onsubmit="return confirm('Delete cycle &quot;{{ $round->name }}&quot;? This will also delete all submissions and reviews in this cycle.')" class="inline">
                                         @csrf @method('DELETE')
                                         <button type="submit" class="text-uh-brick hover:underline text-sm inline-flex items-center gap-1 font-medium" aria-label="Delete {{ $round->name }}">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">

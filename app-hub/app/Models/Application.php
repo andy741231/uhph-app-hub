@@ -14,6 +14,7 @@ class Application extends Model
     protected $fillable = [
         'key',
         'name',
+        'invitation_message',
         'path',
         'callback_url',
         'frontchannel_logout_path',

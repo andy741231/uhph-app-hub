@@ -42,9 +42,9 @@
     </div>
 </div>
 
-{{-- Recent rounds --}}
+{{-- Recent cycles --}}
 <div class="flex items-center justify-between mb-3">
-    <h2 class="text-lg font-bold text-uh-fg">Recent Rounds</h2>
+    <h2 class="text-lg font-bold text-uh-fg">Recent Cycles</h2>
     <a href="{{ route('admin.rounds.index') }}" class="text-sm text-uh-red font-medium hover:underline">View all →</a>
 </div>
 
@@ -52,8 +52,8 @@
     @if ($rounds->isEmpty())
         <div class="p-8 text-center">
             <x-heroicon-o-calendar class="w-12 h-12 mx-auto text-gray-300 mb-3" />
-            <p class="text-gray-500 text-sm">No rounds created yet.</p>
-            <a href="{{ route('admin.rounds.create') }}" class="btn-primary mt-4">Create First Round</a>
+            <p class="text-gray-500 text-sm">No cycles created yet.</p>
+            <a href="{{ route('admin.rounds.create') }}" class="btn-primary mt-4">Create First Cycle</a>
         </div>
     @else
         <div class="table-wrapper">

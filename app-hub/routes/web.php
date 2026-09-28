@@ -7,6 +7,8 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\UserImportController;
 use App\Http\Controllers\ApplicationLaunchController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\EntraOidcController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\SetPasswordController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Sso\AuthorizationController;
@@ -18,17 +20,34 @@ Route::get('/', fn () => auth()->check()
     : redirect()->route('login'));
 Route::get('/sso/logout', LogoutController::class)->middleware('signed')->name('sso.logout');
 Route::get('/sso/authorize', AuthorizationController::class)
-    ->middleware('throttle:30,1')
+    ->middleware(['login-mode', 'throttle:30,1'])
     ->name('sso.authorize');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
-    Route::post('/login', [AuthenticatedSessionController::class, 'store']);
-    Route::get('/set-password/{token}', [SetPasswordController::class, 'create'])->name('password.reset');
-    Route::post('/set-password', [SetPasswordController::class, 'store'])->middleware('throttle:6,1')->name('password.store');
+    Route::post('/login', [AuthenticatedSessionController::class, 'store'])
+        ->middleware('login-mode:local');
+    Route::get('/auth/oidc/redirect', [EntraOidcController::class, 'redirect'])
+        ->middleware(['login-mode:sso', 'throttle:30,1'])
+        ->name('oidc.redirect');
+    Route::get('/auth/oidc/callback', [EntraOidcController::class, 'callback'])
+        ->middleware(['login-mode:sso', 'throttle:60,1'])
+        ->name('oidc.callback');
+    Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])
+        ->middleware('login-mode:local')
+        ->name('password.request');
+    Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])
+        ->middleware(['login-mode:local', 'throttle:6,1'])
+        ->name('password.email');
+    Route::get('/set-password/{token}', [SetPasswordController::class, 'create'])
+        ->middleware('login-mode:local')
+        ->name('password.reset');
+    Route::post('/set-password', [SetPasswordController::class, 'store'])
+        ->middleware(['login-mode:local', 'throttle:6,1'])
+        ->name('password.store');
 });
 
-Route::middleware(['auth', 'active'])->group(function () {
+Route::middleware(['auth', 'active', 'login-mode'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/launch/{application}', ApplicationLaunchController::class)->name('applications.launch');
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');

@@ -6,9 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ImportUsersRequest;
 use App\Models\Application;
 use App\Models\User;
+use App\Services\InvitationSender;
+use App\Support\LoginMode;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -42,7 +43,7 @@ class UserImportController extends Controller
         ]);
     }
 
-    public function store(ImportUsersRequest $request): RedirectResponse
+    public function store(ImportUsersRequest $request, InvitationSender $invitations): RedirectResponse
     {
         $rows = $this->parse($request->file('csv')->path());
         $applications = Application::query()->get()->keyBy('key');
@@ -92,7 +93,7 @@ class UserImportController extends Controller
                     $user = User::create([
                         'name' => $row['name'],
                         'email' => $row['email'],
-                        'password' => Str::random(64),
+                        'password' => null,
                         'email_verified_at' => now(),
                         'status' => User::STATUS_ACTIVE,
                         'is_admin' => false,
@@ -114,22 +115,19 @@ class UserImportController extends Controller
 
         $inviteFailures = 0;
         foreach ($newUsers as $user) {
-            try {
-                if (Password::sendResetLink(['email' => $user->email]) !== Password::RESET_LINK_SENT) {
-                    $inviteFailures++;
-                }
-            } catch (\Throwable) {
+            if (! $invitations->send($user, $user->applications()->get())) {
                 $inviteFailures++;
             }
         }
         $created = count($newUsers);
         $assigned = count($validated);
+        $kind = LoginMode::current() === LoginMode::Local ? 'Set-password' : 'Sign-in';
         $message = "Imported {$assigned} application assignment(s): {$created} new user(s), {$existing} existing user row(s).";
 
         if ($inviteFailures > 0) {
-            $message .= " {$inviteFailures} set-password invitation(s) could not be sent.";
+            $message .= " {$inviteFailures} ".Str::lower($kind).' invitation(s) could not be sent.';
         } elseif ($created > 0) {
-            $message .= ' Set-password invitations were sent to all new users.';
+            $message .= " {$kind} invitations were sent to all new users.";
         }
 
         return redirect()->route('admin.users.import.create')->with('status', $message);

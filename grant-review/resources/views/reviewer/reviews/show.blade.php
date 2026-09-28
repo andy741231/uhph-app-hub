@@ -393,15 +393,18 @@
         </div>
 
         {{-- Other Reviewers' Submitted Reviews (anonymized) --}}
-        @if ($otherReviews->isNotEmpty())
-            <div class="card p-5 shadow-xs">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-sm font-bold uppercase tracking-wider text-uh-fg flex items-center gap-1.5">
-                        <x-heroicon-o-user-group class="w-4 h-4 text-uh-red" />
-                        Peer Reviews
-                    </h3>
+        <div class="card p-5 shadow-xs">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-uh-fg flex items-center gap-1.5">
+                    <x-heroicon-o-user-group class="w-4 h-4 text-uh-red" />
+                    Peer Reviews
+                </h3>
+                @if ($otherReviews->isNotEmpty())
                     <span class="text-xs text-gray-400">{{ $otherReviews->count() }} submitted</span>
-                </div>
+                @endif
+            </div>
+
+            @if ($otherReviews->isNotEmpty())
 
                 <div class="space-y-3">
                     @foreach ($otherReviews as $peerReview)
@@ -434,8 +437,17 @@
                         </div>
                     @endforeach
                 </div>
-            </div>
-        @endif
+            @else
+                <div class="rounded-lg border border-dashed border-uh-border bg-uh-muted/30 p-4">
+                    <p class="text-sm text-uh-slate leading-relaxed">
+                        <span class="font-semibold text-uh-fg">Note:</span> Peer reviews will appear here once they are submitted and released (after the independent review deadline). At that time, you will be able to view your independent review alongside the anonymous peer reviews.
+                    </p>
+                    <p class="text-sm text-uh-slate leading-relaxed mt-2">
+                        Any updates to your independent scoring or discussion of reviewer feedback will be addressed during the Scientific Review Group Meeting.
+                    </p>
+                </div>
+            @endif
+        </div>
         </div>
 
         {{-- Collapsed rail — slim affordance to reopen the evaluation panel --}}

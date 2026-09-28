@@ -14,10 +14,13 @@ use App\Services\HubIdentityService;
 use App\Services\HubUserReconciler;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Uh\AppHub\Services\HubClient;
 
 class UserController extends Controller
@@ -128,18 +131,25 @@ class UserController extends Controller
         return redirect()->route('admin.users.index')->with('status', "User {$user->email} invited.");
     }
 
-    public function import(ImportSubmittersCsvRequest $request): RedirectResponse
-    {
+    public function import(
+        ImportSubmittersCsvRequest $request,
+        HubClient $hub,
+        HubIdentityService $identities,
+    ): RedirectResponse {
+        if (config('hub.enabled')) {
+            return $this->importViaHub($request, $hub, $identities);
+        }
+
         $roundId = $request->round_id;
         $handle = fopen($request->file('csv')->path(), 'r');
-        $header = fgetcsv($handle);
+        $header = fgetcsv($handle) ?: [];
         $count = 0;
         $invalidEmails = [];
         $allowedDomains = ['@uh.edu', '@central.uh.edu', '@cougarnet.uh.edu'];
 
         while (($row = fgetcsv($handle)) !== false) {
-            $data = array_combine($header, $row);
-            $data['email'] = strtolower(trim($data['email']));
+            $data = array_combine($header, array_pad(array_slice($row, 0, count($header)), count($header), ''));
+            $data['email'] = strtolower(trim((string) ($data['email'] ?? '')));
 
             // Validate UH email domain
             $emailDomain = $data['email'];
@@ -158,11 +168,17 @@ class UserController extends Controller
 
             $token = Str::random(64);
 
+            $firstName = trim((string) ($data['first_name'] ?? ''));
+            $lastName = trim((string) ($data['last_name'] ?? ''));
+            if ($firstName === '' && $lastName === '' && filled($data['name'] ?? null)) {
+                [$firstName, $lastName] = array_pad(preg_split('/\s+/', trim($data['name']), 2) ?: [], 2, '');
+            }
+
             $user = User::firstOrCreate(
                 ['email' => $data['email']],
                 [
-                    'first_name' => $data['first_name'] ?? '',
-                    'last_name' => $data['last_name'] ?? '',
+                    'first_name' => $firstName,
+                    'last_name' => $lastName,
                     'role' => 'submitter',
                     'status' => 'invited',
                     'invite_token_hash' => hash('sha256', $token),
@@ -193,6 +209,97 @@ class UserController extends Controller
         return redirect()->route('admin.users.index')->with('status', $message);
     }
 
+    /**
+     * Hub SSO path: provision each CSV row through the scoped managed-users API,
+     * then reconcile the local profile and attach the round invitation. Rows are
+     * processed independently — failures are reported, not rolled back.
+     */
+    private function importViaHub(
+        ImportSubmittersCsvRequest $request,
+        HubClient $hub,
+        HubIdentityService $identities,
+    ): RedirectResponse {
+        $actorToken = (string) $request->session()->get(config('hub.actor_token_session_key', 'hub_actor_token'));
+        $assignments = collect($hub->listManagedUsers($actorToken))
+            ->keyBy(fn (array $u): string => strtolower($u['email']));
+
+        $handle = fopen($request->file('csv')->path(), 'r');
+        $header = fgetcsv($handle) ?: [];
+        $created = $linked = 0;
+        $keptRole = [];
+        $failed = [];
+
+        while (($row = fgetcsv($handle)) !== false) {
+            $data = array_combine($header, array_pad(array_slice($row, 0, count($header)), count($header), '')) ?: [];
+            $email = strtolower(trim((string) ($data['email'] ?? '')));
+            $name = trim((string) ($data['name']
+                ?? trim(($data['first_name'] ?? '').' '.($data['last_name'] ?? ''))));
+
+            if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $failed[] = ($email !== '' ? $email : '(blank)').' — not a valid email';
+
+                continue;
+            }
+
+            $existing = $assignments->get($email);
+            if ($existing !== null && $existing['role'] !== 'submitter') {
+                // A submitter import must never demote a reviewer/admin — sync the
+                // profile and attach the round invitation, but leave the role alone.
+                $user = $identities->resolve($existing);
+                RoundInvitation::firstOrCreate(['round_id' => $request->round_id, 'user_id' => $user->id]);
+                $keptRole[] = $email;
+
+                continue;
+            }
+
+            try {
+                $identity = $hub->manageUser($actorToken, [
+                    'name' => $name !== '' ? $name : $email,
+                    'email' => $email,
+                    'role' => 'submitter',
+                ]);
+                $user = $identities->resolve($identity);
+                if ($name === '') {
+                    // No name in the CSV — leave local names blank so the real
+                    // Entra directory name fills in on the user's first sign-in.
+                    $user->forceFill(['first_name' => '', 'last_name' => ''])->save();
+                }
+            } catch (ValidationException $e) {
+                $failed[] = $email.' — '.collect($e->errors())->flatten()->first();
+
+                continue;
+            } catch (ConflictHttpException $e) {
+                $failed[] = $email.' — '.$e->getMessage();
+
+                continue;
+            }
+
+            RoundInvitation::firstOrCreate(['round_id' => $request->round_id, 'user_id' => $user->id]);
+            $identity['created'] ? $created++ : $linked++;
+        }
+        fclose($handle);
+
+        $message = "{$created} new submitter(s) invited through UHPH App Hub; {$linked} existing user(s) assigned.";
+        if ($keptRole) {
+            $message .= ' '.count($keptRole).' row(s) kept an existing reviewer/admin role: '.implode(', ', $keptRole).'.';
+        }
+        if ($failed) {
+            $message .= ' '.count($failed).' row(s) failed: '.implode(', ', $failed);
+        }
+
+        return redirect()->route('admin.users.index')->with('status', $message);
+    }
+
+    public function importTemplate(): Response
+    {
+        $csv = "email,name\njane.doe@uh.edu,Jane Doe\njohn.smith@uh.edu,\n";
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="pilot-central-import-template.csv"',
+        ]);
+    }
+
     public function resendInvite(User $user): RedirectResponse
     {
         $token = Str::random(64);
@@ -219,8 +326,9 @@ class UserController extends Controller
         $rounds = $user->roundsInvitedTo()->orderBy('name')->get();
         $submissions = $user->submissions()->with('round')->latest()->get();
         $reviewAssignments = $user->reviewAssignments()->with('submission.round')->orderByDesc('assigned_at')->get();
+        $confidentialityAgreements = $user->confidentialityAgreements()->with('round')->latest()->get();
 
-        return view('admin.users.show', compact('user', 'rounds', 'submissions', 'reviewAssignments'));
+        return view('admin.users.show', compact('user', 'rounds', 'submissions', 'reviewAssignments', 'confidentialityAgreements'));
     }
 
     public function update(

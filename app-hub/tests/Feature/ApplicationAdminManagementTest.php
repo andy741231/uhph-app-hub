@@ -5,8 +5,11 @@ namespace Tests\Feature;
 use App\Http\Controllers\Sso\ApplicationActorToken;
 use App\Models\Application;
 use App\Models\User;
+use App\Notifications\HubAccessInvitation;
 use App\Notifications\SetPasswordInvitation;
+use Illuminate\Auth\Events\PasswordResetLinkSent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
@@ -54,6 +57,7 @@ class ApplicationAdminManagementTest extends TestCase
     public function test_application_admin_can_create_and_assign_a_user_without_granting_global_admin(): void
     {
         Notification::fake();
+        Event::fake([PasswordResetLinkSent::class]);
         [$application, $actor, $token] = $this->applicationAdmin();
 
         $this->asApplicationClient($application)
@@ -71,6 +75,7 @@ class ApplicationAdminManagementTest extends TestCase
 
         $target = User::where('email', 'new.user@uh.edu')->firstOrFail();
         $this->assertFalse($target->is_admin);
+        $this->assertNull($target->password);
         $this->assertSame('submitter', $target->applications()->findOrFail($application->id)->pivot->role);
         $this->assertSame($actor->id, $target->applications()->findOrFail($application->id)->pivot->granted_by);
         $this->assertDatabaseHas('application_admin_audits', [
@@ -79,7 +84,70 @@ class ApplicationAdminManagementTest extends TestCase
             'target_user_id' => $target->id,
             'action' => 'user_created_and_assigned',
         ]);
-        Notification::assertSentTo($target, SetPasswordInvitation::class);
+        Notification::assertSentTo($target, SetPasswordInvitation::class, function (SetPasswordInvitation $notification) use ($target): bool {
+            $mail = $notification->toMail($target);
+
+            return $mail->subject === 'Grant Review — set your UHPH App Hub password'
+                && in_array('You have been granted access to Grant Review through UHPH App Hub.', $mail->introLines, true)
+                && in_array('Complete your Grant Review profile after signing in.', $mail->introLines, true)
+                && in_array('Please bookmark the Grant Review page for future sign-ins: http://localhost/apps/grant-review', $mail->outroLines, true);
+        });
+        Event::assertDispatched(PasswordResetLinkSent::class, fn (PasswordResetLinkSent $event): bool => $event->user->is($target));
+    }
+
+    public function test_new_identities_receive_cougarnet_invitations_in_hybrid_mode(): void
+    {
+        Notification::fake();
+        config()->set('hub.login_mode', 'hybrid');
+        [$application, $actor, $token] = $this->applicationAdmin();
+
+        $this->asApplicationClient($application)
+            ->withHeader('X-Hub-Actor-Token', $token)
+            ->putJson('/sso/managed-users', $this->payload())
+            ->assertCreated()
+            ->assertJson(['invitation_sent' => true]);
+
+        $target = User::where('email', 'new.user@uh.edu')->firstOrFail();
+        Notification::assertSentTo($target, HubAccessInvitation::class, function (HubAccessInvitation $notification) use ($target): bool {
+            $mail = $notification->toMail($target);
+
+            return $mail->subject === 'Grant Review — your account is ready'
+                && in_array('You have been granted access to Grant Review through UHPH App Hub.', $mail->introLines, true)
+                && in_array('Complete your Grant Review profile after signing in.', $mail->introLines, true)
+                && str_contains($mail->actionUrl, 'application=grant-review')
+                && str_contains(implode(' ', $mail->outroLines), '/set-password/')
+                && in_array('The optional password setup link expires in 7 days.', $mail->outroLines, true)
+                && in_array('Please bookmark the Grant Review page for future sign-ins: http://localhost/apps/grant-review', $mail->outroLines, true);
+        });
+        Notification::assertNotSentTo($target, SetPasswordInvitation::class);
+        $this->assertDatabaseHas('password_reset_tokens', ['email' => 'new.user@uh.edu']);
+    }
+
+    public function test_new_identities_receive_cougarnet_only_invitations_in_sso_mode(): void
+    {
+        Notification::fake();
+        config()->set('hub.login_mode', 'sso');
+        [$application, $actor, $token] = $this->applicationAdmin();
+
+        $this->asApplicationClient($application)
+            ->withHeader('X-Hub-Actor-Token', $token)
+            ->putJson('/sso/managed-users', $this->payload())
+            ->assertCreated()
+            ->assertJson(['invitation_sent' => true]);
+
+        $target = User::where('email', 'new.user@uh.edu')->firstOrFail();
+        Notification::assertSentTo($target, HubAccessInvitation::class, function (HubAccessInvitation $notification) use ($target): bool {
+            $mail = $notification->toMail($target);
+
+            return $mail->subject === 'Grant Review — your account is ready'
+                && in_array('You have been granted access to Grant Review through UHPH App Hub.', $mail->introLines, true)
+                && str_contains($mail->actionUrl, 'application=grant-review')
+                && ! str_contains(implode(' ', $mail->outroLines), '/set-password/')
+                && ! in_array('The optional password setup link expires in 7 days.', $mail->outroLines, true)
+                && in_array('Please bookmark the Grant Review page for future sign-ins: http://localhost/apps/grant-review', $mail->outroLines, true);
+        });
+        Notification::assertNotSentTo($target, SetPasswordInvitation::class);
+        $this->assertDatabaseCount('password_reset_tokens', 0);
     }
 
     public function test_application_admin_can_change_only_their_application_role(): void
@@ -207,6 +275,7 @@ class ApplicationAdminManagementTest extends TestCase
             'callback_url' => '/apps/grant-review/auth/hub/callback',
             'client_id' => 'hub_grant_review',
             'client_secret_hash' => hash('sha256', 'test-client-secret'),
+            'invitation_message' => 'Complete your Grant Review profile after signing in.',
             'roles' => ['admin', 'submitter', 'reviewer'],
         ]);
         $actor = User::factory()->create();

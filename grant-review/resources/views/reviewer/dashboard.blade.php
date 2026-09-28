@@ -16,7 +16,7 @@
             <div class="min-w-0 flex-1">
                 <h2 class="text-sm font-bold text-amber-900">Conflict-of-interest declaration required</h2>
                 <p class="text-sm text-amber-800 mt-1">
-                    You have been invited to screen the following round{{ $pendingInvitations->count() === 1 ? '' : 's' }}.
+                    You have been invited to screen the following cycle{{ $pendingInvitations->count() === 1 ? '' : 's' }}.
                     Proposals cannot be assigned to you until your declaration is submitted.
                 </p>
                 <div class="mt-3 space-y-2">
@@ -47,7 +47,7 @@
                 @foreach ($staleDeclarations as $stale)
                     {{ $loop->first ? '' : ' · ' }}{{ $staleDeclarations->count() === 1 ? $staleDeclarations->first()->round->name : '' }}
                 @endforeach
-                New or unscreened proposals were added to your declared round{{ $staleDeclarations->count() === 1 ? '' : 's' }}. Please review and resubmit your declaration so administrators have complete information.
+                New or unscreened proposals were added to your declared cycle{{ $staleDeclarations->count() === 1 ? '' : 's' }}. Please review and resubmit your declaration so administrators have complete information.
             </p>
             @foreach ($staleDeclarations as $stale)
                 <a href="{{ route('reviewer.conflicts.create', $stale->round_id) }}" class="inline-flex items-center gap-1 text-xs font-semibold text-amber-900 underline mt-1.5 mr-4">
@@ -64,7 +64,7 @@
             <thead>
                 <tr>
                     <th>Proposal</th>
-                    <th>Round</th>
+                    <th>Cycle</th>
                     <th>Status</th>
                     <th>My score</th>
                     <th>Assigned</th>

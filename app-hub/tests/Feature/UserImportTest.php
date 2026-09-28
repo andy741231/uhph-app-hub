@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Application;
 use App\Models\User;
+use App\Notifications\HubAccessInvitation;
 use App\Notifications\SetPasswordInvitation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -58,10 +59,98 @@ class UserImportTest extends TestCase
         $reviewer = User::where('email', 'rreviewer@cougarnet.uh.edu')->firstOrFail();
         $editor = User::where('email', 'feditor@central.uh.edu')->firstOrFail();
         $this->assertFalse($submitter->is_admin);
+        $this->assertNull($submitter->password);
+        $this->assertNull($reviewer->password);
+        $this->assertNull($editor->password);
         $this->assertSame('submitter', $submitter->applications()->findOrFail($grantReview->id)->pivot->role);
         $this->assertSame('reviewer', $reviewer->applications()->findOrFail($grantReview->id)->pivot->role);
         $this->assertSame('admin', $editor->applications()->findOrFail($flipbook->id)->pivot->role);
         Notification::assertSentTo([$submitter, $reviewer, $editor], SetPasswordInvitation::class);
+    }
+
+    public function test_import_sends_cougarnet_invitations_in_hybrid_mode(): void
+    {
+        Notification::fake();
+        config()->set('hub.login_mode', 'hybrid');
+        $admin = User::factory()->create(['is_admin' => true]);
+        $this->application('grant-review', ['submitter'], 'Complete your Grant Review profile after signing in.');
+        $csv = $this->csv("Jane Submitter,jsubmitter@uh.edu,grant-review,submitter\n");
+
+        $this->actingAs($admin)->post('/admin/users/import', ['csv' => $csv])
+            ->assertRedirect(route('admin.users.import.create'))
+            ->assertSessionHas('status');
+
+        $submitter = User::where('email', 'jsubmitter@uh.edu')->firstOrFail();
+        Notification::assertSentTo($submitter, HubAccessInvitation::class, function (HubAccessInvitation $notification) use ($submitter): bool {
+            $mail = $notification->toMail($submitter);
+
+            return $mail->subject === 'Grant Review — your account is ready'
+                && in_array('You have been granted access to Grant Review through UHPH App Hub.', $mail->introLines, true)
+                && in_array('Complete your Grant Review profile after signing in.', $mail->introLines, true)
+                && str_contains($mail->actionUrl, 'application=grant-review')
+                && str_contains(implode(' ', $mail->outroLines), '/set-password/')
+                && in_array('The optional password setup link expires in 7 days.', $mail->outroLines, true)
+                && in_array('Please bookmark the Grant Review page for future sign-ins: http://localhost/apps/grant-review', $mail->outroLines, true);
+        });
+        Notification::assertNotSentTo($submitter, SetPasswordInvitation::class);
+        $this->assertNull($submitter->password);
+        $this->assertDatabaseHas('password_reset_tokens', ['email' => 'jsubmitter@uh.edu']);
+    }
+
+    public function test_import_sends_cougarnet_only_invitations_in_sso_mode(): void
+    {
+        Notification::fake();
+        config()->set('hub.login_mode', 'sso');
+        $admin = User::factory()->create(['is_admin' => true]);
+        $this->application('grant-review', ['submitter']);
+        $csv = $this->csv("Jane Submitter,jsubmitter@uh.edu,grant-review,submitter\n");
+
+        $this->actingAs($admin)->post('/admin/users/import', ['csv' => $csv])
+            ->assertRedirect(route('admin.users.import.create'))
+            ->assertSessionHas('status', 'Imported 1 application assignment(s): 1 new user(s), 0 existing user row(s). Sign-in invitations were sent to all new users.');
+
+        $submitter = User::where('email', 'jsubmitter@uh.edu')->firstOrFail();
+        Notification::assertSentTo($submitter, HubAccessInvitation::class, function (HubAccessInvitation $notification) use ($submitter): bool {
+            $mail = $notification->toMail($submitter);
+
+            return $mail->subject === 'Grant Review — your account is ready'
+                && ! str_contains(implode(' ', $mail->outroLines), '/set-password/')
+                && ! in_array('The optional password setup link expires in 7 days.', $mail->outroLines, true)
+                && in_array('Please bookmark the Grant Review page for future sign-ins: http://localhost/apps/grant-review', $mail->outroLines, true);
+        });
+        Notification::assertNotSentTo($submitter, SetPasswordInvitation::class);
+        $this->assertNull($submitter->password);
+        $this->assertDatabaseCount('password_reset_tokens', 0);
+    }
+
+    public function test_import_sends_one_app_aware_cougarnet_invitation_for_multiple_assignments(): void
+    {
+        Notification::fake();
+        config()->set('hub.login_mode', 'hybrid');
+        $admin = User::factory()->create(['is_admin' => true]);
+        $this->application('grant-review', ['submitter'], 'Complete your Grant Review profile after signing in.');
+        $this->application('flipbook', ['editor'], 'Explore your Flipbook workspace.');
+        $csv = $this->csv(implode("\n", [
+            'Jane Submitter,jsubmitter@uh.edu,grant-review,submitter',
+            'Jane Submitter,jsubmitter@uh.edu,flipbook,editor',
+        ])."\n");
+
+        $this->actingAs($admin)->post('/admin/users/import', ['csv' => $csv])
+            ->assertRedirect(route('admin.users.import.create'))
+            ->assertSessionHas('status');
+
+        $submitter = User::where('email', 'jsubmitter@uh.edu')->firstOrFail();
+        Notification::assertSentToTimes($submitter, HubAccessInvitation::class, 1);
+        Notification::assertSentTo($submitter, HubAccessInvitation::class, function (HubAccessInvitation $notification) use ($submitter): bool {
+            $mail = $notification->toMail($submitter);
+
+            return $mail->subject === 'Your UHPH App Hub account is ready'
+                && in_array('You have been granted access to Flipbook and Grant Review through UHPH App Hub.', $mail->introLines, true)
+                && in_array('Flipbook: Explore your Flipbook workspace.', $mail->introLines, true)
+                && in_array('Grant Review: Complete your Grant Review profile after signing in.', $mail->introLines, true)
+                && in_array('Please bookmark your UHPH App Hub dashboard for future sign-ins: https://localhost/dashboard', $mail->outroLines, true);
+        });
+        Notification::assertNotSentTo($submitter, SetPasswordInvitation::class);
     }
 
     public function test_import_preserves_existing_accounts_and_updates_the_assignment(): void
@@ -164,13 +253,14 @@ class UserImportTest extends TestCase
         $this->assertSame($originalPassword, $user->fresh()->password);
     }
 
-    private function application(string $key, array $roles): Application
+    private function application(string $key, array $roles, ?string $invitationMessage = null): Application
     {
         return Application::create([
             'key' => $key,
             'name' => str($key)->headline(),
             'path' => "/apps/{$key}",
             'roles' => $roles,
+            'invitation_message' => $invitationMessage,
             'enabled' => true,
         ]);
     }

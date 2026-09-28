@@ -41,7 +41,7 @@
                     @csrf
                     <button type="submit"
                             class="btn-accent text-sm"
-                            onclick="return confirm('Submit this proposal? You can still edit it until the round deadline.')">
+                            onclick="return confirm('Submit this proposal? You can still edit it until the cycle deadline.')">
                         Submit
                     </button>
                 </form>
@@ -51,7 +51,7 @@
         <p class="mt-4 text-sm text-gray-500">
             {{ $submission->reviewsReleasedToSubmitter()
                 ? 'Reviews have been released for this proposal — it can no longer be edited.'
-                : 'The round deadline has passed — this submission can no longer be edited.' }}
+                : 'The cycle deadline has passed — this submission can no longer be edited.' }}
         </p>
     @endif
 </div>

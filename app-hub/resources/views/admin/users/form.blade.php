@@ -11,14 +11,18 @@
         @error('email')<p class="field-error">{{ $message }}</p>@enderror
     </div>
     <div class="field">
-        <label class="label" for="password">Password{{ $editing ? ' (optional)' : '' }}</label>
-        <input class="input" id="password" name="password" type="password" minlength="8" {{ $editing ? '' : 'required' }} autocomplete="new-password" @error('password') aria-invalid="true" @enderror>
-        <p class="hint">At least 8 characters containing letters and numbers.</p>
+        <label class="label" for="password">Password (optional)</label>
+        <input class="input" id="password" name="password" type="password" minlength="8" autocomplete="new-password" @error('password') aria-invalid="true" @enderror>
+        @if ($localEnabled)
+            <p class="hint">Leave blank to create the account without a local password. The user can set one later from the Hub login page.</p>
+        @else
+            <p class="hint">Local sign-in is currently disabled. A stored password becomes usable only after switching to local or hybrid mode.</p>
+        @endif
         @error('password')<p class="field-error">{{ $message }}</p>@enderror
     </div>
     <div class="field">
         <label class="label" for="password_confirmation">Confirm password</label>
-        <input class="input" id="password_confirmation" name="password_confirmation" type="password" {{ $editing ? '' : 'required' }} autocomplete="new-password">
+        <input class="input" id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password">
     </div>
     <div class="field">
         <label class="label" for="status">Account status</label>
@@ -37,4 +41,12 @@
         </label>
         @error('is_admin')<p class="field-error">{{ $message }}</p>@enderror
     </div>
+    @if ($editing && $ssoEnabled)
+        <div class="field field-full">
+            <label class="label" for="external_subject">SSO subject</label>
+            <input class="input" id="external_subject" name="external_subject" value="{{ old('external_subject', $managedUser->external_subject ?? '') }}" autocomplete="off" spellcheck="false">
+            <p class="hint">Bound automatically on the first CougarNet sign-in. Set it manually only to fix an account whose sign-in failed with a link error (see the failed sign-in audit entry).</p>
+            @error('external_subject')<p class="field-error">{{ $message }}</p>@enderror
+        </div>
+    @endif
 </div>

@@ -19,6 +19,7 @@ class AuthorizationCode extends Model
         'user_id',
         'redirect_uri',
         'role',
+        'login_method',
         'expires_at',
         'consumed_at',
     ];

@@ -52,7 +52,7 @@
                 </select>
             </div>
             <div>
-                <span class="label">Invite to Rounds <span class="text-gray-400 font-normal">(optional)</span></span>
+                <span class="label">Invite to Cycles <span class="text-gray-400 font-normal">(optional)</span></span>
                 <div class="max-h-40 overflow-y-auto border border-uh-border rounded-md p-3 space-y-2">
                     @forelse ($rounds as $round)
                         <label class="flex items-center gap-2 text-sm cursor-pointer">
@@ -65,7 +65,7 @@
                             @endif
                         </label>
                     @empty
-                        <p class="text-sm text-gray-400">No non-closed rounds available.</p>
+                        <p class="text-sm text-gray-400">No non-closed cycles available.</p>
                     @endforelse
                 </div>
             </div>
@@ -80,7 +80,6 @@
         </form>
     </div>
 
-    @unless(config('hub.enabled'))
     {{-- CSV bulk import --}}
     <div class="card p-6">
         <h2 class="text-lg font-bold text-uh-fg mb-4 flex items-center gap-2">
@@ -92,16 +91,16 @@
 
         <div class="bg-uh-muted rounded-md p-3 mb-4">
             <p class="text-xs text-gray-600 mb-2">CSV must have a header row with these columns:</p>
-            <code class="text-xs font-mono text-uh-red font-semibold">email, first_name, last_name</code>
-            <p class="text-xs text-gray-500 mt-2">All imported users get role <strong>submitter</strong> and are invited to the selected round.</p>
+            <code class="text-xs font-mono text-uh-red font-semibold">email, name</code>
+            <p class="text-xs text-gray-500 mt-2">All imported users get role <strong>submitter</strong> and are invited to the selected cycle. <strong>name</strong> is optional{{ config('hub.enabled') ? ' — the CougarNet directory name fills in at first sign-in. The UHPH App Hub sends new users the sign-in email.' : '.' }}</p>
         </div>
 
         <form action="{{ route('admin.users.import') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
             @csrf
             <div>
-                <label for="round_id" class="label">Target Round</label>
+                <label for="round_id" class="label">Target Cycle</label>
                 <select id="round_id" name="round_id" required class="input">
-                    <option value="">Select round...</option>
+                    <option value="">Select cycle...</option>
                     @foreach ($rounds as $round)
                         <option value="{{ $round->id }}" {{ old('round_id') == $round->id ? 'selected' : '' }}>
                             {{ $round->name }} ({{ $round->status }})
@@ -113,7 +112,9 @@
                 <label for="csv" class="label">CSV File</label>
                 <input type="file" id="csv" name="csv" accept=".csv,.txt" required
                     class="input cursor-pointer file:mr-3 file:py-2 file:px-4 file:rounded file:border-0 file:bg-uh-red file:text-white file:cursor-pointer file:hover:bg-uh-brick">
-                <p class="text-xs text-gray-500 mt-1">Max 2MB. Accepted: .csv, .txt</p>
+                <p class="text-xs text-gray-500 mt-1">Max 2MB. Accepted: .csv, .txt.
+                    <a href="{{ route('admin.users.import.template') }}" class="text-uh-red hover:underline">Download the CSV template</a>
+                </p>
             </div>
             <div class="pt-2">
                 <button type="submit" class="btn-secondary w-full">
@@ -125,6 +126,5 @@
             </div>
         </form>
     </div>
-    @endunless
 </div>
 @endsection

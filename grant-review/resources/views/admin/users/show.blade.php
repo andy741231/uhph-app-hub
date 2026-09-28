@@ -69,7 +69,7 @@
             </div>
             <div>
                 <p class="text-2xl font-bold text-uh-fg">{{ $rounds->count() }}</p>
-                <p class="text-xs text-gray-500">Round Invitations</p>
+                <p class="text-xs text-gray-500">Cycle Invitations</p>
             </div>
         </div>
     </div>
@@ -201,11 +201,11 @@
             </div>
         </div>
 
-        {{-- Round invitations --}}
+        {{-- Cycle invitations --}}
         <div class="card p-6">
             <h2 class="text-lg font-bold text-uh-fg mb-5 flex items-center gap-2">
                 <x-heroicon-o-academic-cap class="w-5 h-5 text-uh-red" />
-                Round Invitations
+                Cycle Invitations
             </h2>
             @forelse ($rounds as $round)
                 <div class="flex items-center justify-between py-2.5 {{ !$loop->last ? 'border-b border-uh-border' : '' }}">
@@ -219,10 +219,40 @@
             @empty
                 <div class="text-center py-6">
                     <x-heroicon-o-academic-cap class="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                    <p class="text-sm text-gray-400">Not invited to any rounds.</p>
+                    <p class="text-sm text-gray-400">Not invited to any cycles.</p>
                 </div>
             @endforelse
         </div>
+
+        {{-- Confidentiality & Code of Conduct agreements --}}
+        @if ($user->role === 'reviewer' || $confidentialityAgreements->isNotEmpty())
+        <div class="card p-6">
+            <h2 class="text-lg font-bold text-uh-fg mb-5 flex items-center gap-2">
+                <x-heroicon-o-shield-check class="w-5 h-5 text-uh-red" />
+                Confidentiality &amp; Code of Conduct
+            </h2>
+            @forelse ($confidentialityAgreements as $agreement)
+                <div class="py-2.5 {{ !$loop->last ? 'border-b border-uh-border' : '' }}">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-sm text-uh-fg font-medium">{{ $agreement->round->name }}</span>
+                        <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-50 text-green-700">Agreed</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Version {{ $agreement->version }} &middot; {{ $agreement->created_at->format('M j, Y \a\t g:i A') }}
+                    </p>
+                    <details class="mt-1.5">
+                        <summary class="text-xs font-semibold text-uh-red cursor-pointer hover:underline">View agreed text</summary>
+                        <pre class="mt-2 p-3 rounded-lg bg-uh-muted/60 text-xs text-gray-700 whitespace-pre-wrap font-sans max-h-64 overflow-y-auto">{{ $agreement->content }}</pre>
+                    </details>
+                </div>
+            @empty
+                <div class="text-center py-6">
+                    <x-heroicon-o-shield-check class="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                    <p class="text-sm text-gray-400">No agreements recorded yet.</p>
+                </div>
+            @endforelse
+        </div>
+        @endif
     </div>
 </div>
 
@@ -238,7 +268,7 @@
         <table class="w-full text-sm">
             <thead>
                 <tr class="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-uh-border">
-                    <th class="pb-3 pr-4 font-semibold">Round</th>
+                    <th class="pb-3 pr-4 font-semibold">Cycle</th>
                     <th class="pb-3 pr-4 font-semibold">Title</th>
                     <th class="pb-3 pr-4 font-semibold">Status</th>
                     <th class="pb-3 pr-4 font-semibold">Amount</th>
@@ -273,7 +303,7 @@
         <table class="w-full text-sm">
             <thead>
                 <tr class="text-left text-xs text-gray-500 uppercase tracking-wider border-b border-uh-border">
-                    <th class="pb-3 pr-4 font-semibold">Round</th>
+                    <th class="pb-3 pr-4 font-semibold">Cycle</th>
                     <th class="pb-3 pr-4 font-semibold">Submission</th>
                     <th class="pb-3 pr-4 font-semibold">Status</th>
                     <th class="pb-3 font-semibold">Assigned</th>

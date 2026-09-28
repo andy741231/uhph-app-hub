@@ -287,7 +287,7 @@ class ReviewResultsController extends Controller
         $rows = $this->aggregateSubmissions($query->get());
 
         $headers = [
-            'Round',
+            'Cycle',
             'Submission ID',
             'Title',
             'Submitter',
@@ -346,8 +346,8 @@ class ReviewResultsController extends Controller
 
         $round = $roundId ? Round::find($roundId) : null;
         $filename = $round
-            ? 'round-results-'.Str::slug($round->name).'.csv'
-            : 'round-results-all.csv';
+            ? 'cycle-results-'.Str::slug($round->name).'.csv'
+            : 'cycle-results-all.csv';
 
         return response()->stream($callback, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',

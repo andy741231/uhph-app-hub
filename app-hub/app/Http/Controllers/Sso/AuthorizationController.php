@@ -66,12 +66,14 @@ class AuthorizationController extends Controller
         }
 
         $plainCode = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
+        $loginMethod = $request->session()->get(config('hub.login_method_session_key', 'hub_login_method'));
         AuthorizationCode::create([
             'token_hash' => hash('sha256', $plainCode),
             'application_id' => $application->id,
             'user_id' => $request->user()->id,
             'redirect_uri' => $application->callback_url,
             'role' => $assignment->pivot->role,
+            'login_method' => in_array($loginMethod, ['sso', 'local'], true) ? $loginMethod : null,
             'expires_at' => now()->addSeconds(min(300, max(30, config('hub.authorization_code_ttl')))),
         ]);
         $query = http_build_query([

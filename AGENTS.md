@@ -29,7 +29,7 @@ PHP_CLI_SERVER_WORKERS=4 php -S localhost:8000 server.php
 ### SSO Flow
 1. Visit `/apps/grant-review` → redirects to `/apps/sso/authorize`
 2. Hub sees no session → redirects to `/apps/login?application=grant-review`
-3. Log in with Hub credentials
+3. Log in with Hub credentials (or CougarNet SSO when app-hub's `.env` sets `HUB_LOGIN_MODE=sso` or `hybrid` — see `app-hub/AGENTS.md` → "Login modes"; when `HUB_LOGIN_MODE` is absent, legacy `ENTRA_SSO_ENABLED=true` maps to `hybrid` and `false` to `local`)
 4. Hub issues authorization code → redirects back to `/apps/grant-review/auth/hub/callback`
 5. Grant Review exchanges code for identity → logs you in
 

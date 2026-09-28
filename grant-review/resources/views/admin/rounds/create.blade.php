@@ -1,9 +1,9 @@
 @extends('layouts.admin')
-@section('title', 'New Round')
+@section('title', 'New Cycle')
 
 @section('content')
 <div class="mb-6">
-    <h1 class="text-2xl font-bold text-uh-fg">Create Funding Round</h1>
+    <h1 class="text-2xl font-bold text-uh-fg">Create Funding Cycle</h1>
     <p class="text-sm text-gray-500 mt-1">Set up a new grant funding cycle</p>
 </div>
 
@@ -12,7 +12,7 @@
         @csrf
         <div class="space-y-5">
             <div>
-                <label for="name" class="label">Round Name</label>
+                <label for="name" class="label">Cycle Name</label>
                 <input type="text" id="name" name="name" value="{{ old('name') }}" required
                     class="input" placeholder="e.g. Spring 2027">
             </div>
@@ -41,7 +41,7 @@
             </div>
 
             <div class="flex items-center gap-3 pt-2">
-                <button type="submit" class="btn-primary">Create Round</button>
+                <button type="submit" class="btn-primary">Create Cycle</button>
                 <a href="{{ route('admin.rounds.index') }}" class="btn-ghost">Cancel</a>
             </div>
         </div>

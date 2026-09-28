@@ -7,7 +7,7 @@
     <div>
         <p class="text-sm font-semibold text-uh-red mb-1">Submitter workspace</p>
         <h1 class="text-2xl sm:text-3xl font-bold text-uh-fg">My submissions</h1>
-        <p class="text-gray-600 mt-1 max-w-2xl">Submit your proposal for an open funding round. You can save a draft and return to it before submitting.</p>
+        <p class="text-gray-600 mt-1 max-w-2xl">Submit your proposal for an open funding cycle. You can save a draft and return to it before submitting.</p>
     </div>
     <a href="{{ route('submitter.submissions.create') }}" class="btn-primary">
         <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
@@ -93,7 +93,7 @@
                                     @csrf
                                     <button type="submit"
                                             class="btn-accent text-sm"
-                                            onclick="return confirm('Submit this proposal? You can still edit it until the round deadline.')">
+                                            onclick="return confirm('Submit this proposal? You can still edit it until the cycle deadline.')">
                                         Submit
                                     </button>
                                 </form>
@@ -113,7 +113,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V8.25c0-.621-.504-1.125-1.125-1.125H10.5V2.25Z"/>
                     </svg>
                     <p class="font-medium text-gray-700">No submissions yet</p>
-                    <p class="text-sm text-gray-500 mt-1">Choose an open round to start your proposal.</p>
+                    <p class="text-sm text-gray-500 mt-1">Choose an open cycle to start your proposal.</p>
                 </div>
             @endforelse
         </div>

@@ -53,7 +53,7 @@
         </form>
     </div>
     <p class="text-center text-xs text-gray-400 mt-4">
-        Don't have an account? Contact the grants administrator for an invitation.
+        Don't have an account? Contact the administrator for an invitation.
     </p>
 </div>
 @endsection

@@ -9,9 +9,9 @@
     </div>
     <form method="GET" action="{{ route('admin.review-assignments.index') }}" class="flex items-end gap-2">
         <div>
-            <label for="assignment-round" class="label">Round</label>
+            <label for="assignment-round" class="label">Cycle</label>
             <select id="assignment-round" name="round_id" class="input mt-1" onchange="this.form.submit()">
-                <option value="">All rounds</option>
+                <option value="">All cycles</option>
                 @foreach ($rounds as $round)
                     <option value="{{ $round->id }}" @selected($roundId === $round->id)>{{ $round->name }}</option>
                 @endforeach
@@ -137,7 +137,7 @@
                             @endforeach
                         </div>
                         @if ($notInvitedCount > 0)
-                            <p class="text-xs text-gray-400 mt-2">{{ $notInvitedCount }} active reviewer{{ $notInvitedCount === 1 ? ' has' : 's have' }} not been invited to complete a COI declaration for this round and cannot be assigned. Send invitations from COI invitations.</p>
+                            <p class="text-xs text-gray-400 mt-2">{{ $notInvitedCount }} active reviewer{{ $notInvitedCount === 1 ? ' has' : 's have' }} not been invited to complete a COI declaration for this cycle and cannot be assigned. Send invitations from COI invitations.</p>
                         @endif
                     @endif
                 </fieldset>
@@ -168,7 +168,7 @@
             </button>
         </div>
         <p class="text-sm text-gray-700 mt-3">
-            <span class="font-semibold" data-modal-reviewer></span> declared COI for this round before this proposal was submitted.
+            <span class="font-semibold" data-modal-reviewer></span> declared COI for this cycle before this proposal was submitted.
             New application(s) submitted after a COI declaration are not covered until the reviewer updates their declaration —
             silence cannot be treated as a verified &quot;no conflict&quot;.
         </p>

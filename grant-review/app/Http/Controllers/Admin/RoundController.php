@@ -27,7 +27,7 @@ class RoundController extends Controller
     {
         Round::create($request->validated());
 
-        return redirect()->route('admin.rounds.index')->with('status', 'Round created.');
+        return redirect()->route('admin.rounds.index')->with('status', 'Cycle created.');
     }
 
     public function edit(Round $round): View
@@ -39,13 +39,13 @@ class RoundController extends Controller
     {
         $round->update($request->validated());
 
-        return redirect()->route('admin.rounds.index')->with('status', 'Round updated.');
+        return redirect()->route('admin.rounds.index')->with('status', 'Cycle updated.');
     }
 
     public function destroy(Round $round): RedirectResponse
     {
         $round->delete();
 
-        return redirect()->route('admin.rounds.index')->with('status', 'Round deleted.');
+        return redirect()->route('admin.rounds.index')->with('status', 'Cycle deleted.');
     }
 }
