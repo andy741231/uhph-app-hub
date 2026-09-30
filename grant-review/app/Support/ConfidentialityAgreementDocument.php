@@ -44,8 +44,8 @@ final class ConfidentialityAgreementDocument
                 'paragraphs' => [],
                 'items' => [
                     ['label' => 'Disclosure of Influence Attempts:', 'text' => 'Reviewers must immediately report any attempts by applicants or third parties to influence their evaluation or scoring to the Investigator Development Core Director.'],
-                    ['label' => 'Independent Review:', 'text' => 'Reviewers will conduct all evaluations independently and will not delegate any portion of the proposal review, scoring, or critique writing to graduate students, postdocs, colleagues, or staff members.'],
-                    ['label' => 'Authorized Contact Points:', 'text' => 'Reviewers will direct all questions regarding proposals, review logistics, or evaluation guidelines solely to the Investigator Development Core Director (srgorniak@central.uh.edu) or RCMI team (UHrcmi@uh.edu). Reviewers must not contact applicants directly.'],
+                    ['label' => 'Independent Review:', 'text' => 'Reviewers will conduct all evaluations independently and will not delegate any portion of the proposal review, scoring, or critique writing to students, postdocs, colleagues, or staff members.'],
+                    ['label' => 'Authorized Contact Points:', 'text' => 'Reviewers will direct all questions regarding proposals, review logistics, or evaluation guidelines solely to the Investigator Development Core Director (sgorniak@central.uh.edu) or RCMI team (UHrcmi@uh.edu). Reviewers must not contact applicants directly.'],
                     ['label' => 'Protection of Intellectual Property:', 'text' => 'Reviewers will strictly respect and safeguard all proprietary ideas, scientific hypotheses, specific aims, experimental designs, and future funding strategies disclosed within the proposals.'],
                 ],
             ],

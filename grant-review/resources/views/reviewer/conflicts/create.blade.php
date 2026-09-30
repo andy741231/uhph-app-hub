@@ -251,7 +251,7 @@
         <div class="mt-4 space-y-4 text-sm text-gray-700 leading-relaxed max-h-[70vh] overflow-y-auto pr-2">
             <div>
                 <h3 class="font-semibold text-uh-fg">Conflict of Interest Overview &amp; Policy</h3>
-                <p class="mt-1.5">Peer review for the RCMI Pilot Grant Program adheres to National Institutes of Health (NIH) Conflict of Interest guidelines.</p>
+                <p class="mt-1.5">Peer review for the RCMI Pilot Grant Program adheres to <a href="https://www.nih.gov/sites/default/files/peer-review-conflict-interest-policy.pdf" target="_blank">National Institutes of Health (NIH) Conflict of Interest guidelines</a>.</p>
                 <p class="mt-2">Before evaluating any assigned proposal, reviewers must review the project details and declare any actual, apparent, or potential conflicts of interest.</p>
                 <p class="mt-2"><span class="font-semibold">Note:</span> Unlike traditional NIH study sections, departmental affiliation at the University of Houston is NOT an automatic disqualifying conflict. Due to specialized content expertise within specific academic units, reviewers MAY review proposals submitted by faculty or staff within their own department or college, provided no other disqualifying conflicts exist.</p>
             </div>
