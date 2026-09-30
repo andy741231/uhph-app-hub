@@ -48,6 +48,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('review-invitations/{invitation}/revoke', [ReviewInvitationController::class, 'revoke'])->name('review-invitations.revoke')->whereNumber('invitation');
     Route::get('review-results', [ReviewResultsController::class, 'index'])->name('review-results.index');
     Route::get('conflicts', [AdminConflictOfInterestController::class, 'index'])->name('conflicts.index');
+    Route::get('conflicts/{declaration}', [AdminConflictOfInterestController::class, 'show'])->name('conflicts.show')->whereNumber('declaration');
     Route::get('review-results/export', [ReviewResultsController::class, 'exportCsv'])->name('review-results.export');
     Route::get('review-results/export/{roundId}', [ReviewResultsController::class, 'exportCsv'])->name('review-results.export.round');
     Route::post('review-results/{submission}/release/{audience}', [ReviewResultsController::class, 'release'])->name('review-results.release')->whereNumber('submission')->whereIn('audience', ['reviewers', 'submitter']);

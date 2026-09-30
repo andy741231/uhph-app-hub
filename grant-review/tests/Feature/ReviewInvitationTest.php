@@ -13,6 +13,7 @@ use App\Models\ReviewerRoundInvitation;
 use App\Models\Round;
 use App\Models\Submission;
 use App\Models\User;
+use App\Support\ConflictOfInterestPolicyDocument;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -220,6 +221,7 @@ class ReviewInvitationTest extends TestCase
             ->post(route('reviewer.conflicts.store', $round), [
                 'coi_policy_acknowledged' => '1',
                 'confidentiality_acknowledged' => '1',
+                'coi_policy_digest' => ConflictOfInterestPolicyDocument::digest(),
                 'conflicts' => [
                     $submission->id => ['submission_id' => $submission->id, 'has_conflict' => false, 'description' => ''],
                 ],

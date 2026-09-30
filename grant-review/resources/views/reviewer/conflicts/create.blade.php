@@ -4,6 +4,7 @@
 @section('content')
 <form action="{{ route('reviewer.conflicts.store', $round) }}" method="POST" id="coiForm">
     @csrf
+    <input type="hidden" name="coi_policy_digest" value="{{ \App\Support\ConflictOfInterestPolicyDocument::digest() }}">
     @if ($returnTo)
         <input type="hidden" name="return_to" value="{{ $returnTo }}">
     @endif
@@ -70,6 +71,9 @@
                         <span class="text-sm text-gray-700">I have read and agree to the COI Policy &amp; Guidelines</span>
                     </label>
                     @error('coi_policy_acknowledged')
+                        <p class="text-sm text-uh-red mt-1.5">{{ $message }}</p>
+                    @enderror
+                    @error('coi_policy_digest')
                         <p class="text-sm text-uh-red mt-1.5">{{ $message }}</p>
                     @enderror
                 </div>
@@ -243,30 +247,30 @@
 <x-modal name="coi-policy" maxWidth="2xl">
     <div class="p-6">
         <div class="flex items-start justify-between gap-4">
-            <h2 class="text-lg font-bold text-uh-fg">Conflict of Interest Policy &amp; Guidelines</h2>
+            <h2 class="text-lg font-bold text-uh-fg">{{ \App\Support\ConflictOfInterestPolicyDocument::TITLE }}</h2>
             <button type="button" x-on:click="show = false" class="text-gray-400 hover:text-gray-600" aria-label="Close">
                 <x-heroicon-o-x-mark class="w-6 h-6" />
             </button>
         </div>
         <div class="mt-4 space-y-4 text-sm text-gray-700 leading-relaxed max-h-[70vh] overflow-y-auto pr-2">
-            <div>
-                <h3 class="font-semibold text-uh-fg">Conflict of Interest Overview &amp; Policy</h3>
-                <p class="mt-1.5">Peer review for the RCMI Pilot Grant Program adheres to <a style="color: #003366; text-decoration: underline;" href="https://grants.nih.gov/policy-and-compliance/policy-topics/peer-review/coi" target="_blank">National Institutes of Health (NIH) Conflict of Interest guidelines</a>.</p>
-                <p class="mt-2">Before evaluating any assigned proposal, reviewers must review the project details and declare any actual, apparent, or potential conflicts of interest.</p>
-                <p class="mt-2"><span class="font-semibold">Note:</span> Unlike traditional NIH study sections, departmental affiliation at the University of Houston is NOT an automatic disqualifying conflict. Due to specialized content expertise within specific academic units, reviewers MAY review proposals submitted by faculty or staff within their own department or college, provided no other disqualifying conflicts exist.</p>
-            </div>
-            <div>
-                <h3 class="font-semibold text-uh-fg">What Constitutes a Disqualifying Conflict of Interest?</h3>
-                <p class="mt-1.5">A disqualifying COI exists if any of the following apply to you regarding the Principal Investigator (PI) or Key Personnel on a proposal:</p>
-                <ul class="mt-2 list-disc pl-5 space-y-1.5">
-                    <li><span class="font-medium">Role / Involvement:</span> You are named as Key Personnel, a formal Collaborator, Mentor, or letter of support author on the proposal.</li>
-                    <li><span class="font-medium">Recent Professional Relationship:</span> You have collaborated on a research project or co-authored a publication with the PI or Key Personnel within the past three years.</li>
-                    <li><span class="font-medium">Financial Interest:</span> You, your spouse, or your dependent children would benefit financially from the funding or execution of the project.</li>
-                    <li><span class="font-medium">Institutional / Personal Role:</span> You have a close personal relationship (family member, partner) or supervisory/mentoring role with the PI that compromises your scientific objectivity.</li>
-                    <li><span class="font-medium">Other Circumstances:</span> You feel there is any other relationship or circumstance that could reasonably affect, or appear to affect, your impartiality.</li>
-                </ul>
-            </div>
-            <p>If you are unsure whether a circumstance constitutes a conflict, please connect with us and we will be glad to discuss further.</p>
+            @foreach (\App\Support\ConflictOfInterestPolicyDocument::sections() as $section)
+                <div>
+                    @if ($section['heading'] !== null)
+                        <h3 class="font-semibold text-uh-fg">{{ $section['heading'] }}</h3>
+                    @endif
+                    @foreach ($section['paragraphs'] as $paragraph)
+                        {{-- No whitespace may leak between segments; spacing lives inside the segment strings. --}}
+                        <p class="mt-1.5">@foreach ((array) $paragraph as $segment){!! \App\Support\ConflictOfInterestPolicyDocument::segmentHtml($segment) !!}@endforeach</p>
+                    @endforeach
+                    @if (! empty($section['items']))
+                        <ul class="mt-2 list-disc pl-5 space-y-1.5">
+                            @foreach ($section['items'] as $item)
+                                <li><span class="font-medium">{{ $item['label'] }}</span> {{ $item['text'] }}</li>
+                            @endforeach
+                        </ul>
+                    @endif
+                </div>
+            @endforeach
         </div>
         <div class="mt-6 text-right">
             <button type="button" class="btn-secondary" x-on:click="show = false">Close</button>

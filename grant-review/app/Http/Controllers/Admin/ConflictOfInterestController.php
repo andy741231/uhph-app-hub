@@ -151,4 +151,26 @@ class ConflictOfInterestController extends Controller
             'stats' => $stats,
         ]);
     }
+
+    /**
+     * Audit history for one reviewer + cycle: every declaration version
+     * (current and superseded), newest first, with the policy snapshot
+     * each version was recorded against and its screening detail.
+     */
+    public function show(Request $request, ConflictOfInterestDeclaration $declaration): View
+    {
+        $declarations = ConflictOfInterestDeclaration::query()
+            ->with(['reviewer', 'round', 'responses.submission.submitter', 'entries.submission.submitter'])
+            ->where('reviewer_id', $declaration->reviewer_id)
+            ->where('round_id', $declaration->round_id)
+            ->orderByDesc('declared_at')
+            ->orderByDesc('id')
+            ->get();
+
+        return view('admin.conflicts.show', [
+            'declarations' => $declarations,
+            'reviewer' => $declaration->reviewer,
+            'round' => $declaration->round,
+        ]);
+    }
 }

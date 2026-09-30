@@ -13,6 +13,7 @@ use App\Models\Round;
 use App\Models\Submission;
 use App\Models\User;
 use App\Support\ConfidentialityAgreementDocument;
+use App\Support\ConflictOfInterestPolicyDocument;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -80,19 +81,28 @@ class ConflictOfInterestController extends Controller
             ->first();
 
         $declaration = DB::transaction(function () use ($reviewer, $round, $submissions, $conflicts, $invitation): ConflictOfInterestDeclaration {
+            $now = now();
+
             // Supersede any prior active declarations so the latest
             // version is authoritative while history remains auditable.
             ConflictOfInterestDeclaration::query()
                 ->where('reviewer_id', $reviewer->id)
                 ->where('round_id', $round->id)
                 ->whereNull('superseded_at')
-                ->update(['superseded_at' => now()]);
+                ->update(['superseded_at' => $now]);
 
+            // Store the canonical policy version and wording the
+            // reviewer just accepted — superseded declarations keep
+            // their own snapshot so audits reflect what was actually
+            // shown at the time.
             $declaration = ConflictOfInterestDeclaration::create([
                 'reviewer_id' => $reviewer->id,
                 'round_id' => $round->id,
                 'reviewer_round_invitation_id' => $invitation?->id,
-                'declared_at' => now(),
+                'declared_at' => $now,
+                'coi_policy_version' => ConflictOfInterestPolicyDocument::VERSION,
+                'coi_policy_content' => ConflictOfInterestPolicyDocument::text(),
+                'coi_policy_acknowledged_at' => $now,
             ]);
 
             foreach ($submissions as $submission) {

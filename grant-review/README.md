@@ -1,3 +1,17 @@
+# Grant Review
+
+RCMI Pilot Grant Program review application (Laravel), deployed as an IIS child application under the UHPH App Hub at `/apps/grant-review`.
+
+## COI & confidentiality audit trail
+
+- **Where things live**: reviewers declare per-proposal conflicts at `/reviewer/conflicts/{round}`; admins review coverage at `/admin/conflicts` and audit every declaration version (current and superseded) at `/admin/conflicts/{declaration}` ("View declaration history" on each submitted row). Confidentiality acceptances are shown on the admin user profile.
+- **What is stored**: each `conflict_of_interest_declarations` row snapshots the canonical COI policy (`coi_policy_version`, `coi_policy_content`, `coi_policy_acknowledged_at`, same instant as `declared_at`); `confidentiality_agreements` stores the agreed confidentiality text per reviewer + cycle + document version. Canonical wording lives in `App\Support\ConflictOfInterestPolicyDocument` and `App\Support\ConfidentialityAgreementDocument`.
+- **Legacy limitation**: declarations recorded before the snapshot columns exist keep `NULL`s and render "COI policy acceptance details were not recorded" — never assume today's wording for old rows; rows predating per-proposal responses fall back to `conflict_of_interest_entries` with an incomplete-coverage warning.
+- **Policy changes**: when the policy text or the linked NIH URL changes, bump `ConflictOfInterestPolicyDocument::VERSION` and update `sections()` manually — the external NIH page is not archived, only our local policy text and the link are stored. The declaration form posts a `coi_policy_digest` (SHA-256 of version + text); forms opened before a change are rejected on submit and the reviewer must reload and re-read the policy.
+- **Deployment**: run `php artisan migrate --force` and `npm run build` when deploying — production migrations are never automated.
+
+---
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">

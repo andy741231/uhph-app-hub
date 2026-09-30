@@ -5,13 +5,16 @@ namespace Tests\Feature;
 use App\Mail\ConflictOfInterestDeclared;
 use App\Models\ConfidentialityAgreement;
 use App\Models\ConflictOfInterestDeclaration;
+use App\Models\ConflictOfInterestEntry;
 use App\Models\ConflictOfInterestResponse;
 use App\Models\Review;
 use App\Models\ReviewAssignment;
+use App\Models\ReviewerRoundInvitation;
 use App\Models\Round;
 use App\Models\Submission;
 use App\Models\User;
 use App\Support\ConfidentialityAgreementDocument;
+use App\Support\ConflictOfInterestPolicyDocument;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
@@ -229,6 +232,7 @@ class ConflictOfInterestTest extends TestCase
             ->post(route('reviewer.conflicts.store', $round), [
                 'coi_policy_acknowledged' => '1',
                 'confidentiality_acknowledged' => '1',
+                'coi_policy_digest' => ConflictOfInterestPolicyDocument::digest(),
                 'conflicts' => [
                     $submission1->id => [
                         'submission_id' => $submission1->id,
@@ -276,6 +280,7 @@ class ConflictOfInterestTest extends TestCase
             ->post(route('reviewer.conflicts.store', $round), [
                 'coi_policy_acknowledged' => '1',
                 'confidentiality_acknowledged' => '1',
+                'coi_policy_digest' => ConflictOfInterestPolicyDocument::digest(),
                 'conflicts' => [
                     $submission1->id => [
                         'submission_id' => $submission1->id,
@@ -305,6 +310,7 @@ class ConflictOfInterestTest extends TestCase
             ->post(route('reviewer.conflicts.store', $round), [
                 'coi_policy_acknowledged' => '1',
                 'confidentiality_acknowledged' => '1',
+                'coi_policy_digest' => ConflictOfInterestPolicyDocument::digest(),
                 'conflicts' => [
                     $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => false, 'description' => ''],
                     $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => false, 'description' => ''],
@@ -348,6 +354,7 @@ class ConflictOfInterestTest extends TestCase
             ->post(route('reviewer.conflicts.store', $round), [
                 'coi_policy_acknowledged' => '1',
                 'confidentiality_acknowledged' => '1',
+                'coi_policy_digest' => ConflictOfInterestPolicyDocument::digest(),
             ]);
 
         $response->assertForbidden();
@@ -363,6 +370,7 @@ class ConflictOfInterestTest extends TestCase
             ->post(route('reviewer.conflicts.store', $round), [
                 'coi_policy_acknowledged' => '1',
                 'confidentiality_acknowledged' => '1',
+                'coi_policy_digest' => ConflictOfInterestPolicyDocument::digest(),
                 'conflicts' => [
                     $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => true, 'description' => 'Old reason.'],
                     $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => false, 'description' => ''],
@@ -386,6 +394,7 @@ class ConflictOfInterestTest extends TestCase
             ->post(route('reviewer.conflicts.store', $round), [
                 'coi_policy_acknowledged' => '1',
                 'confidentiality_acknowledged' => '1',
+                'coi_policy_digest' => ConflictOfInterestPolicyDocument::digest(),
                 'conflicts' => [
                     $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => false, 'description' => ''],
                     $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => true, 'description' => 'New reason.'],
@@ -425,6 +434,7 @@ class ConflictOfInterestTest extends TestCase
             ->post(route('reviewer.conflicts.store', $round), [
                 'coi_policy_acknowledged' => '1',
                 'confidentiality_acknowledged' => '1',
+                'coi_policy_digest' => ConflictOfInterestPolicyDocument::digest(),
                 'conflicts' => [
                     $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => false, 'description' => ''],
                     $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => false, 'description' => ''],
@@ -518,6 +528,7 @@ class ConflictOfInterestTest extends TestCase
         $this->actingAs($reviewer)
             ->post(route('reviewer.conflicts.store', $round), [
                 'confidentiality_acknowledged' => '1',
+                'coi_policy_digest' => ConflictOfInterestPolicyDocument::digest(),
                 'conflicts' => [
                     $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => false, 'description' => ''],
                     $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => false, 'description' => ''],
@@ -536,6 +547,7 @@ class ConflictOfInterestTest extends TestCase
         $this->actingAs($reviewer)
             ->post(route('reviewer.conflicts.store', $round), [
                 'coi_policy_acknowledged' => '1',
+                'coi_policy_digest' => ConflictOfInterestPolicyDocument::digest(),
                 'conflicts' => [
                     $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => false, 'description' => ''],
                     $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => false, 'description' => ''],
@@ -556,6 +568,7 @@ class ConflictOfInterestTest extends TestCase
             ->post(route('reviewer.conflicts.store', $round), [
                 'coi_policy_acknowledged' => '1',
                 'confidentiality_acknowledged' => '1',
+                'coi_policy_digest' => ConflictOfInterestPolicyDocument::digest(),
                 'conflicts' => [
                     $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => '0', 'description' => ''],
                     $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => '0', 'description' => ''],
@@ -580,6 +593,7 @@ class ConflictOfInterestTest extends TestCase
         $payload = [
             'coi_policy_acknowledged' => '1',
             'confidentiality_acknowledged' => '1',
+            'coi_policy_digest' => ConflictOfInterestPolicyDocument::digest(),
             'conflicts' => [
                 $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => '0', 'description' => ''],
                 $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => '0', 'description' => ''],
@@ -603,6 +617,7 @@ class ConflictOfInterestTest extends TestCase
             ->post(route('reviewer.conflicts.store', $round), [
                 'coi_policy_acknowledged' => '1',
                 'confidentiality_acknowledged' => '1',
+                'coi_policy_digest' => ConflictOfInterestPolicyDocument::digest(),
                 'conflicts' => [
                     $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => '0', 'description' => ''],
                     $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => '0', 'description' => ''],
@@ -627,6 +642,7 @@ class ConflictOfInterestTest extends TestCase
             ->post(route('reviewer.conflicts.store', $round), [
                 'coi_policy_acknowledged' => '1',
                 'confidentiality_acknowledged' => '1',
+                'coi_policy_digest' => ConflictOfInterestPolicyDocument::digest(),
                 'conflicts' => [
                     $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => false, 'description' => ''],
                     $submission2->id => ['submission_id' => $submission2->id],
@@ -646,6 +662,7 @@ class ConflictOfInterestTest extends TestCase
             ->post(route('reviewer.conflicts.store', $round), [
                 'coi_policy_acknowledged' => '1',
                 'confidentiality_acknowledged' => '1',
+                'coi_policy_digest' => ConflictOfInterestPolicyDocument::digest(),
                 'conflicts' => [
                     $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => '1', 'description' => ''],
                     $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => '0', 'description' => ''],
@@ -656,4 +673,368 @@ class ConflictOfInterestTest extends TestCase
         $this->assertDatabaseCount('conflict_of_interest_declarations', 0);
     }
 
+    public function test_coi_form_shows_policy_digest_and_full_policy_text(): void
+    {
+        [$reviewer, $round] = $this->setupRoundWithAssignedReviewer();
+
+        $this->actingAs($reviewer)
+            ->get(route('reviewer.conflicts.create', $round))
+            ->assertOk()
+            ->assertSee('name="coi_policy_digest"', false)
+            ->assertSee('value="'.ConflictOfInterestPolicyDocument::digest().'"', false)
+            ->assertSee(ConflictOfInterestPolicyDocument::TITLE)
+            ->assertSee(ConflictOfInterestPolicyDocument::NIH_POLICY_URL)
+            ->assertSee('What Constitutes a Disqualifying Conflict of Interest?')
+            ->assertSee('Recent Professional Relationship:')
+            ->assertSee('If you are unsure whether a circumstance constitutes a conflict');
+    }
+
+    public function test_coi_submission_stores_canonical_policy_snapshot(): void
+    {
+        Mail::fake();
+        $this->freezeTime();
+        [$reviewer, $round, $submission1, $submission2] = $this->setupRoundWithAssignedReviewer();
+
+        $this->actingAs($reviewer)
+            ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'confidentiality_acknowledged' => '1',
+                'coi_policy_digest' => ConflictOfInterestPolicyDocument::digest(),
+                'conflicts' => [
+                    $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => '0', 'description' => ''],
+                    $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => '0', 'description' => ''],
+                ],
+            ])
+            ->assertRedirect();
+
+        $declaration = ConflictOfInterestDeclaration::where('reviewer_id', $reviewer->id)
+            ->where('round_id', $round->id)
+            ->sole();
+
+        $this->assertSame(ConflictOfInterestPolicyDocument::VERSION, $declaration->coi_policy_version);
+        $this->assertSame(ConflictOfInterestPolicyDocument::text(), $declaration->coi_policy_content);
+        $this->assertStringContainsString('grants.nih.gov/policy-and-compliance/policy-topics/peer-review/coi', $declaration->coi_policy_content);
+        $this->assertSame(
+            $declaration->declared_at->toDateTimeString(),
+            $declaration->coi_policy_acknowledged_at->toDateTimeString(),
+        );
+        $this->assertSame(now()->toDateTimeString(), $declaration->declared_at->toDateTimeString());
+    }
+
+    public function test_coi_resubmission_preserves_superseded_policy_snapshot(): void
+    {
+        Mail::fake();
+        [$reviewer, $round, $submission1, $submission2] = $this->setupRoundWithAssignedReviewer();
+
+        // An earlier declaration recorded against older policy wording.
+        $oldDeclaration = ConflictOfInterestDeclaration::create([
+            'reviewer_id' => $reviewer->id,
+            'round_id' => $round->id,
+            'declared_at' => now()->subDay(),
+            'coi_policy_version' => '2001-01-01',
+            'coi_policy_content' => 'LEGACY POLICY WORDING SNAPSHOT',
+            'coi_policy_acknowledged_at' => now()->subDay(),
+        ]);
+
+        $this->freezeTime();
+
+        $this->actingAs($reviewer)
+            ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'confidentiality_acknowledged' => '1',
+                'coi_policy_digest' => ConflictOfInterestPolicyDocument::digest(),
+                'conflicts' => [
+                    $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => '0', 'description' => ''],
+                    $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => '0', 'description' => ''],
+                ],
+            ])
+            ->assertRedirect();
+
+        $oldDeclaration->refresh();
+        $this->assertNotNull($oldDeclaration->superseded_at);
+        $this->assertSame('2001-01-01', $oldDeclaration->coi_policy_version);
+        $this->assertSame('LEGACY POLICY WORDING SNAPSHOT', $oldDeclaration->coi_policy_content);
+        $this->assertSame(
+            $oldDeclaration->declared_at->toDateTimeString(),
+            $oldDeclaration->coi_policy_acknowledged_at->toDateTimeString(),
+        );
+
+        $current = ConflictOfInterestDeclaration::where('reviewer_id', $reviewer->id)
+            ->where('round_id', $round->id)
+            ->current()
+            ->sole();
+
+        $this->assertNotSame($oldDeclaration->id, $current->id);
+        $this->assertSame(ConflictOfInterestPolicyDocument::VERSION, $current->coi_policy_version);
+        $this->assertSame(ConflictOfInterestPolicyDocument::text(), $current->coi_policy_content);
+        $this->assertSame(now()->toDateTimeString(), $current->coi_policy_acknowledged_at->toDateTimeString());
+    }
+
+    public function test_coi_submission_rejects_missing_or_stale_policy_digest(): void
+    {
+        Mail::fake();
+        [$reviewer, $round, $submission1, $submission2] = $this->setupRoundWithAssignedReviewer();
+
+        $conflicts = [
+            $submission1->id => ['submission_id' => $submission1->id, 'has_conflict' => '0', 'description' => ''],
+            $submission2->id => ['submission_id' => $submission2->id, 'has_conflict' => '0', 'description' => ''],
+        ];
+
+        // No digest at all — the acceptance cannot be trusted.
+        $this->actingAs($reviewer)
+            ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'confidentiality_acknowledged' => '1',
+                'conflicts' => $conflicts,
+            ])
+            ->assertSessionHasErrors('coi_policy_digest');
+
+        // A stale digest (form opened before a wording change) is rejected.
+        $this->actingAs($reviewer)
+            ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'confidentiality_acknowledged' => '1',
+                'coi_policy_digest' => hash('sha256', 'outdated wording'),
+                'conflicts' => $conflicts,
+            ])
+            ->assertSessionHasErrors('coi_policy_digest');
+
+        $this->assertDatabaseCount('conflict_of_interest_declarations', 0);
+        $this->assertDatabaseCount('conflict_of_interest_responses', 0);
+        $this->assertDatabaseCount('confidentiality_agreements', 0);
+
+        // A rejected submission must not supersede an existing declaration.
+        $existing = ConflictOfInterestDeclaration::create([
+            'reviewer_id' => $reviewer->id,
+            'round_id' => $round->id,
+            'declared_at' => now(),
+        ]);
+
+        $this->actingAs($reviewer)
+            ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'confidentiality_acknowledged' => '1',
+                'coi_policy_digest' => 'stale-digest',
+                'conflicts' => $conflicts,
+            ])
+            ->assertSessionHasErrors('coi_policy_digest');
+
+        $this->assertNull($existing->fresh()->superseded_at);
+        $this->assertDatabaseCount('conflict_of_interest_declarations', 1);
+    }
+
+    public function test_admin_can_view_declaration_history_with_policy_snapshots(): void
+    {
+        $this->freezeTime();
+        $admin = User::factory()->create(['role' => 'admin']);
+        [$reviewer, $round, $submission1, $submission2] = $this->setupRoundWithAssignedReviewer();
+
+        // Superseded declaration recorded against older wording.
+        $superseded = ConflictOfInterestDeclaration::create([
+            'reviewer_id' => $reviewer->id,
+            'round_id' => $round->id,
+            'declared_at' => now()->subDays(2),
+            'superseded_at' => now()->subDay(),
+            'admin_notified_at' => now()->subDays(2),
+            'coi_policy_version' => '2001-01-01',
+            'coi_policy_content' => 'LEGACY POLICY WORDING SNAPSHOT',
+            'coi_policy_acknowledged_at' => now()->subDays(2),
+        ]);
+        ConflictOfInterestResponse::create([
+            'declaration_id' => $superseded->id,
+            'submission_id' => $submission1->id,
+            'status' => ConflictOfInterestResponse::STATUS_CONFLICT,
+            'description' => 'Old conflict reason.',
+        ]);
+
+        // Current declaration recorded against the canonical wording.
+        $current = ConflictOfInterestDeclaration::create([
+            'reviewer_id' => $reviewer->id,
+            'round_id' => $round->id,
+            'declared_at' => now(),
+            'coi_policy_version' => ConflictOfInterestPolicyDocument::VERSION,
+            'coi_policy_content' => ConflictOfInterestPolicyDocument::text(),
+            'coi_policy_acknowledged_at' => now(),
+        ]);
+        ConflictOfInterestResponse::create([
+            'declaration_id' => $current->id,
+            'submission_id' => $submission1->id,
+            'status' => ConflictOfInterestResponse::STATUS_CLEAR,
+        ]);
+        ConflictOfInterestResponse::create([
+            'declaration_id' => $current->id,
+            'submission_id' => $submission2->id,
+            'status' => ConflictOfInterestResponse::STATUS_CONFLICT,
+            'description' => 'Current conflict reason.',
+        ]);
+
+        // Unrelated declarations must not leak into this history —
+        // another reviewer in the same round, and the same reviewer
+        // in another round.
+        $otherReviewer = User::factory()->create(['role' => 'reviewer', 'first_name' => 'Zed', 'last_name' => 'Outsider']);
+        ConflictOfInterestDeclaration::create([
+            'reviewer_id' => $otherReviewer->id,
+            'round_id' => $round->id,
+            'declared_at' => now(),
+            'coi_policy_content' => 'UNRELATED REVIEWER SNAPSHOT',
+        ]);
+        $otherRound = Round::create([
+            'name' => 'Fall 2028 Grants',
+            'opens_at' => now()->subDay(),
+            'deadline_at' => now()->addDays(10),
+            'status' => 'open',
+        ]);
+        ConflictOfInterestDeclaration::create([
+            'reviewer_id' => $reviewer->id,
+            'round_id' => $otherRound->id,
+            'declared_at' => now(),
+            'coi_policy_content' => 'UNRELATED ROUND SNAPSHOT',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.conflicts.show', $current));
+
+        $response->assertOk();
+        $response->assertSee($reviewer->full_name);
+        $response->assertSee($round->name);
+        $response->assertSeeInOrder([
+            'Declaration #'.$current->id,
+            'Declaration #'.$superseded->id,
+        ]);
+        $response->assertSee('Current');
+        $response->assertSee('Superseded');
+        $response->assertSee('LEGACY POLICY WORDING SNAPSHOT');
+        $response->assertSee('2001-01-01');
+        $response->assertSee(ConflictOfInterestPolicyDocument::VERSION);
+        $response->assertSee('What Constitutes a Disqualifying Conflict of Interest?');
+        $response->assertSee('Old conflict reason.');
+        $response->assertSee('Current conflict reason.');
+        $response->assertSee('No conflict');
+        $response->assertSee('Potential conflict');
+        $response->assertSee($current->declared_at->format('M j, Y \a\t g:i:s A T'));
+        $response->assertSee($superseded->declared_at->format('M j, Y \a\t g:i:s A T'));
+        $response->assertSee($superseded->superseded_at->format('M j, Y \a\t g:i:s A T'));
+        $response->assertDontSee('Zed Outsider');
+        $response->assertDontSee('UNRELATED REVIEWER SNAPSHOT');
+        $response->assertDontSee('UNRELATED ROUND SNAPSHOT');
+        $response->assertDontSee('Fall 2028 Grants');
+    }
+
+    public function test_declaration_history_for_zero_proposal_round_is_not_marked_legacy(): void
+    {
+        Mail::fake();
+        $admin = User::factory()->create(['role' => 'admin']);
+        $reviewer = User::factory()->create(['role' => 'reviewer', 'status' => 'active']);
+        $round = Round::create([
+            'name' => 'Empty Cycle',
+            'opens_at' => now()->subDay(),
+            'deadline_at' => now()->addDays(10),
+            'status' => 'open',
+        ]);
+
+        ReviewerRoundInvitation::create([
+            'round_id' => $round->id,
+            'reviewer_id' => $reviewer->id,
+            'invited_at' => now(),
+        ]);
+
+        $this->actingAs($reviewer)
+            ->post(route('reviewer.conflicts.store', $round), [
+                'coi_policy_acknowledged' => '1',
+                'confidentiality_acknowledged' => '1',
+                'coi_policy_digest' => ConflictOfInterestPolicyDocument::digest(),
+            ])
+            ->assertRedirect();
+
+        $declaration = ConflictOfInterestDeclaration::where('reviewer_id', $reviewer->id)
+            ->where('round_id', $round->id)
+            ->sole();
+        $this->assertCount(0, $declaration->responses);
+
+        $this->actingAs($admin)
+            ->get(route('admin.conflicts.show', $declaration))
+            ->assertOk()
+            ->assertSee('No proposals were screened in this declaration.')
+            ->assertDontSee('coverage is incomplete');
+    }
+
+    public function test_admin_declaration_history_marks_unrecorded_policy_acceptance(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        [$reviewer, $round, $submission1] = $this->setupRoundWithAssignedReviewer();
+
+        // Legacy declaration: no policy snapshot columns, legacy conflict entry.
+        $declaration = ConflictOfInterestDeclaration::create([
+            'reviewer_id' => $reviewer->id,
+            'round_id' => $round->id,
+            'declared_at' => now(),
+        ]);
+        ConflictOfInterestEntry::create([
+            'declaration_id' => $declaration->id,
+            'submission_id' => $submission1->id,
+            'description' => 'Legacy reported conflict.',
+        ]);
+
+        $response = $this->actingAs($admin)->get(route('admin.conflicts.show', $declaration));
+
+        $response->assertOk();
+        $response->assertSee('COI policy acceptance details were not recorded for this declaration.');
+        $response->assertSee('Legacy reported conflict.');
+        $response->assertSee('coverage is incomplete');
+        $response->assertDontSee(ConflictOfInterestPolicyDocument::VERSION);
+    }
+
+    public function test_declaration_history_requires_admin(): void
+    {
+        [$reviewer, $round] = $this->setupRoundWithAssignedReviewer();
+        $submitter = User::factory()->create(['role' => 'submitter']);
+        $declaration = ConflictOfInterestDeclaration::create([
+            'reviewer_id' => $reviewer->id,
+            'round_id' => $round->id,
+            'declared_at' => now(),
+        ]);
+
+        $this->get(route('admin.conflicts.show', $declaration))
+            ->assertRedirect(route('login'));
+
+        $this->actingAs($reviewer)
+            ->get(route('admin.conflicts.show', $declaration))
+            ->assertForbidden();
+
+        $this->actingAs($submitter)
+            ->get(route('admin.conflicts.show', $declaration))
+            ->assertForbidden();
+
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($admin)
+            ->get(route('admin.conflicts.show', 999999))
+            ->assertNotFound();
+    }
+
+    public function test_conflicts_index_links_to_declaration_history(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        [$reviewer, $round, $submission1, $submission2] = $this->setupRoundWithAssignedReviewer();
+        $declaration = ConflictOfInterestDeclaration::create([
+            'reviewer_id' => $reviewer->id,
+            'round_id' => $round->id,
+            'declared_at' => now(),
+        ]);
+
+        // Full per-proposal coverage keeps the row non-stale so the
+        // Assign reviews action remains alongside the history link.
+        foreach ([$submission1, $submission2] as $submission) {
+            ConflictOfInterestResponse::create([
+                'declaration_id' => $declaration->id,
+                'submission_id' => $submission->id,
+                'status' => ConflictOfInterestResponse::STATUS_CLEAR,
+            ]);
+        }
+
+        $this->actingAs($admin)
+            ->get(route('admin.conflicts.index'))
+            ->assertOk()
+            ->assertSee('View declaration history')
+            ->assertSee('Assign reviews')
+            ->assertSee(route('admin.conflicts.show', $declaration));
+    }
 }

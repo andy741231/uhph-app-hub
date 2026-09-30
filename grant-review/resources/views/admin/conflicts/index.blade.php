@@ -145,27 +145,36 @@
                             @endif
                         </td>
                         <td class="text-right whitespace-nowrap">
-                            @if (($isPending || $stale) && $invitation)
-                                <form action="{{ route('admin.review-invitations.resend', $invitation) }}" method="POST" class="inline">
-                                    @csrf
-                                    <button type="submit" class="inline-flex items-center gap-1 text-xs font-semibold text-uh-fg bg-white border border-uh-border hover:bg-uh-muted rounded-md px-3 py-1.5 transition-colors">
+                            <div class="inline-flex flex-col items-end gap-1.5">
+                                @if (! $isPending)
+                                    <a href="{{ route('admin.conflicts.show', $declaration) }}"
+                                       class="inline-flex items-center gap-1 text-xs font-semibold text-uh-fg bg-white border border-uh-border hover:bg-uh-muted rounded-md px-3 py-1.5 transition-colors">
+                                        <x-heroicon-o-clock class="w-3.5 h-3.5" />
+                                        View declaration history
+                                    </a>
+                                @endif
+                                @if (($isPending || $stale) && $invitation)
+                                    <form action="{{ route('admin.review-invitations.resend', $invitation) }}" method="POST" class="inline">
+                                        @csrf
+                                        <button type="submit" class="inline-flex items-center gap-1 text-xs font-semibold text-uh-fg bg-white border border-uh-border hover:bg-uh-muted rounded-md px-3 py-1.5 transition-colors">
+                                            <x-heroicon-o-envelope-open class="w-3.5 h-3.5" />
+                                            Resend COI invitation
+                                        </button>
+                                    </form>
+                                @elseif ($stale)
+                                    <a href="{{ route('admin.review-invitations.index', ['round_id' => $round->id]) }}"
+                                       class="inline-flex items-center gap-1 text-xs font-semibold text-uh-fg bg-white border border-uh-border hover:bg-uh-muted rounded-md px-3 py-1.5 transition-colors">
                                         <x-heroicon-o-envelope-open class="w-3.5 h-3.5" />
-                                        Resend COI invitation
-                                    </button>
-                                </form>
-                            @elseif ($stale)
-                                <a href="{{ route('admin.review-invitations.index', ['round_id' => $round->id]) }}"
-                                   class="inline-flex items-center gap-1 text-xs font-semibold text-uh-fg bg-white border border-uh-border hover:bg-uh-muted rounded-md px-3 py-1.5 transition-colors">
-                                    <x-heroicon-o-envelope-open class="w-3.5 h-3.5" />
-                                    View COI invitations
-                                </a>
-                            @else
-                                <a href="{{ route('admin.review-assignments.index', ['round_id' => $round->id, 'reviewer_id' => $reviewer->id]) }}"
-                                   class="inline-flex items-center gap-1 text-xs font-semibold text-white bg-uh-red hover:bg-uh-red/90 rounded-md px-3 py-1.5 transition-colors">
-                                    <x-heroicon-o-user-plus class="w-3.5 h-3.5" />
-                                    Assign reviews
-                                </a>
-                            @endif
+                                        View COI invitations
+                                    </a>
+                                @elseif (! $isPending)
+                                    <a href="{{ route('admin.review-assignments.index', ['round_id' => $round->id, 'reviewer_id' => $reviewer->id]) }}"
+                                       class="inline-flex items-center gap-1 text-xs font-semibold text-white bg-uh-red hover:bg-uh-red/90 rounded-md px-3 py-1.5 transition-colors">
+                                        <x-heroicon-o-user-plus class="w-3.5 h-3.5" />
+                                        Assign reviews
+                                    </a>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                 @empty

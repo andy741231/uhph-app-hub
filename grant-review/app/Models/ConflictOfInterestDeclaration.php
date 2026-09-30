@@ -16,12 +16,16 @@ class ConflictOfInterestDeclaration extends Model
         'declared_at',
         'admin_notified_at',
         'superseded_at',
+        'coi_policy_version',
+        'coi_policy_content',
+        'coi_policy_acknowledged_at',
     ];
 
     protected $casts = [
         'declared_at' => 'datetime',
         'admin_notified_at' => 'datetime',
         'superseded_at' => 'datetime',
+        'coi_policy_acknowledged_at' => 'datetime',
     ];
 
     public function scopeCurrent(Builder $query): Builder

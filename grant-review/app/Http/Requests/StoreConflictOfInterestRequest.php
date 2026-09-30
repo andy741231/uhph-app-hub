@@ -3,7 +3,9 @@
 namespace App\Http\Requests;
 
 use App\Models\Round;
+use App\Support\ConflictOfInterestPolicyDocument;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreConflictOfInterestRequest extends FormRequest
 {
@@ -27,6 +29,9 @@ class StoreConflictOfInterestRequest extends FormRequest
             'conflicts.*.has_conflict' => ['sometimes', 'boolean'],
             'conflicts.*.description' => ['required_if:conflicts.*.has_conflict,1', 'nullable', 'string', 'max:2000'],
             'coi_policy_acknowledged' => ['required', 'accepted'],
+            // Digest of the policy wording shown when the form was
+            // rendered — rejects stale forms after a version bump.
+            'coi_policy_digest' => ['required', 'string', Rule::in([ConflictOfInterestPolicyDocument::digest()])],
             'confidentiality_acknowledged' => ['required', 'accepted'],
             'return_to' => ['sometimes', 'string'],
         ];
@@ -46,6 +51,8 @@ class StoreConflictOfInterestRequest extends FormRequest
             'conflicts.*.description.max' => 'Please keep each conflict description under 2,000 characters.',
             'coi_policy_acknowledged.required' => 'Please read and agree to the COI Policy & Guidelines.',
             'coi_policy_acknowledged.accepted' => 'Please read and agree to the COI Policy & Guidelines.',
+            'coi_policy_digest.required' => 'The COI Policy & Guidelines have changed since this form was opened. Please reload the page, re-read the policy, and submit again.',
+            'coi_policy_digest.in' => 'The COI Policy & Guidelines have changed since this form was opened. Please reload the page, re-read the policy, and submit again.',
             'confidentiality_acknowledged.required' => 'Please read and agree to the Confidentiality Statement & Code of Conduct.',
             'confidentiality_acknowledged.accepted' => 'Please read and agree to the Confidentiality Statement & Code of Conduct.',
         ];
