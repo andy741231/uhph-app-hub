@@ -13,10 +13,16 @@ CREATE TABLE IF NOT EXISTS flipbooks (
     thumbnail VARCHAR(500),
     toc_json TEXT DEFAULT NULL,
     settings_json TEXT DEFAULT NULL,
+    owner_subject CHAR(36) NULL,
+    owner_name VARCHAR(255) NULL,
+    owner_email VARCHAR(255) NULL,
+    visibility ENUM('public', 'unlisted', 'private') NOT NULL DEFAULT 'private',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_slug (slug),
-    INDEX idx_created (created_at)
+    INDEX idx_created (created_at),
+    INDEX idx_owner_subject (owner_subject),
+    INDEX idx_visibility (visibility)
 ) ENGINE=InnoDB;
 
 -- Extracted text per page for search

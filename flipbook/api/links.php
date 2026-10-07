@@ -9,13 +9,40 @@
 require_once __DIR__ . '/../includes/auth.php';
 
 header('Content-Type: application/json');
+header('Cache-Control: no-store');
 $method = $_SERVER['REQUEST_METHOD'];
 if ($method !== 'GET') {
-    flipbook_require_api_admin();
+    flipbook_require_api_user();
     flipbook_require_csrf();
 }
 require_once __DIR__ . '/../includes/db.php';
 $db = getDB();
+
+function flipbook_parent_for_link(PDO $db, int $flipbookId): array
+{
+    $stmt = $db->prepare("SELECT * FROM flipbooks WHERE id = ?");
+    $stmt->execute([$flipbookId]);
+    $flipbook = $stmt->fetch();
+    if (!$flipbook) {
+        jsonResponse(['error' => 'Flipbook not found'], 404);
+    }
+
+    return $flipbook;
+}
+
+function flipbook_parent_for_link_id(PDO $db, int $linkId): array
+{
+    $stmt = $db->prepare(
+        "SELECT f.* FROM flipbook_links l JOIN flipbooks f ON f.id = l.flipbook_id WHERE l.id = ?"
+    );
+    $stmt->execute([$linkId]);
+    $flipbook = $stmt->fetch();
+    if (!$flipbook) {
+        jsonResponse(['error' => 'Link not found'], 404);
+    }
+
+    return $flipbook;
+}
 
 switch ($method) {
 
@@ -24,10 +51,12 @@ switch ($method) {
         if (!isset($_GET['flipbook_id'])) {
             jsonResponse(['error' => 'flipbook_id required'], 400);
         }
+        $flipbook = flipbook_parent_for_link($db, (int)$_GET['flipbook_id']);
+        flipbook_authorize_view($flipbook);
         $stmt = $db->prepare(
             "SELECT * FROM flipbook_links WHERE flipbook_id = ? ORDER BY page_number, id"
         );
-        $stmt->execute([(int)$_GET['flipbook_id']]);
+        $stmt->execute([$flipbook['id']]);
         jsonResponse(['links' => $stmt->fetchAll()]);
         break;
 
@@ -40,6 +69,8 @@ switch ($method) {
                 jsonResponse(['error' => "$f is required"], 400);
             }
         }
+
+        flipbook_authorize_manage(flipbook_parent_for_link($db, (int)$input['flipbook_id']));
 
         $stmt = $db->prepare("
             INSERT INTO flipbook_links
@@ -67,6 +98,8 @@ switch ($method) {
         if (empty($input['id'])) {
             jsonResponse(['error' => 'id required'], 400);
         }
+
+        flipbook_authorize_manage(flipbook_parent_for_link_id($db, (int)$input['id']));
 
         $fields = [];
         $params = [];
@@ -99,6 +132,7 @@ switch ($method) {
         if (empty($input['id'])) {
             jsonResponse(['error' => 'id required'], 400);
         }
+        flipbook_authorize_manage(flipbook_parent_for_link_id($db, (int)$input['id']));
         $db->prepare("DELETE FROM flipbook_links WHERE id = ?")
            ->execute([(int)$input['id']]);
         jsonResponse(['success' => true]);

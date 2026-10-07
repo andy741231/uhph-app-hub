@@ -8,26 +8,41 @@
 require_once __DIR__ . '/../includes/auth.php';
 
 header('Content-Type: application/json');
+header('Cache-Control: no-store');
 $method = $_SERVER['REQUEST_METHOD'];
-$publicSlugRead = $method === 'GET' && isset($_GET['slug']) && !isset($_GET['id']);
-if (!$publicSlugRead) {
-    flipbook_require_api_admin();
-}
 if ($method !== 'GET') {
+    flipbook_require_api_user();
     flipbook_require_csrf();
 }
 require_once __DIR__ . '/../includes/db.php';
 $db = getDB();
 
+// Never expose owner identity to callers who cannot manage the row.
+function flipbook_strip_owner(array $row): array
+{
+    unset($row['owner_email'], $row['owner_subject']);
+
+    return $row;
+}
+
 switch ($method) {
     case 'GET':
-        if (isset($_GET['id'])) {
-            // Get single flipbook by ID
-            $stmt = $db->prepare("SELECT * FROM flipbooks WHERE id = ?");
-            $stmt->execute([(int)$_GET['id']]);
+        if (isset($_GET['id']) || isset($_GET['slug'])) {
+            // Get single flipbook by ID or slug, then apply the visibility rule.
+            if (isset($_GET['id'])) {
+                $stmt = $db->prepare("SELECT * FROM flipbooks WHERE id = ?");
+                $stmt->execute([(int)$_GET['id']]);
+            } else {
+                $stmt = $db->prepare("SELECT * FROM flipbooks WHERE slug = ?");
+                $stmt->execute([$_GET['slug']]);
+            }
             $flipbook = $stmt->fetch();
             if (!$flipbook) {
                 jsonResponse(['error' => 'Flipbook not found'], 404);
+            }
+            flipbook_authorize_view($flipbook);
+            if (!flipbook_can_manage($flipbook)) {
+                $flipbook = flipbook_strip_owner($flipbook);
             }
             // Get videos for this flipbook
             $vstmt = $db->prepare("SELECT * FROM flipbook_videos WHERE flipbook_id = ? ORDER BY page_number");
@@ -35,31 +50,37 @@ switch ($method) {
             $flipbook['videos'] = $vstmt->fetchAll();
             jsonResponse($flipbook);
 
-        } elseif (isset($_GET['slug'])) {
-            // Get single flipbook by slug
-            $stmt = $db->prepare("SELECT * FROM flipbooks WHERE slug = ?");
-            $stmt->execute([$_GET['slug']]);
-            $flipbook = $stmt->fetch();
-            if (!$flipbook) {
-                jsonResponse(['error' => 'Flipbook not found'], 404);
-            }
-            $vstmt = $db->prepare("SELECT * FROM flipbook_videos WHERE flipbook_id = ? ORDER BY page_number");
-            $vstmt->execute([$flipbook['id']]);
-            $flipbook['videos'] = $vstmt->fetchAll();
-            jsonResponse($flipbook);
-
         } else {
-            // List all flipbooks
+            // List: anonymous -> public only; signed-in user -> own; admin -> all.
+            // ?scope=public forces the public gallery for any caller.
             $page = max(1, (int)($_GET['page'] ?? 1));
             $limit = min(50, max(1, (int)($_GET['limit'] ?? 20)));
             $offset = ($page - 1) * $limit;
 
-            $countStmt = $db->query("SELECT COUNT(*) FROM flipbooks");
+            $user = flipbook_current_user();
+            $publicOnly = isset($_GET['scope']) && $_GET['scope'] === 'public';
+
+            $where = '';
+            $params = [];
+            $stripOwner = false;
+            if ($publicOnly || ($user === null && FLIPBOOK_HUB_SSO_ENABLED)) {
+                $where = " WHERE visibility = 'public'";
+                $stripOwner = true;
+            } elseif ($user !== null && $user['role'] !== 'admin') {
+                $where = " WHERE owner_subject = ?";
+                $params[] = $user['subject'];
+            }
+
+            $countStmt = $db->prepare("SELECT COUNT(*) FROM flipbooks" . $where);
+            $countStmt->execute($params);
             $total = $countStmt->fetchColumn();
 
-            $stmt = $db->prepare("SELECT * FROM flipbooks ORDER BY created_at DESC LIMIT ? OFFSET ?");
-            $stmt->execute([$limit, $offset]);
+            $stmt = $db->prepare("SELECT * FROM flipbooks" . $where . " ORDER BY created_at DESC LIMIT ? OFFSET ?");
+            $stmt->execute(array_merge($params, [$limit, $offset]));
             $flipbooks = $stmt->fetchAll();
+            if ($stripOwner) {
+                $flipbooks = array_map('flipbook_strip_owner', $flipbooks);
+            }
 
             jsonResponse([
                 'flipbooks' => $flipbooks,
@@ -76,6 +97,14 @@ switch ($method) {
         if (!isset($input['id'])) {
             jsonResponse(['error' => 'Flipbook ID required'], 400);
         }
+
+        $stmt = $db->prepare("SELECT * FROM flipbooks WHERE id = ?");
+        $stmt->execute([(int)$input['id']]);
+        $flipbook = $stmt->fetch();
+        if (!$flipbook) {
+            jsonResponse(['error' => 'Flipbook not found'], 404);
+        }
+        flipbook_authorize_manage($flipbook);
 
         $fields = [];
         $params = [];
@@ -95,6 +124,13 @@ switch ($method) {
         if (isset($input['page_count'])) {
             $fields[] = "page_count = ?";
             $params[] = (int)$input['page_count'];
+        }
+        if (array_key_exists('visibility', $input)) {
+            if (!in_array($input['visibility'], ['public', 'unlisted', 'private'], true)) {
+                jsonResponse(['error' => 'visibility must be public, unlisted, or private'], 400);
+            }
+            $fields[] = "visibility = ?";
+            $params[] = $input['visibility'];
         }
         if (array_key_exists('settings_json', $input)) {
             $fields[] = "settings_json = ?";
@@ -129,10 +165,13 @@ switch ($method) {
             jsonResponse(['error' => 'Flipbook ID required'], 400);
         }
 
-        // Get flipbook to delete file
-        $stmt = $db->prepare("SELECT pdf_filename FROM flipbooks WHERE id = ?");
+        // Get flipbook to check ownership and delete its file
+        $stmt = $db->prepare("SELECT * FROM flipbooks WHERE id = ?");
         $stmt->execute([(int)$input['id']]);
         $flipbook = $stmt->fetch();
+        if ($flipbook) {
+            flipbook_authorize_manage($flipbook);
+        }
 
         if ($flipbook) {
             // Delete PDF file

@@ -13,7 +13,7 @@ if ((!flipbook_is_https() && !flipbook_is_local_development()) || !flipbook_hub_
     exit;
 }
 
-if (flipbook_is_admin()) {
+if (flipbook_current_user() !== null) {
     header('Location: ' . BASE_PATH . '/index.php', true, 302);
     exit;
 }

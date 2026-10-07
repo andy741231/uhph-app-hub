@@ -5,6 +5,8 @@
  * Mimics the production IIS /apps mount:
  *   /apps/flipbook/*      -> flipbook/ (physical app, served as-is)
  *   /apps/grant-review/*  -> grant-review/public/ (Laravel public dir)
+ *   /apps/doc-review/*    -> doc-review/public/ (Laravel public dir)
+ *   /apps/<laravel-dir>/* -> <dir>/public/ (any dir with public/index.php)
  *   /apps/<other-dir>/*   -> <other-dir>/ (physical app, served as-is)
  *   /apps/<non-physical>  -> app-hub/public/index.php (App Hub front controller)
  *   /                     -> root index.php (placeholder)
@@ -21,6 +23,21 @@ $uri = urldecode(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?? '');
 
 // --- Root-level requests (not under /apps) ---
 if ($uri !== '/' && strpos($uri, '/apps') !== 0) {
+    // Uploaded flipbook files are only served through authorized api/*.php
+    // endpoints — never directly, under any app path.
+    $uriSegments = array_map('strtolower', array_values(array_filter(explode('/', $uri))));
+    if (in_array('uploads', $uriSegments, true)) {
+        http_response_code(404);
+        return true;
+    }
+    // App source directories (flipbook/, doc-review/, app-hub/, ...) are only
+    // reachable through /apps/* routing — never as raw static paths, so
+    // /flipbook/.env etc. cannot leak. Root-level files stay servable.
+    $firstSegment = explode('/', ltrim($uri, '/'))[0] ?? '';
+    if ($firstSegment !== '' && is_dir($root . DIRECTORY_SEPARATOR . $firstSegment)) {
+        http_response_code(404);
+        return true;
+    }
     $file = safe_file_path($root, $uri);
     if ($file !== null && !is_dir($file) && strtolower(pathinfo($file, PATHINFO_EXTENSION)) !== 'php') {
         serve_static_file($file);
@@ -63,9 +80,10 @@ if ($first !== '') {
     $physDir = $root . '/' . $first;
 
     if (is_dir($physDir)) {
-        // grant-review is a Laravel app — serve from its public/
-        if ($first === 'grant-review') {
-            return serve_laravel_public($physDir . '/public', $rel, '/apps/grant-review');
+        // Laravel apps (grant-review, doc-review, …) are served only from
+        // their public/ directory — source directories are never exposed.
+        if (file_exists($physDir . '/public/index.php')) {
+            return serve_laravel_public($physDir . '/public', $rel, '/apps/' . $first);
         }
         // Other physical apps (flipbook, etc.)
         return serve_physical_app($physDir, $rel, '/apps/' . $first);
@@ -95,6 +113,7 @@ function serve_static_file(string $file): void
     $types = [
         'css' => 'text/css',
         'js' => 'application/javascript',
+        'mjs' => 'application/javascript',
         'json' => 'application/json',
         'html' => 'text/html',
         'htm' => 'text/html',
@@ -143,7 +162,9 @@ function route_to_hub(string $root): bool
 function serve_laravel_public(string $publicDir, string $rel, string $basePath): bool
 {
     $_SERVER['UHPH_LOCAL_DEV'] = '1';
-    $subPath = substr($rel, strlen('/grant-review'));
+    // Strip the app's mount segment (e.g. /grant-review, /doc-review).
+    $mount = '/' . basename($basePath);
+    $subPath = substr($rel, strlen($mount));
     $subPath = '/' . ltrim($subPath, '/');
 
     // Serve static files that exist
@@ -174,7 +195,7 @@ function serve_physical_app(string $appDir, string $rel, string $basePath): bool
     $subPath = substr($rel, strlen('/' . basename($appDir)));
     $subPath = '/' . ltrim($subPath, '/');
     $segments = array_map('strtolower', array_values(array_filter(explode('/', $subPath))));
-    $blocked = ['config.php', 'includes', '.windsurf', '.devin', '.git', '.env', '.playwright-mcp', 'tests', 'sql', 'scripts'];
+    $blocked = ['config.php', 'includes', '.windsurf', '.devin', '.git', '.env', '.playwright-mcp', 'tests', 'sql', 'scripts', 'uploads'];
     if (array_intersect($segments, $blocked) !== []) {
         http_response_code(404);
         return true;

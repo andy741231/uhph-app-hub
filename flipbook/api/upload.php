@@ -4,11 +4,12 @@
  * POST: Upload a PDF file and create a flipbook
  */
 require_once __DIR__ . '/../includes/auth.php';
-flipbook_require_api_admin();
+flipbook_require_api_user();
 flipbook_require_csrf();
 require_once __DIR__ . '/../includes/db.php';
 
 header('Content-Type: application/json');
+header('Cache-Control: no-store');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonResponse(['error' => 'Method not allowed'], 405);
@@ -44,6 +45,17 @@ if ($file['size'] > MAX_UPLOAD_SIZE) {
 // Get title from POST or filename
 $title = trim($_POST['title'] ?? pathinfo($file['name'], PATHINFO_FILENAME));
 $description = trim($_POST['description'] ?? '');
+
+// Visibility comes from the form but is validated against a whitelist;
+// owner identity is taken only from the authenticated session, never POST.
+$visibility = $_POST['visibility'] ?? 'private';
+if (!in_array($visibility, ['public', 'unlisted', 'private'], true)) {
+    jsonResponse(['error' => 'Invalid visibility'], 400);
+}
+$owner = flipbook_current_user();
+$ownerSubject = $owner['subject'] ?? null;
+$ownerName = $owner['name'] ?? null;
+$ownerEmail = $owner['email'] ?? null;
 
 // Generate unique slug
 $slug = preg_replace('/[^a-z0-9]+/', '-', strtolower($title));
@@ -95,9 +107,9 @@ if (!empty($_POST['cover_image'])) {
 // Insert into database
 try {
     $stmt = $db->prepare(
-        "INSERT INTO flipbooks (title, slug, description, pdf_filename, thumbnail) VALUES (?, ?, ?, ?, ?)"
+        "INSERT INTO flipbooks (title, slug, description, pdf_filename, thumbnail, owner_subject, owner_name, owner_email, visibility) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
-    $stmt->execute([$title, $slug, $description, $filename, $thumbnailFilename]);
+    $stmt->execute([$title, $slug, $description, $filename, $thumbnailFilename, $ownerSubject, $ownerName, $ownerEmail, $visibility]);
     $flipbookId = $db->lastInsertId();
 
     jsonResponse([

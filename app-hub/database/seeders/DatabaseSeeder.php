@@ -38,9 +38,26 @@ class DatabaseSeeder extends Seeder
                 'path' => '/apps/flipbook',
                 'callback_url' => '/apps/flipbook/auth/callback.php',
                 'frontchannel_logout_path' => '/apps/flipbook/auth/hub-logout.php',
-                'roles' => ['admin'],
+                'roles' => ['admin', 'user'],
                 'enabled' => true,
                 'sort_order' => 20,
+            ],
+        );
+
+        // Registered disabled until production credentials are assigned
+        // through the Hub admin UI and the deployment is verified. Uses
+        // firstOrCreate so re-seeding never re-disables the app or clobbers
+        // issued credentials/assignments after launch.
+        Application::firstOrCreate(
+            ['key' => 'doc-review'],
+            [
+                'name' => 'Document Reviewer',
+                'path' => '/apps/doc-review',
+                'callback_url' => '/apps/doc-review/auth/hub/callback',
+                'frontchannel_logout_path' => '/apps/doc-review/auth/hub/logout',
+                'roles' => ['admin', 'user'],
+                'enabled' => false,
+                'sort_order' => 30,
             ],
         );
     }

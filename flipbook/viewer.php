@@ -3,9 +3,8 @@
  * Flipbook Viewer - The main flipbook reading experience
  */
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/db.php';
 
-$canEdit = flipbook_is_admin();
-$csrfToken = flipbook_csrf_token();
 $slug = $_GET['slug'] ?? '';
 $isEmbed = isset($_GET['embed']) && $_GET['embed'] == '1';
 
@@ -13,6 +12,51 @@ if (empty($slug)) {
     header('Location: ' . BASE_PATH . '/index.php');
     exit;
 }
+
+// Server-side visibility decision before any content is rendered.
+// Fail closed: a DB error or unknown slug never renders the viewer shell.
+try {
+    $stmt = getDB()->prepare("SELECT * FROM flipbooks WHERE slug = ?");
+    $stmt->execute([$slug]);
+    $viewerFlipbook = $stmt->fetch() ?: null;
+} catch (Throwable $e) {
+    http_response_code(503);
+    echo '<!DOCTYPE html><html><body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#475569;background:#f8fafc;"><p style="margin:0;">Flipbook is temporarily unavailable.</p></body></html>';
+    exit;
+}
+
+if ($viewerFlipbook === null) {
+    http_response_code(404);
+    echo '<!DOCTYPE html><html><body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#475569;background:#f8fafc;"><p style="margin:0;">Flipbook not found.</p></body></html>';
+    exit;
+}
+
+// Private flipbooks are never embeddable — not even for the owner/admin.
+if ($isEmbed && ($viewerFlipbook['visibility'] ?? 'public') === 'private') {
+    http_response_code(403);
+    echo '<!DOCTYPE html><html><body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#475569;background:#f8fafc;"><p style="margin:0;">This flipbook is private.</p></body></html>';
+    exit;
+}
+
+if (!flipbook_can_view($viewerFlipbook)) {
+    if ($isEmbed) {
+        // Never redirect inside an iframe — show a minimal notice instead.
+        http_response_code(403);
+        echo '<!DOCTYPE html><html><body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#475569;background:#f8fafc;"><p style="margin:0;">This flipbook is private.</p></body></html>';
+        exit;
+    }
+    if (flipbook_current_user() === null && FLIPBOOK_HUB_SSO_ENABLED) {
+        // Anonymous: bounce through sign-in and return here afterwards.
+        flipbook_redirect_to_login();
+    }
+    http_response_code(403);
+    echo '<!DOCTYPE html><html><head><title>Forbidden</title></head><body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#475569;background:#f8fafc;"><div style="text-align:center;"><h1 style="color:#C8102E;margin:0 0 .5rem;">403</h1><p style="margin:0;">This flipbook is private. Only its owner and Flipbook administrators can view it.</p></div></body></html>';
+    exit;
+}
+
+$canEdit = flipbook_can_manage($viewerFlipbook);
+$canEmbed = ($viewerFlipbook['visibility'] ?? 'public') !== 'private';
+$csrfToken = flipbook_csrf_token();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -89,9 +133,11 @@ if (empty($slug)) {
                     <i class="fas fa-edit"></i>
                 </button>
                 <?php endif; ?>
+                <?php if ($canEmbed): ?>
                 <button class="btn btn-sm" id="btnEmbed" title="Get Embed Code">
                     <i class="fas fa-code"></i>
                 </button>
+                <?php endif; ?>
                 <button class="btn btn-sm btn-more" id="btnMore" title="More" aria-haspopup="true" aria-expanded="false">
                     <i class="fas fa-ellipsis-v"></i>
                 </button>
@@ -104,9 +150,11 @@ if (empty($slug)) {
                         <i class="fas fa-edit"></i><span>Edit Mode</span>
                     </button>
                     <?php endif; ?>
+                    <?php if ($canEmbed): ?>
                     <button class="more-menu-item" data-target="btnEmbed" role="menuitem">
                         <i class="fas fa-code"></i><span>Embed</span>
                     </button>
+                    <?php endif; ?>
                 </div>
                 <?php endif; ?>
             </div>
@@ -138,7 +186,7 @@ if (empty($slug)) {
                 <div class="toc-panel-header">
                     <span>Table of Contents</span>
                     <div style="display:flex;align-items:center;gap:0.375rem;">
-                        <?php if (!$isEmbed): ?>
+                        <?php if ($canEdit): ?>
                         <button class="btn btn-icon btn-ghost btn-sm" id="btnEditToc" title="Edit Table of Contents">
                             <i class="fas fa-pencil-alt"></i>
                         </button>
@@ -158,6 +206,7 @@ if (empty($slug)) {
                 <div class="flipbook-container" id="flipbookContainer"></div>
             </div>
 
+            <?php if ($canEdit): ?>
             <!-- Edit Mode Panel (flex sibling — pushes book left as it opens) -->
             <div class="edit-panel" id="editPanel">
                 <div class="edit-panel-inner">
@@ -207,6 +256,7 @@ if (empty($slug)) {
                     </div>
                 </div>
             </div>
+            <?php endif; ?>
 
             <!-- Navigation Arrows -->
             <button class="nav-arrow prev" id="navPrev" title="Previous"><i class="fas fa-chevron-left"></i></button>
@@ -266,6 +316,7 @@ if (empty($slug)) {
         </div>
     </div>
 
+    <?php if ($canEdit): ?>
     <!-- Add Link Modal -->
     <div class="modal-backdrop" id="addLinkModal">
         <div class="modal add-link-modal">
@@ -383,6 +434,7 @@ if (empty($slug)) {
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
     <div class="toast-container" id="toastContainer"></div>
 

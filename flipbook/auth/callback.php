@@ -59,7 +59,7 @@ $identity = json_decode($body, true);
 if (!is_array($identity)
     || ($identity['token_type'] ?? null) !== 'hub_identity'
     || ($identity['application'] ?? null) !== 'flipbook'
-    || ($identity['role'] ?? null) !== 'admin'
+    || !in_array($identity['role'] ?? null, ['admin', 'user'], true)
     || !isset($identity['subject'], $identity['email'], $identity['name'], $identity['application_count'], $identity['logout_url'])
     || preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', (string)$identity['subject']) !== 1
     || filter_var($identity['email'], FILTER_VALIDATE_EMAIL) === false
@@ -78,7 +78,7 @@ $_SESSION['flipbook_admin'] = [
     'subject' => $identity['subject'],
     'email' => strtolower(trim($identity['email'])),
     'name' => trim($identity['name']),
-    'role' => 'admin',
+    'role' => $identity['role'],
     'application_count' => $identity['application_count'],
     'logout_url' => $identity['logout_url'],
     'authenticated_at' => time(),

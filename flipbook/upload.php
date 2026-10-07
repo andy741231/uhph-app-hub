@@ -3,7 +3,7 @@
  * Upload page - Create a new flipbook from PDF
  */
 require_once __DIR__ . '/includes/auth.php';
-flipbook_require_admin();
+flipbook_require_user();
 
 $pageTitle = 'Upload PDF';
 require_once 'includes/header.php';
@@ -31,6 +31,16 @@ require_once 'includes/header.php';
                 <div class="form-group">
                     <label for="description">Description (optional)</label>
                     <textarea id="description" name="description" class="form-control" placeholder="Brief description of this flipbook"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="visibility">Visibility</label>
+                    <select id="visibility" name="visibility" class="form-control">
+                        <option value="private" selected>Private — only you and administrators</option>
+                        <option value="unlisted">Unlisted — anyone with the link</option>
+                        <option value="public">Public — listed in the gallery</option>
+                    </select>
+                    <p style="font-size:0.75rem;color:var(--gray-500);margin-top:0.25rem;">Private flipbooks cannot be embedded.</p>
                 </div>
 
                 <div class="form-group">
@@ -163,6 +173,7 @@ uploadForm.addEventListener('submit', async (e) => {
     formData.append('pdf', selectedFile);
     formData.append('title', document.getElementById('title').value);
     formData.append('description', document.getElementById('description').value);
+    formData.append('visibility', document.getElementById('visibility').value);
     if (generatedThumbnail) {
         formData.append('cover_image', generatedThumbnail);
     }

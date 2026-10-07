@@ -24,6 +24,46 @@ A web-based PDF flipbook viewer with realistic page-turning effects, search, tab
 - **Styling:** Custom CSS (no framework dependency)
 - **Server:** IIS on Windows Server 2022 (also works with Apache)
 
+## Access & Visibility
+
+Authentication is Hub SSO (`admin` / `user` application roles). Anonymous
+visitors land on a public gallery (`index.php`); signed-in users get a
+dashboard (`admin` sees every flipbook, `user` sees only their own uploads).
+
+| Visibility | Gallery | View | Embed |
+| --- | --- | --- | --- |
+| `public` | Listed | Anyone | Allowed |
+| `unlisted` | Not listed | Anyone with the link | Allowed |
+| `private` (default) | Not listed | Owner + admin only | Disabled |
+
+All checks run server-side (`flipbook_can_view` / `flipbook_can_manage` in
+`includes/auth.php`) on every data path — including `api/pdf.php`,
+`api/download.php`, page-text search, and child-overlay endpoints. Uploaded
+files are never served directly: `uploads/` is blocked in `web.config`
+(IIS hidden segment), `.htaccess` (Apache), and the dev router; PDFs and
+cover thumbnails are served through `api/pdf.php` and `api/cover.php`, which
+authorize the request first (private content is sent `Cache-Control:
+private, no-store` and embeds render an inline notice rather than a
+redirect inside the iframe).
+
+### Ownership migration
+
+Existing databases need the ownership/visibility columns:
+
+```bash
+php scripts/migrate-ownership.php           # dry run (default)
+php scripts/migrate-ownership.php --apply   # apply
+```
+
+The runner is CLI-only and idempotent: it adds the columns only when
+`owner_subject` is absent, then always runs the NULL-guarded backfill
+(`sql/migrations/2026-10-07-ownership-visibility.sql`).
+
+Rollback: revert the application code first and take a database backup;
+only then may the four added columns/indexes be dropped. Do **not** run a
+destructive rollback while the new code is deployed — readers would lose
+access controls.
+
 ## Installation
 
 ### 1. Database Setup
@@ -86,6 +126,7 @@ flipbook/
 ├── web.config              # IIS configuration
 ├── .htaccess               # Apache fallback configuration
 ├── api/
+│   ├── cover.php           # Cover thumbnail endpoint (visibility-authorized)
 │   ├── upload.php          # PDF upload endpoint
 │   ├── flipbooks.php       # CRUD operations for flipbooks
 │   ├── text.php            # Save/search extracted text

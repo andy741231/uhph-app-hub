@@ -3,11 +3,27 @@
  * Editor - Manage flipbook (add video overlays, edit metadata)
  */
 require_once __DIR__ . '/includes/auth.php';
-flipbook_require_admin();
+require_once __DIR__ . '/includes/db.php';
+flipbook_require_user();
 
 $flipbookId = $_GET['id'] ?? '';
 if (empty($flipbookId)) {
     header('Location: ' . BASE_PATH . '/index.php');
+    exit;
+}
+
+// Owner-or-admin check before any editor markup is emitted.
+$stmt = getDB()->prepare("SELECT * FROM flipbooks WHERE id = ?");
+$stmt->execute([(int)$flipbookId]);
+$editorFlipbook = $stmt->fetch();
+if (!$editorFlipbook) {
+    http_response_code(404);
+    echo 'Flipbook not found.';
+    exit;
+}
+if (!flipbook_can_manage($editorFlipbook)) {
+    http_response_code(403);
+    echo 'Forbidden: only the owner or a Flipbook administrator can edit this flipbook.';
     exit;
 }
 
@@ -128,6 +144,14 @@ function renderEditor() {
                             <label>Pages</label>
                             <p style="font-size:0.875rem;color:var(--gray-600);">${flipbookData.page_count || 'Not yet counted'}</p>
                         </div>
+                        <div class="form-group">
+                            <label for="editVisibility">Visibility</label>
+                            <select id="editVisibility" class="form-control">
+                                <option value="public">Public — listed in the gallery</option>
+                                <option value="unlisted">Unlisted — anyone with the link</option>
+                                <option value="private">Private — only you and administrators</option>
+                            </select>
+                        </div>
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save"></i> Save Changes
                         </button>
@@ -156,29 +180,47 @@ function renderEditor() {
         <div class="card mt-2">
             <div class="card-header">Embed Code</div>
             <div class="card-body">
+                ${flipbookData.visibility === 'private' ? `
+                <p style="font-size:0.875rem;color:var(--warning);">
+                    <i class="fas fa-lock"></i>
+                    Private flipbooks cannot be embedded. Change visibility to Public or Unlisted to enable embedding.
+                </p>` : `
                 <p style="margin-bottom:0.75rem;font-size:0.875rem;color:var(--gray-600);">Use this code to embed the flipbook on other websites:</p>
                 <div class="embed-code">${generateEmbedCode()}</div>
                 <button class="btn btn-primary btn-sm mt-1" onclick="copyEmbedCode()">
                     <i class="fas fa-copy"></i> Copy Code
-                </button>
+                </button>`}
             </div>
         </div>
     `;
+
+    // Visibility select
+    document.getElementById('editVisibility').value = flipbookData.visibility || 'private';
 
     // Metadata form
     document.getElementById('metadataForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         try {
-            await fetch('api/flipbooks.php', {
+            const resp = await fetch('api/flipbooks.php', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
                 body: JSON.stringify({
                     id: FLIPBOOK_ID,
                     title: document.getElementById('editTitle').value,
                     description: document.getElementById('editDescription').value,
+                    visibility: document.getElementById('editVisibility').value,
                 })
             });
+            if (!resp.ok) {
+                const data = await resp.json().catch(() => ({}));
+                throw new Error(data.error || 'Save failed (' + resp.status + ')');
+            }
+            // Reflect the new visibility immediately (embed warning etc.)
+            flipbookData.title = document.getElementById('editTitle').value;
+            flipbookData.description = document.getElementById('editDescription').value;
+            flipbookData.visibility = document.getElementById('editVisibility').value;
             showToast('Saved successfully!', 'success');
+            renderEditor();
         } catch (err) {
             showToast('Failed to save: ' + err.message, 'error');
         }

@@ -3,6 +3,7 @@
  * PDF viewing endpoint
  * Serves the flipbook PDF with long-term cache headers and range-request support.
  */
+require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/db.php';
 
 $flipbookId = $_GET['id'] ?? null;
@@ -32,33 +33,25 @@ if (!$flipbook) {
     exit;
 }
 
-$pdfPath = UPLOAD_DIR . '/' . $flipbook['pdf_filename'];
-if (!file_exists($pdfPath)) {
+// Visibility rule: private PDFs are served only to owner/admin.
+flipbook_authorize_view($flipbook);
+
+$pdfPath = UPLOAD_DIR . '/' . basename((string)$flipbook['pdf_filename']);
+$real = realpath($pdfPath);
+if ($real === false || !str_starts_with($real, realpath(UPLOAD_DIR) . DIRECTORY_SEPARATOR)) {
     http_response_code(404);
     echo json_encode(['error' => 'PDF file not found']);
     exit;
 }
+$pdfPath = $real;
 
 $fileSize = filesize($pdfPath);
-$lastModified = filemtime($pdfPath);
-$etag = '"' . md5($flipbook['pdf_filename'] . '-' . $fileSize . '-' . $lastModified) . '"';
 
-// Respond to conditional requests
-if (isset($_SERVER['HTTP_IF_NONE_MATCH']) && trim($_SERVER['HTTP_IF_NONE_MATCH']) === $etag) {
-    header('HTTP/1.1 304 Not Modified');
-    exit;
-}
-if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE']) && strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']) >= $lastModified) {
-    header('HTTP/1.1 304 Not Modified');
-    exit;
-}
-
-// Long-term cache headers: unique filename per upload means immutable
+// Visibility is mutable, so a previously "public" response must never be
+// replayable from a cache: no-store for every response, no ETag/304
+// conditionals, no far-future Expires. Range support is retained for pdf.js.
 header('Content-Type: application/pdf');
-header('Cache-Control: public, max-age=31536000, immutable');
-header('Expires: ' . gmdate('D, d M Y H:i:s', strtotime('+1 year')) . ' GMT');
-header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $lastModified) . ' GMT');
-header('ETag: ' . $etag);
+header('Cache-Control: no-store');
 header('Accept-Ranges: bytes');
 
 // Range request support (used by pdf.js for large PDFs)

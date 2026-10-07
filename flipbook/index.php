@@ -3,14 +3,20 @@
  * Dashboard - List all flipbooks
  */
 require_once __DIR__ . '/includes/auth.php';
-flipbook_require_admin();
+
+$navIndexUser = flipbook_current_user();
+$indexIsAdmin = flipbook_is_admin();
+$indexSignedIn = $navIndexUser !== null || !FLIPBOOK_HUB_SSO_ENABLED;
+// Anonymous visitors get the public gallery; signed-in users get their
+// dashboard (admin sees everything, user sees only their own uploads).
+$heading = !$indexSignedIn ? 'Flipbooks' : ($indexIsAdmin ? 'All Flipbooks' : 'My Flipbooks');
 
 $pageTitle = 'Dashboard';
 require_once 'includes/header.php';
 ?>
 
 <div class="page-header">
-    <h1>My Flipbooks</h1>
+    <h1><?= htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') ?></h1>
 </div>
 
 <div id="flipbook-list">
@@ -65,6 +71,22 @@ require_once 'includes/header.php';
 <script>
 const BASE_PATH = '<?= BASE_PATH ?>';
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
+const IS_SIGNED_IN = <?= $indexSignedIn ? 'true' : 'false' ?>;
+const IS_ADMIN = <?= $indexIsAdmin ? 'true' : 'false' ?>;
+
+const VISIBILITY_BADGES = {
+    public:   { icon: 'fa-globe', label: 'Public' },
+    unlisted: { icon: 'fa-link',  label: 'Unlisted' },
+    private:  { icon: 'fa-lock',  label: 'Private' },
+};
+
+function visibilityBadge(v) {
+    // Class and content are taken only from the whitelist above — never
+    // from the raw server value.
+    const b = VISIBILITY_BADGES[v];
+    if (!b) return '';
+    return `<span class="visibility-badge visibility-${v}"><i class="fas ${b.icon}"></i> ${b.label}</span>`;
+}
 
 async function loadFlipbooks() {
     try {
@@ -74,7 +96,7 @@ async function loadFlipbooks() {
         const container = document.getElementById('flipbook-list');
 
         if (!data.flipbooks || data.flipbooks.length === 0) {
-            container.innerHTML = `
+            container.innerHTML = IS_SIGNED_IN ? `
                 <div class="empty-state">
                     <i class="fas fa-book-open"></i>
                     <h3>No flipbooks yet</h3>
@@ -82,33 +104,48 @@ async function loadFlipbooks() {
                     <a href="upload.php" class="btn btn-primary mt-2">
                         <i class="fas fa-plus"></i> Upload PDF
                     </a>
+                </div>` : `
+                <div class="empty-state">
+                    <i class="fas fa-book-open"></i>
+                    <h3>No public flipbooks yet</h3>
+                    <p>Sign in to upload and manage flipbooks.</p>
                 </div>`;
             return;
         }
 
         container.innerHTML = '<div class="flipbook-grid">' +
             data.flipbooks.map(fb => {
-                const thumbHtml = fb.thumbnail 
-                    ? `<img src="${BASE_PATH}/uploads/${fb.thumbnail}" alt="Cover" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<i class=\\'fas fa-file-pdf\\' style=\\'font-size:4rem;color:var(--primary)\\'></i>')">` 
+                const fbId = parseInt(fb.id, 10) || 0;
+                const fbSlug = encodeURIComponent(String(fb.slug || ''));
+                const thumbHtml = fb.thumbnail
+                    ? `<img src="api/cover.php?id=${fbId}" alt="Cover" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<i class=\\'fas fa-file-pdf\\' style=\\'font-size:4rem;color:var(--primary)\\'></i>')">`
                     : `<i class="fas fa-file-pdf" style="font-size: 4rem; color: var(--primary);"></i>`;
+                const embedBtn = fb.visibility !== 'private' ? `
+                        <button class="btn btn-icon" data-action="embed" title="Embed">
+                            <i class="fas fa-code"></i>
+                        </button>` : '';
+                const actions = IS_SIGNED_IN ? `
+                    <div class="card-actions">
+                        ${embedBtn}
+                        <button class="btn btn-icon" data-action="edit" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-icon" data-action="delete" title="Delete" style="color:var(--danger);">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>` : '';
+                const badge = IS_SIGNED_IN ? ' ' + visibilityBadge(fb.visibility) : '';
+                const owner = IS_ADMIN && fb.owner_name
+                    ? `<p class="card-owner"><i class="fas fa-user"></i> ${escapeHtml(String(fb.owner_name))}</p>` : '';
                 return `
-                <div class="flipbook-card card" onclick="window.location.href='viewer.php?slug=${fb.slug}'">
+                <div class="flipbook-card card" data-slug="${fbSlug}" data-id="${fbId}" data-title="${escapeAttr(String(fb.title || ''))}" tabindex="0" role="link" aria-label="Open ${escapeAttr(String(fb.title || 'flipbook'))}">
                     <div class="card-thumbnail">
                         ${thumbHtml}
                     </div>
-                    <div class="card-actions">
-                        <button class="btn btn-icon" onclick="event.stopPropagation(); showEmbed('${fb.slug}', '${escapeHtml(fb.title)}')" title="Embed">
-                            <i class="fas fa-code"></i>
-                        </button>
-                        <button class="btn btn-icon" onclick="event.stopPropagation(); window.location.href='editor.php?id=${fb.id}'" title="Edit">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-icon" onclick="event.stopPropagation(); confirmDelete(${fb.id}, '${escapeHtml(fb.title)}')" title="Delete" style="color:var(--danger);">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
+                    ${actions}
                     <div class="card-info">
-                        <h3>${escapeHtml(fb.title)}</h3>
+                        <h3>${escapeHtml(fb.title)}${badge}</h3>
+                        ${owner}
                         <p>${fb.page_count || 0} pages &middot; ${formatDate(fb.created_at)}</p>
                     </div>
                 </div>
@@ -119,10 +156,44 @@ async function loadFlipbooks() {
     }
 }
 
+// Delegated card interactions — no user data is ever interpolated into
+// inline handlers, so titles/slugs can't break out of attributes or JS.
+document.getElementById('flipbook-list').addEventListener('click', (e) => {
+    const card = e.target.closest('.flipbook-card');
+    if (!card) return;
+    const { slug, id, title } = card.dataset;
+    const actionBtn = e.target.closest('[data-action]');
+
+    if (actionBtn) {
+        e.stopPropagation();
+        if (actionBtn.dataset.action === 'embed') showEmbed(slug, title);
+        if (actionBtn.dataset.action === 'edit') window.location.href = 'editor.php?id=' + encodeURIComponent(id);
+        if (actionBtn.dataset.action === 'delete') confirmDelete(id, title);
+        return;
+    }
+    window.location.href = 'viewer.php?slug=' + slug;
+});
+
+// Keyboard activation — Enter/Space opens the viewer. Only fires when the
+// card itself is the keydown target, so nested action buttons keep their own
+// activation (Space scroll/click prevention included).
+document.getElementById('flipbook-list').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const card = e.target.closest('.flipbook-card');
+    if (!card || e.target !== card) return;
+    e.preventDefault();
+    window.location.href = 'viewer.php?slug=' + card.dataset.slug;
+});
+
 function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+function escapeAttr(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function formatDate(dateStr) {
@@ -142,11 +213,15 @@ function confirmDelete(id, title) {
 document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
     if (!deleteId) return;
     try {
-        await fetch('api/flipbooks.php', {
+        const resp = await fetch('api/flipbooks.php', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN },
             body: JSON.stringify({ id: deleteId })
         });
+        if (!resp.ok) {
+            const data = await resp.json().catch(() => ({}));
+            throw new Error(data.error || 'Delete failed (' + resp.status + ')');
+        }
         closeModal('deleteModal');
         showToast('Flipbook deleted', 'success');
         loadFlipbooks();

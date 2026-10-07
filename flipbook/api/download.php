@@ -4,6 +4,7 @@
  * Downloads the original PDF file
  * Note: To embed video thumbnails in PDF, install FPDI library via composer
  */
+require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
@@ -31,6 +32,9 @@ if (!$flipbook) {
     echo json_encode(['error' => 'Flipbook not found']);
     exit;
 }
+
+// Visibility rule: private PDFs are served only to owner/admin.
+flipbook_authorize_view($flipbook);
 
 $pdfPath = UPLOAD_DIR . '/' . $flipbook['pdf_filename'];
 if (!file_exists($pdfPath)) {

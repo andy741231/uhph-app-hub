@@ -87,40 +87,78 @@ function flipbook_is_safe_hub_navigation_url(string $url): bool
         && preg_match('#(?:^|/)\.{1,2}(?:/|$)#', $path) !== 1;
 }
 
+/**
+ * Any authenticated Hub identity (roles: admin or user), or null.
+ * Returns null when SSO is disabled — use flipbook_is_admin() etc. which
+ * treat the SSO-off local mode as full access.
+ */
+function flipbook_current_user(): ?array
+{
+    if (!FLIPBOOK_HUB_SSO_ENABLED) {
+        return null;
+    }
+
+    flipbook_auth_start_session();
+    $identity = $_SESSION['flipbook_admin'] ?? null;
+    if (!is_array($identity) || !in_array($identity['role'] ?? null, ['admin', 'user'], true)) {
+        return null;
+    }
+
+    $authenticatedAt = (int)($identity['authenticated_at'] ?? 0);
+    if ($authenticatedAt <= 0 || time() - $authenticatedAt >= FLIPBOOK_HUB_SESSION_REVALIDATION_SECONDS) {
+        unset($_SESSION['flipbook_admin']);
+        return null;
+    }
+
+    return $identity;
+}
+
 function flipbook_is_admin(): bool
 {
     if (!FLIPBOOK_HUB_SSO_ENABLED) {
         return true;
     }
 
-    flipbook_auth_start_session();
-    $identity = $_SESSION['flipbook_admin'] ?? null;
-    if (!is_array($identity) || ($identity['role'] ?? null) !== 'admin') {
-        return false;
-    }
-
-    $authenticatedAt = (int)($identity['authenticated_at'] ?? 0);
-    if ($authenticatedAt <= 0 || time() - $authenticatedAt >= FLIPBOOK_HUB_SESSION_REVALIDATION_SECONDS) {
-        unset($_SESSION['flipbook_admin']);
-        return false;
-    }
-
-    return true;
+    return (flipbook_current_user()['role'] ?? null) === 'admin';
 }
 
 function flipbook_current_admin(): ?array
 {
-    return flipbook_is_admin() && FLIPBOOK_HUB_SSO_ENABLED
-        ? $_SESSION['flipbook_admin']
-        : null;
+    $user = flipbook_current_user();
+
+    return $user !== null && $user['role'] === 'admin' ? $user : null;
 }
 
+/**
+ * Redirect to login when nobody is signed in; 403 when a signed-in user
+ * lacks the admin role (avoids an authorize→callback redirect loop).
+ */
 function flipbook_require_admin(): void
 {
     if (!FLIPBOOK_HUB_SSO_ENABLED || flipbook_is_admin()) {
         return;
     }
 
+    if (flipbook_current_user() !== null) {
+        http_response_code(403);
+        echo 'Forbidden: this page requires an administrator.';
+        exit;
+    }
+
+    flipbook_redirect_to_login();
+}
+
+function flipbook_require_user(): void
+{
+    if (!FLIPBOOK_HUB_SSO_ENABLED || flipbook_current_user() !== null) {
+        return;
+    }
+
+    flipbook_redirect_to_login();
+}
+
+function flipbook_redirect_to_login(): void
+{
     flipbook_auth_start_session();
     $returnTo = $_SERVER['REQUEST_URI'] ?? (BASE_PATH . '/index.php');
     if (flipbook_is_safe_app_path($returnTo)) {
@@ -138,6 +176,80 @@ function flipbook_require_api_admin(): void
     }
 
     flipbook_json_error('Authentication required.', 401);
+}
+
+function flipbook_require_api_user(): void
+{
+    if (!FLIPBOOK_HUB_SSO_ENABLED || flipbook_current_user() !== null) {
+        return;
+    }
+
+    flipbook_json_error('Authentication required.', 401);
+}
+
+/**
+ * View rule: public and unlisted are viewable by anyone (embed allowed);
+ * private is owner/admin only. Pre-migration rows without a visibility
+ * column keep their previous public-link behaviour.
+ */
+function flipbook_can_view(array $flipbook): bool
+{
+    $visibility = $flipbook['visibility'] ?? 'public';
+
+    if ($visibility !== 'private') {
+        return true;
+    }
+
+    return flipbook_can_manage($flipbook);
+}
+
+/**
+ * Manage rule (edit/delete/metadata): admin or the flipbook owner.
+ * When SSO is disabled, local development is treated as admin.
+ */
+function flipbook_can_manage(array $flipbook): bool
+{
+    if (!FLIPBOOK_HUB_SSO_ENABLED) {
+        return true;
+    }
+
+    $user = flipbook_current_user();
+    if ($user === null) {
+        return false;
+    }
+    if ($user['role'] === 'admin') {
+        return true;
+    }
+
+    return isset($flipbook['owner_subject'], $user['subject'])
+        && $flipbook['owner_subject'] !== ''
+        && hash_equals((string)$flipbook['owner_subject'], (string)$user['subject']);
+}
+
+/** JSON 401/403 for API reads. */
+function flipbook_authorize_view(array $flipbook): void
+{
+    if (flipbook_can_view($flipbook)) {
+        return;
+    }
+
+    flipbook_json_error(
+        flipbook_current_user() === null ? 'Authentication required.' : 'Forbidden.',
+        flipbook_current_user() === null ? 401 : 403
+    );
+}
+
+/** JSON 401/403 for API writes against a specific flipbook. */
+function flipbook_authorize_manage(array $flipbook): void
+{
+    if (flipbook_can_manage($flipbook)) {
+        return;
+    }
+
+    flipbook_json_error(
+        flipbook_current_user() === null ? 'Authentication required.' : 'Forbidden.',
+        flipbook_current_user() === null ? 401 : 403
+    );
 }
 
 function flipbook_csrf_token(): string

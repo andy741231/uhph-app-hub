@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Notifications\SetPasswordInvitation;
+use App\Services\DefaultApplicationAccess;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -26,6 +27,10 @@ class User extends Authenticatable
     {
         static::creating(function (User $user): void {
             $user->public_id ??= (string) Str::uuid();
+        });
+
+        static::created(function (User $user): void {
+            app(DefaultApplicationAccess::class)->assignDefaults($user);
         });
     }
 

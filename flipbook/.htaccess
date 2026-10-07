@@ -12,6 +12,22 @@ DirectoryIndex index.php
     Deny from all
 </FilesMatch>
 
+# Environment files never get served (works without mod_rewrite)
+<FilesMatch "^\.env">
+    Order allow,deny
+    Deny from all
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+</FilesMatch>
+
+# Uploaded files are served only through authorized api/*.php endpoints.
+# uploads/ is gitignored so it cannot carry its own .htaccess — deny here
+# without relying on mod_rewrite (Apache 2.4 core authz).
+<If "%{REQUEST_URI} =~ m#/uploads#">
+    Require all denied
+</If>
+
 # Deny access to includes directory
 <IfModule mod_rewrite.c>
     RewriteEngine On
@@ -19,6 +35,7 @@ DirectoryIndex index.php
     RewriteRule ^\.windsurf/ - [F,L]
     RewriteRule ^sql/ - [F,L]
     RewriteRule ^scripts/ - [F,L]
+    RewriteRule ^uploads/ - [F,L]
 </IfModule>
 
 # Allow large uploads

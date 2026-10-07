@@ -23,30 +23,54 @@ FLIPBOOK_HUB_SESSION_REVALIDATION_MINUTES=15
 BASE_PATH_OVERRIDE=/apps/flipbook
 ```
 
-Never commit or log `FLIPBOOK_HUB_CLIENT_SECRET`. The client must have the Flipbook `admin` role. When SSO is enabled, administrator sessions reauthorize through the Hub every 15 minutes by default.
+Never commit or log `FLIPBOOK_HUB_CLIENT_SECRET`. The client must have the Flipbook `admin` or `user` role. When SSO is enabled, sessions reauthorize through the Hub every 15 minutes by default.
 
 The SSO callback stores the Hub-issued application count and signed logout URL in the Flipbook administrator session. “All applications” appears only for users assigned to multiple enabled Hub apps and returns to the launcher without ending either session. “Sign Out” destroys the Flipbook session and follows only a validated signed Hub logout URL. The Hub then sends the browser through each registered front-channel endpoint; `auth/hub-logout.php` validates the opaque transaction with the Hub before clearing Flipbook, so signing out anywhere immediately clears all application and Hub sessions before showing the contextual login screen.
 
 ## Access boundaries
 
-Public:
+Two Hub roles on the `flipbook` application: `admin` (sees/edits/deletes all
+flipbooks) and `user` (uploads; manages only flipbooks where
+`owner_subject` equals their Hub subject). Anonymous visitors can browse the
+public gallery and view `public`/`unlisted` flipbooks.
 
-- `viewer.php`
-- `api/flipbooks.php?slug=...`
-- GET requests to `api/videos.php`, `api/links.php`, and `api/text.php`
-- `api/pdf.php`
-- `api/download.php`
+Visibility per flipbook (`visibility` enum, default `private`):
 
-Administrative:
+- `public` — listed on the public gallery; viewable and embeddable by anyone.
+- `unlisted` — never listed; anyone with the link can view and embed.
+- `private` — only the owner or an admin can view; embed is disabled (anonymous
+  `viewer.php` hits redirect to sign-in, `embed=1` renders a private notice,
+  owner dashboards/editor hide the embed controls and show the private-embed
+  warning).
 
-- `index.php`
-- `upload.php`
-- `editor.php`
-- `api/upload.php`
-- Flipbook list and ID reads
-- All POST, PUT, and DELETE API operations
+Enforcement lives in `includes/auth.php`:
 
-All administrative mutations require both an authenticated administrator and the `X-CSRF-Token` request header.
+- `flipbook_current_user()` — authenticated identity (`admin` or `user`).
+- `flipbook_is_admin()` — admin role only (SSO off = local admin).
+- `flipbook_require_user()` / `flipbook_require_api_user()` — any signed-in role.
+- `flipbook_can_view(array $flipbook)` / `flipbook_authorize_view()` — the
+  visibility rule (JSON 401 anonymous / 403 signed-in).
+- `flipbook_can_manage(array $flipbook)` / `flipbook_authorize_manage()` —
+  owner-or-admin for mutations.
+
+Every API applies the visibility/ownership rule server-side: `flipbooks.php`
+list filters by caller (anonymous→public, user→own, admin→all; `?scope=public`
+forces the gallery), and child endpoints (`videos`, `links`, `text`, `pdf`,
+`download`) authorize against the parent flipbook row. Anonymous responses
+never expose `owner_subject`/`owner_email`.
+
+New uploads store `owner_subject`/`owner_name`/`owner_email` from the
+authenticated session (never from client input) plus a whitelisted
+`visibility`. `index.php` is the public gallery for anonymous visitors and
+the dashboard for signed-in users.
+
+Schema change: `sql/migrations/2026-10-07-ownership-visibility.sql` applied via
+the idempotent CLI runner `php scripts/migrate-ownership.php [--apply]`
+(default `--dry-run`; CLI only).
+
+## Navigation style
+
+Follow `docs/top-nav-standard.md` (repo root). Flipbook's implementation lives in `includes/header.php`, `assets/css/app.css` (`.navbar*` classes), and `assets/js/nav.js`. Semantic icon mapping uses Font Awesome per the standard's iconography table.
 
 ## Verification
 

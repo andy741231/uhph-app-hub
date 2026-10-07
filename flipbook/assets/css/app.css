@@ -90,6 +90,36 @@ body {
     align-items: center;
 }
 
+.navbar-logout {
+    display: inline;
+}
+
+.navbar-toggle {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--radius);
+    background: white;
+    color: var(--gray-600);
+    font-size: 1.125rem;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.navbar-toggle:hover {
+    background: var(--gray-50);
+    color: var(--gray-800);
+}
+
+.navbar :is(a, button):focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
 /* ---- Buttons ---- */
 .btn {
     display: inline-flex;
@@ -237,6 +267,11 @@ body {
     position: relative;
 }
 
+.flipbook-card:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
 .flipbook-card .card-thumbnail {
     height: 220px;
     background: var(--gray-100);
@@ -281,6 +316,40 @@ body {
 .flipbook-card .card-info p {
     font-size: 0.8125rem;
     color: var(--gray-500);
+}
+
+.flipbook-card .card-owner {
+    font-size: 0.8125rem;
+    color: var(--gray-600);
+}
+
+/* Visibility pill shown on cards for signed-in users */
+.visibility-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    vertical-align: middle;
+    margin-left: 0.375rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    border: 1px solid var(--gray-300);
+    color: var(--gray-600);
+    background: var(--gray-50);
+}
+
+.visibility-badge.visibility-public {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-light);
+}
+
+.visibility-badge.visibility-private {
+    border-color: var(--gray-400);
+    color: var(--gray-700);
+    background: var(--gray-200);
 }
 
 .flipbook-card .card-actions {
@@ -1177,6 +1246,67 @@ textarea.form-control {
 
     .navbar-inner {
         padding: 0 1rem;
+    }
+
+    /* No-JS fallback: controls stay visible, wrapped below the brand.
+       Once nav.js adds .nav-js they collapse behind the toggle. */
+    .navbar-inner {
+        flex-wrap: wrap;
+        height: auto;
+        row-gap: 0.5rem;
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .navbar-actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .navbar-actions .btn,
+    .navbar-actions .navbar-logout .btn {
+        min-height: 44px;
+    }
+
+    .navbar.nav-js .navbar-inner {
+        flex-wrap: nowrap;
+        height: 64px;
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    .navbar.nav-js .navbar-toggle {
+        display: inline-flex;
+    }
+
+    .navbar.nav-js .navbar-actions {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+        background: white;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--gray-200);
+        box-shadow: var(--shadow-md);
+    }
+
+    .navbar.nav-js .navbar-actions.open {
+        display: flex;
+    }
+
+    .navbar.nav-js .navbar-actions .btn,
+    .navbar.nav-js .navbar-actions .navbar-logout,
+    .navbar.nav-js .navbar-actions .navbar-logout .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .navbar.nav-js .navbar-logout {
+        display: block;
     }
 
     .main-content {

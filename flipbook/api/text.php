@@ -7,13 +7,26 @@
 require_once __DIR__ . '/../includes/auth.php';
 
 header('Content-Type: application/json');
+header('Cache-Control: no-store');
 $method = $_SERVER['REQUEST_METHOD'];
 if ($method !== 'GET') {
-    flipbook_require_api_admin();
+    flipbook_require_api_user();
     flipbook_require_csrf();
 }
 require_once __DIR__ . '/../includes/db.php';
 $db = getDB();
+
+function flipbook_parent_for_text(PDO $db, int $flipbookId): array
+{
+    $stmt = $db->prepare("SELECT * FROM flipbooks WHERE id = ?");
+    $stmt->execute([$flipbookId]);
+    $flipbook = $stmt->fetch();
+    if (!$flipbook) {
+        jsonResponse(['error' => 'Flipbook not found'], 404);
+    }
+
+    return $flipbook;
+}
 
 switch ($method) {
     case 'POST':
@@ -26,12 +39,9 @@ switch ($method) {
 
         $flipbookId = (int)$input['flipbook_id'];
 
-        // Verify flipbook exists
-        $stmt = $db->prepare("SELECT id FROM flipbooks WHERE id = ?");
-        $stmt->execute([$flipbookId]);
-        if (!$stmt->fetch()) {
-            jsonResponse(['error' => 'Flipbook not found'], 404);
-        }
+        // Verify flipbook exists and the caller may edit it
+        $flipbook = flipbook_parent_for_text($db, $flipbookId);
+        flipbook_authorize_manage($flipbook);
 
         $db->beginTransaction();
         try {
@@ -69,6 +79,7 @@ switch ($method) {
         }
 
         $flipbookId = (int)$_GET['flipbook_id'];
+        flipbook_authorize_view(flipbook_parent_for_text($db, $flipbookId));
 
         if (isset($_GET['q']) && !empty(trim($_GET['q']))) {
             // Search within flipbook

@@ -17,12 +17,15 @@ PHP_CLI_SERVER_WORKERS=4 php -S localhost:8000 server.php
 `server.php` is the local development router that emulates the production IIS `/apps` mount:
 
 - `/apps/grant-review/*` → grant-review Laravel app (prefix stripped so Laravel routes match)
+- `/apps/doc-review/*` → doc-review Laravel app (prefix stripped; only `public/` is served)
+- `/apps/<dir>` for any directory containing `public/index.php` → Laravel public dir
 - `/apps/*` (everything else) → app-hub Laravel front controller
 - Physical app directories (e.g. `flipbook/`) → served as-is
 - Static files (favicon, css, js, images) → served directly
 
 ### URLs
 - **Grant Review** (triggers SSO): http://localhost:8000/apps/grant-review
+- **Document Reviewer** (triggers SSO once Hub credentials are configured; fails closed with 503 until then): http://localhost:8000/apps/doc-review
 - **App Hub login**: http://localhost:8000/apps/login
 - **Grant Review health check**: http://localhost:8000/apps/grant-review/up
 
@@ -57,3 +60,9 @@ composer exec --working-dir=grant-review -- phpunit
 # App Hub
 composer test --working-dir=app-hub
 ```
+
+### Shared UI standards
+
+Top navigation across sub-applications (Flipbook, Document Reviewer, future
+apps) follows `docs/top-nav-standard.md`. Change the standard first, then each
+app's implementation — never hand-match navs one at a time.

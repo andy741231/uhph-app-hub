@@ -9,23 +9,39 @@
 require_once __DIR__ . '/../includes/auth.php';
 
 header('Content-Type: application/json');
+header('Cache-Control: no-store');
 $method = $_SERVER['REQUEST_METHOD'];
 if ($method !== 'GET') {
-    flipbook_require_api_admin();
+    flipbook_require_api_user();
     flipbook_require_csrf();
 }
 require_once __DIR__ . '/../includes/db.php';
 $db = getDB();
+
+// Fetch the parent flipbook row (for visibility/ownership checks).
+function flipbook_parent_for_video(PDO $db, int $flipbookId): array
+{
+    $stmt = $db->prepare("SELECT * FROM flipbooks WHERE id = ?");
+    $stmt->execute([$flipbookId]);
+    $flipbook = $stmt->fetch();
+    if (!$flipbook) {
+        jsonResponse(['error' => 'Flipbook not found'], 404);
+    }
+
+    return $flipbook;
+}
 
 switch ($method) {
     case 'GET':
         if (!isset($_GET['flipbook_id'])) {
             jsonResponse(['error' => 'flipbook_id required'], 400);
         }
+        $flipbook = flipbook_parent_for_video($db, (int)$_GET['flipbook_id']);
+        flipbook_authorize_view($flipbook);
         $stmt = $db->prepare(
             "SELECT * FROM flipbook_videos WHERE flipbook_id = ? ORDER BY page_number"
         );
-        $stmt->execute([(int)$_GET['flipbook_id']]);
+        $stmt->execute([$flipbook['id']]);
         jsonResponse(['videos' => $stmt->fetchAll()]);
         break;
 
@@ -44,6 +60,8 @@ switch ($method) {
         if (!$videoId) {
             jsonResponse(['error' => 'Invalid YouTube URL'], 400);
         }
+
+        flipbook_authorize_manage(flipbook_parent_for_video($db, (int)$input['flipbook_id']));
 
         $stmt = $db->prepare(
             "INSERT INTO flipbook_videos (flipbook_id, page_number, youtube_url, pos_x_percent, pos_y_percent, width_percent, height_percent) 
@@ -73,6 +91,16 @@ switch ($method) {
         if (!isset($input['id'])) {
             jsonResponse(['error' => 'Video ID required'], 400);
         }
+
+        $stmt = $db->prepare(
+            "SELECT f.* FROM flipbook_videos v JOIN flipbooks f ON f.id = v.flipbook_id WHERE v.id = ?"
+        );
+        $stmt->execute([(int)$input['id']]);
+        $flipbook = $stmt->fetch();
+        if (!$flipbook) {
+            jsonResponse(['error' => 'Video not found'], 404);
+        }
+        flipbook_authorize_manage($flipbook);
 
         $fields = [];
         $params = [];
@@ -107,6 +135,15 @@ switch ($method) {
         if (!isset($input['id'])) {
             jsonResponse(['error' => 'Video ID required'], 400);
         }
+        $stmt = $db->prepare(
+            "SELECT f.* FROM flipbook_videos v JOIN flipbooks f ON f.id = v.flipbook_id WHERE v.id = ?"
+        );
+        $stmt->execute([(int)$input['id']]);
+        $flipbook = $stmt->fetch();
+        if (!$flipbook) {
+            jsonResponse(['error' => 'Video not found'], 404);
+        }
+        flipbook_authorize_manage($flipbook);
         $stmt = $db->prepare("DELETE FROM flipbook_videos WHERE id = ?");
         $stmt->execute([(int)$input['id']]);
         jsonResponse(['success' => true]);
