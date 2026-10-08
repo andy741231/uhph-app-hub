@@ -161,7 +161,7 @@ class ApplicationAdminManagementTest extends TestCase
         ]);
         $target = User::factory()->create(['is_admin' => true]);
         $target->applications()->attach($application, ['role' => 'submitter', 'granted_by' => $actor->id, 'granted_at' => now()]);
-        $target->applications()->attach($flipbook, ['role' => 'admin', 'granted_by' => $actor->id, 'granted_at' => now()]);
+        $target->applications()->syncWithoutDetaching([$flipbook->id => ['role' => 'admin', 'granted_by' => $actor->id, 'granted_at' => now()]]);
 
         $this->asApplicationClient($application)
             ->withHeader('X-Hub-Actor-Token', $token)
@@ -190,7 +190,7 @@ class ApplicationAdminManagementTest extends TestCase
         ]);
         $target = User::factory()->create();
         $target->applications()->attach($application, ['role' => 'reviewer', 'granted_by' => $actor->id, 'granted_at' => now()]);
-        $target->applications()->attach($flipbook, ['role' => 'admin', 'granted_by' => $actor->id, 'granted_at' => now()]);
+        $target->applications()->syncWithoutDetaching([$flipbook->id => ['role' => 'admin', 'granted_by' => $actor->id, 'granted_at' => now()]]);
 
         $this->asApplicationClient($application)
             ->withHeader('X-Hub-Actor-Token', $token)
@@ -264,6 +264,36 @@ class ApplicationAdminManagementTest extends TestCase
             ->assertJsonValidationErrors('role');
 
         $this->assertSame('admin', $actor->applications()->findOrFail($application->id)->pivot->role);
+    }
+
+    public function test_managed_user_responses_include_the_onboarding_pending_flag_without_credentials(): void
+    {
+        [$application, $actor, $token] = $this->applicationAdmin();
+        $pending = User::factory()->create(['password' => null]);
+        $pending->applications()->attach($application, ['role' => 'submitter', 'granted_by' => $actor->id, 'granted_at' => now()]);
+        $ready = User::factory()->create(['last_login_at' => now()]);
+        $ready->applications()->attach($application, ['role' => 'submitter', 'granted_by' => $actor->id, 'granted_at' => now()]);
+
+        $this->asApplicationClient($application)
+            ->withHeader('X-Hub-Actor-Token', $token)
+            ->getJson('/sso/managed-users')
+            ->assertOk()
+            ->assertJsonFragment(['subject' => $pending->public_id, 'onboarding_pending' => true])
+            ->assertJsonFragment(['subject' => $ready->public_id, 'onboarding_pending' => false])
+            ->assertJsonMissingPath('users.0.password')
+            ->assertJsonMissingPath('users.0.password_hash');
+
+        $this->asApplicationClient($application)
+            ->withHeader('X-Hub-Actor-Token', $token)
+            ->putJson('/sso/managed-users', [
+                'name' => 'Invited User',
+                'email' => 'invited.user@uh.edu',
+                'role' => 'submitter',
+            ])
+            ->assertCreated()
+            ->assertJson(['onboarding_pending' => true, 'created' => true])
+            ->assertJsonMissingPath('password')
+            ->assertJsonMissingPath('password_hash');
     }
 
     private function applicationAdmin(): array

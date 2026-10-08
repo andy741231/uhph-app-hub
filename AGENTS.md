@@ -1,18 +1,38 @@
 # UHPH App Hub — Project Instructions
 
+## Environments
+
+- **Production** (`uhph-server1` IIS, `https://uhph.uh.edu/apps`): the Hub runs
+  `APP_ENV=production`, `APP_DEBUG=false`, `HUB_LOGIN_MODE=local`; Grant Review
+  runs `HUB_SSO_ENABLED=true` against it (production cutover completed
+  2026-10-07). Each deployment keeps its own ignored `.env` — nothing in this
+  section applies to local. Per-app details: `app-hub/AGENTS.md`,
+  `grant-review/AGENTS.md`.
+- **Local development**: `APP_ENV=local` with separate ignored `.env` files,
+  local-only databases, and locally generated credentials — never copy
+  production secrets, flags, or migration artifacts. Full setup:
+  `docs/local-authentication-setup.md`.
+
 ## Local Development
 
 ### Prerequisites
-- **VPN access** to `uhph-server1.cougarnet.uh.edu` (production MySQL)
+- **Local-only SQLite or MySQL** for development; production database access
+  requires separate authorization and VPN access to `uhph-server1.cougarnet.uh.edu`
 - **PHP 8.5+** with required extensions
 - **Composer** installed
 
 ### Start the app
 
 ```bash
-cd /Users/mchan3/CascadeProjects/uhph-app-hub
+cd E:/apps
 PHP_CLI_SERVER_WORKERS=4 php -S localhost:8000 server.php
 ```
+
+`PHP_CLI_SERVER_WORKERS` requires a non-Windows PHP build — on native Windows,
+`php -S` runs a single worker and deadlocks during the SSO token exchange
+(standalone local login still works). For full local setup including Hub SSO,
+per-app `.env` templates, and the Windows IIS alternative, see
+`docs/local-authentication-setup.md`.
 
 `server.php` is the local development router that emulates the production IIS `/apps` mount:
 
@@ -39,15 +59,15 @@ PHP_CLI_SERVER_WORKERS=4 php -S localhost:8000 server.php
 ### First-time setup (if needed)
 
 ```bash
-composer install --working-dir=app-hub
-composer install --working-dir=grant-review
+composer install --working-dir="E:/apps/app-hub"
+composer install --working-dir="E:/apps/grant-review"
 
-php artisan migrate --force --working-dir=app-hub
-php artisan migrate --force --working-dir=grant-review
+composer exec --working-dir="E:/apps/app-hub" -- php artisan migrate --force
+composer exec --working-dir="E:/apps/grant-review" -- php artisan migrate --force
 
 # Clear config caches after .env changes
-php artisan config:clear --working-dir=app-hub
-php artisan config:clear --working-dir=grant-review
+composer exec --working-dir="E:/apps/app-hub" -- php artisan config:clear
+composer exec --working-dir="E:/apps/grant-review" -- php artisan config:clear
 ```
 
 ### Verification

@@ -119,6 +119,7 @@ class HubClient
             'users.*.name' => ['required', 'string', 'max:255'],
             'users.*.role' => ['required', Rule::in(config('hub.roles', []))],
             'users.*.status' => ['required', 'in:active'],
+            'users.*.onboarding_pending' => ['sometimes', 'boolean'],
         ]);
         abort_if($validated->fails(), 502);
 
@@ -159,6 +160,7 @@ class HubClient
             'application' => ['required', Rule::in([config('hub.application_key')])],
             'role' => ['required', Rule::in(config('hub.roles', []))],
             'status' => ['required', 'in:active'],
+            'onboarding_pending' => ['sometimes', 'boolean'],
             'created' => ['required', 'boolean'],
             'invitation_sent' => ['required', 'boolean'],
         ]);

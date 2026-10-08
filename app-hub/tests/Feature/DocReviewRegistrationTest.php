@@ -43,7 +43,7 @@ class DocReviewRegistrationTest extends TestCase
         $flipbook = Application::where('key', 'flipbook')->first();
         $this->assertNotNull($flipbook);
         $this->assertTrue($flipbook->enabled);
-        $this->assertSame(['admin'], $flipbook->roles);
+        $this->assertSame(['admin', 'user'], $flipbook->roles);
     }
 
     public function test_reseeding_preserves_enabled_state_credentials_and_assignments(): void
@@ -63,11 +63,11 @@ class DocReviewRegistrationTest extends TestCase
             'name' => 'Document Reviewer (renamed by admin)',
         ]);
         $user = \App\Models\User::factory()->create();
-        $app->users()->attach($user->id, [
+        $app->users()->syncWithoutDetaching([$user->id => [
             'role' => 'admin',
             'granted_by' => $user->id,
             'granted_at' => now(),
-        ]);
+        ]]);
 
         $this->seed(DatabaseSeeder::class);
 

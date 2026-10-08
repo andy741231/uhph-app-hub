@@ -9,9 +9,9 @@ use Uh\AppHub\Contracts\MapsHubIdentity;
 
 class HubIdentityService implements MapsHubIdentity
 {
-    public function resolve(array $identity): User
+    public function resolve(array $identity, bool $authenticated = true): User
     {
-        return DB::transaction(function () use ($identity): User {
+        return DB::transaction(function () use ($identity, $authenticated): User {
             $email = strtolower(trim($identity['email']));
             $users = User::query()
                 ->where('sso_sub', $identity['subject'])
@@ -43,7 +43,7 @@ class HubIdentityService implements MapsHubIdentity
                 ]);
             }
 
-            return $this->apply($user, $identity, $email);
+            return $this->apply($user, $identity, $email, $authenticated);
         });
     }
 
@@ -67,11 +67,11 @@ class HubIdentityService implements MapsHubIdentity
                 throw new ConflictHttpException('The Hub identity is linked to a different Pilot Central account.');
             }
 
-            return $this->apply($profile, $identity, $email);
+            return $this->apply($profile, $identity, $email, false);
         });
     }
 
-    private function apply(User $user, array $identity, string $email): User
+    private function apply(User $user, array $identity, string $email, bool $authenticated): User
     {
         [$firstName, $lastName] = $this->splitName($identity['name']);
         $user->email = $email;
@@ -79,12 +79,11 @@ class HubIdentityService implements MapsHubIdentity
         $user->last_name = $user->last_name ?: $lastName;
         $user->sso_sub = $identity['subject'];
         $user->role = $identity['role'];
-        $user->status = 'active';
-        $user->invite_token_hash = null;
-        $user->invite_expires_at = null;
+        $user->status = $this->statusFor($user, $identity, $authenticated);
 
-        if ($identity['role'] !== 'admin') {
-            $user->password_hash = null;
+        if ($user->status === 'active') {
+            $user->invite_token_hash = null;
+            $user->invite_expires_at = null;
         }
 
         if ($user->isDirty()) {
@@ -92,6 +91,19 @@ class HubIdentityService implements MapsHubIdentity
         }
 
         return $user;
+    }
+
+    private function statusFor(User $user, array $identity, bool $authenticated): string
+    {
+        if ($authenticated) {
+            return 'active';
+        }
+
+        if (array_key_exists('onboarding_pending', $identity)) {
+            return $identity['onboarding_pending'] ? 'invited' : 'active';
+        }
+
+        return $user->status === 'invited' ? 'invited' : 'active';
     }
 
     private function splitName(string $name): array

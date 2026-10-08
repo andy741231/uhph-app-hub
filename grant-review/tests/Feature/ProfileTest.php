@@ -21,6 +21,67 @@ class ProfileTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_profile_shows_the_local_password_form_when_sso_is_disabled(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/profile')
+            ->assertOk()
+            ->assertSee('Update Password')
+            ->assertSee('name="current_password"', false);
+    }
+
+    public function test_profile_links_to_the_hub_password_page_when_sso_is_enabled(): void
+    {
+        config()->set('hub.enabled', true);
+        config()->set('hub.base_url', 'https://hub.test/apps');
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->withSession([
+                'hub_authenticated_at' => now()->timestamp,
+                'hub_login_mode' => 'local',
+            ])
+            ->get('/profile')
+            ->assertOk()
+            ->assertSee('https://hub.test/apps/account/password')
+            ->assertSee('Change Password in UHPH App Hub')
+            ->assertDontSee('name="current_password"', false);
+    }
+
+    public function test_profile_defaults_to_the_hub_password_link_when_login_mode_is_missing(): void
+    {
+        config()->set('hub.enabled', true);
+        config()->set('hub.base_url', 'https://hub.test/apps');
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->withSession(['hub_authenticated_at' => now()->timestamp])
+            ->get('/profile')
+            ->assertOk()
+            ->assertSee('https://hub.test/apps/account/password')
+            ->assertDontSee('name="current_password"', false);
+    }
+
+    public function test_profile_explains_external_password_management_in_sso_mode(): void
+    {
+        config()->set('hub.enabled', true);
+        config()->set('hub.base_url', 'https://hub.test/apps');
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->withSession([
+                'hub_authenticated_at' => now()->timestamp,
+                'hub_login_mode' => 'sso',
+            ])
+            ->get('/profile')
+            ->assertOk()
+            ->assertSee('managed by UH')
+            ->assertDontSee('https://hub.test/apps/account/password')
+            ->assertDontSee('name="current_password"', false);
+    }
+
     public function test_profile_information_can_be_updated(): void
     {
         $user = User::factory()->create();

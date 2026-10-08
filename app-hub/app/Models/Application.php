@@ -63,8 +63,15 @@ class Application extends Model
     public function launchUrl(): string
     {
         return $this->hasSsoCredentials() && $this->hasSafePath()
-            ? $this->path
+            ? $this->launchPath()
             : route('applications.launch', $this);
+    }
+
+    public function launchPath(): string
+    {
+        return $this->key === 'flipbook' && $this->hasSsoCredentials()
+            ? rtrim($this->path, '/').'/auth/login.php'
+            : $this->path;
     }
 
     public function hasSsoCredentials(): bool

@@ -19,8 +19,12 @@ class NewPasswordController extends Controller
     /**
      * Display the password reset view.
      */
-    public function create(Request $request): View
+    public function create(Request $request): View|RedirectResponse
     {
+        if (config('hub.enabled')) {
+            return redirect()->away(rtrim((string) config('hub.base_url'), '/').'/forgot-password');
+        }
+
         return view('auth.reset-password', ['request' => $request]);
     }
 

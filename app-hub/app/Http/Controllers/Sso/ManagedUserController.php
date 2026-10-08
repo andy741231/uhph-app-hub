@@ -33,6 +33,7 @@ class ManagedUserController extends Controller
                 'name' => $user->name,
                 'role' => $user->pivot->role,
                 'status' => $user->status,
+                'onboarding_pending' => $user->onboardingPending(),
             ])
             ->values();
 
@@ -124,6 +125,7 @@ class ManagedUserController extends Controller
             'application' => $application->key,
             'role' => $input['role'],
             'status' => $target->status,
+            'onboarding_pending' => $target->onboardingPending(),
             'created' => $result['created'],
             'invitation_sent' => $invitationSent,
         ], $result['created'] ? 201 : 200)->header('Cache-Control', 'no-store, private');

@@ -30,7 +30,7 @@ class ApplicationLaunchController extends Controller
             ], 403);
         }
 
-        return redirect()->away($application->path);
+        return redirect()->away($application->launchPath());
     }
 
     private function audit(Request $request, Application $application, bool $succeeded, ?string $reason): void

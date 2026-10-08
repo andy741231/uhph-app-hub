@@ -175,6 +175,9 @@
                 <div class="topbar-actions">
                     <nav class="nav" aria-label="Primary navigation">
                         <a href="{{ route('dashboard') }}" @if (request()->routeIs('dashboard')) aria-current="page" @endif>Applications</a>
+                        @if (App\Support\LoginMode::current()->allowsLocal())
+                            <a href="{{ route('account.password.edit') }}" @if (request()->routeIs('account.password.*')) aria-current="page" @endif>Password</a>
+                        @endif
                         @if (auth()->user()->is_admin)
                             <a href="{{ route('admin.users.index') }}" @if (request()->routeIs('admin.users.*')) aria-current="page" @endif>Users</a>
                             <a href="{{ route('admin.applications.index') }}" @if (request()->routeIs('admin.applications.*')) aria-current="page" @endif>Manage apps</a>

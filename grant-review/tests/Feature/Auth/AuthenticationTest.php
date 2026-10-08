@@ -119,7 +119,7 @@ class AuthenticationTest extends TestCase
         $this->assertSame('550e8400-e29b-41d4-a716-446655440000', $user->sso_sub);
         $this->assertSame('reviewer', $user->role);
         $this->assertSame('active', $user->status);
-        $this->assertNull($user->password_hash);
+        $this->assertTrue(Hash::check('old-password', $user->password_hash));
         $this->assertNull($user->invite_token_hash);
         $this->assertSame(1, session('hub_application_count'));
         $this->assertSame('hybrid', session('hub_login_mode'));

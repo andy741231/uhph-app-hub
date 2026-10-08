@@ -104,6 +104,32 @@
     </div>
 
     {{-- Update Password --}}
+    @if (config('hub.enabled'))
+        @php
+            $hubLoginMode = (string) session(config('hub.login_mode_session_key', 'hub_login_mode'), 'local');
+            $hubPasswordUrl = rtrim((string) config('hub.base_url'), '/').'/account/password';
+        @endphp
+        <div class="card p-6 shadow-xs">
+            <div class="pb-4 border-b border-uh-border mb-5">
+                <h2 class="text-lg font-bold text-uh-fg">Password</h2>
+                <p class="text-xs text-gray-500 mt-0.5">Your password is managed by the UHPH App Hub.</p>
+            </div>
+
+            @if (in_array($hubLoginMode, ['local', 'hybrid'], true))
+                <p class="text-sm text-gray-600 mb-5">
+                    Pilot Central signs you in through the UHPH App Hub, so password changes happen there.
+                </p>
+                <a href="{{ $hubPasswordUrl }}" class="btn-primary inline-flex items-center">
+                    <x-heroicon-o-key class="w-4 h-4 mr-1.5" />
+                    Change Password in UHPH App Hub
+                </a>
+            @else
+                <p class="text-sm text-gray-600">
+                    You sign in with CougarNet, so your password is managed by UH — Pilot Central never sees or stores it.
+                </p>
+            @endif
+        </div>
+    @else
     <div class="card p-6 shadow-xs">
         <div class="pb-4 border-b border-uh-border mb-5">
             <h2 class="text-lg font-bold text-uh-fg">Update Password</h2>
@@ -149,5 +175,6 @@
             </div>
         </form>
     </div>
+    @endif
 </div>
 @endsection

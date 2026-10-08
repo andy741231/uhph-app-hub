@@ -143,6 +143,41 @@ class HubBulkImportTest extends TestCase
         $this->assertSame('User', $user->fresh()->last_name);
     }
 
+    public function test_csv_rows_pending_hub_onboarding_stay_invited_with_round_invitations(): void
+    {
+        $round = Round::factory()->create();
+        $existing[] = ['subject' => $this->admin->sso_sub, 'email' => $this->admin->email, 'name' => $this->admin->full_name, 'role' => 'admin', 'status' => 'active'];
+        Http::fake(function ($request) use ($existing) {
+            if ($request->method() === 'GET') {
+                return Http::response(['application' => 'grant-review', 'users' => $existing]);
+            }
+            if ($request->method() === 'PUT') {
+                return Http::response([
+                    'subject' => Str::uuid()->toString(),
+                    'email' => $request['email'],
+                    'name' => $request['name'],
+                    'application' => 'grant-review',
+                    'role' => 'submitter',
+                    'status' => 'active',
+                    'onboarding_pending' => true,
+                    'created' => true,
+                    'invitation_sent' => true,
+                ], 201);
+            }
+
+            return Http::response([], 404);
+        });
+
+        $this->asAdmin()->post('/admin/users/import', [
+            'round_id' => $round->id,
+            'csv' => $this->csv([['pending.submitter@uh.edu', 'Pending', 'Submitter']]),
+        ])->assertRedirect(route('admin.users.index'));
+
+        $user = User::where('email', 'pending.submitter@uh.edu')->firstOrFail();
+        $this->assertSame('invited', $user->status);
+        $this->assertDatabaseHas('round_invitations', ['round_id' => $round->id, 'user_id' => $user->id]);
+    }
+
     public function test_admins_can_download_the_csv_template(): void
     {
         $response = $this->asAdmin()->get('/admin/users/import/template');

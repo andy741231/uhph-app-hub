@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Round;
 use App\Models\User;
+use App\Services\HubIdentityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -126,6 +129,215 @@ class ApplicationAdminManagementTest extends TestCase
             ->get('/admin/users?archived=1')
             ->assertOk()
             ->assertSee('removed@uh.edu');
+    }
+
+    public function test_reconciliation_marks_onboarding_pending_hub_users_invited(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'sso_sub' => '550e8400-e29b-41d4-a716-446655440030',
+        ]);
+        $corrupted = User::factory()->create([
+            'email' => 'pending@uh.edu',
+            'role' => 'submitter',
+            'status' => 'active',
+            'sso_sub' => '550e8400-e29b-41d4-a716-446655440060',
+            'password_hash' => Hash::make('legacy-password'),
+            'invite_token_hash' => hash('sha256', 'pending-token'),
+            'invite_expires_at' => now()->addDays(5),
+        ]);
+        $legacyInvited = User::factory()->create([
+            'email' => 'legacy.invited@uh.edu',
+            'role' => 'submitter',
+            'status' => 'invited',
+            'sso_sub' => '550e8400-e29b-41d4-a716-446655440063',
+        ]);
+        Http::fake([
+            'https://hub.test/apps/sso/managed-users' => Http::response([
+                'application' => 'grant-review',
+                'users' => [
+                    $this->managedIdentity($admin->sso_sub, $admin->email, $admin->full_name, 'admin'),
+                    $this->managedIdentity($corrupted->sso_sub, $corrupted->email, $corrupted->full_name, 'submitter', ['onboarding_pending' => true]),
+                    $this->managedIdentity($legacyInvited->sso_sub, $legacyInvited->email, $legacyInvited->full_name, 'submitter'),
+                    $this->managedIdentity('550e8400-e29b-41d4-a716-446655440061', 'new.pending@uh.edu', 'New Pending', 'submitter', ['onboarding_pending' => true]),
+                    $this->managedIdentity('550e8400-e29b-41d4-a716-446655440062', 'ready@uh.edu', 'Ready User', 'reviewer', ['onboarding_pending' => false]),
+                ],
+            ]),
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession($this->hubSession())
+            ->get('/admin/users')
+            ->assertOk()
+            ->assertSee('pending@uh.edu')
+            ->assertSee('new.pending@uh.edu')
+            ->assertSee('Invited');
+
+        $corrupted = $corrupted->fresh();
+        $this->assertSame('invited', $corrupted->status);
+        $this->assertTrue(Hash::check('legacy-password', $corrupted->password_hash));
+        $this->assertSame(hash('sha256', 'pending-token'), $corrupted->invite_token_hash);
+        $this->assertSame('invited', User::where('email', 'new.pending@uh.edu')->firstOrFail()->status);
+        $this->assertSame('invited', $legacyInvited->fresh()->status);
+        $ready = User::where('email', 'ready@uh.edu')->firstOrFail();
+        $this->assertSame('active', $ready->status);
+        $this->assertNull($ready->invite_token_hash);
+    }
+
+    public function test_admin_provisioning_preserves_invited_status_while_hub_onboarding_is_pending(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $round = Round::factory()->create(['status' => 'open']);
+        Http::fake([
+            'https://hub.test/apps/sso/managed-users' => Http::response([
+                'subject' => '550e8400-e29b-41d4-a716-446655440070',
+                'email' => 'new.submitter@uh.edu',
+                'name' => 'New Submitter',
+                'application' => 'grant-review',
+                'role' => 'submitter',
+                'status' => 'active',
+                'onboarding_pending' => true,
+                'created' => true,
+                'invitation_sent' => true,
+            ], 201),
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession($this->hubSession())
+            ->post('/admin/users', [
+                'first_name' => 'New',
+                'last_name' => 'Submitter',
+                'email' => 'new.submitter@uh.edu',
+                'role' => 'submitter',
+                'round_ids' => [$round->id],
+            ])
+            ->assertRedirect(route('admin.users.index', absolute: false));
+
+        $user = User::where('email', 'new.submitter@uh.edu')->firstOrFail();
+        $this->assertSame('invited', $user->status);
+        $this->assertDatabaseHas('round_invitations', ['round_id' => $round->id, 'user_id' => $user->id]);
+    }
+
+    public function test_admin_update_does_not_activate_a_user_while_hub_onboarding_is_pending(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $target = User::factory()->create([
+            'email' => 'pending.reviewer@uh.edu',
+            'first_name' => 'Pending',
+            'last_name' => 'Reviewer',
+            'role' => 'reviewer',
+            'status' => 'invited',
+            'sso_sub' => '550e8400-e29b-41d4-a716-446655440071',
+        ]);
+        Http::fake([
+            'https://hub.test/apps/sso/managed-users' => Http::response([
+                'subject' => $target->sso_sub,
+                'email' => $target->email,
+                'name' => $target->full_name,
+                'application' => 'grant-review',
+                'role' => 'admin',
+                'status' => 'active',
+                'onboarding_pending' => true,
+                'created' => false,
+                'invitation_sent' => false,
+            ]),
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession($this->hubSession())
+            ->put('/admin/users/'.$target->id, [
+                'first_name' => $target->first_name,
+                'last_name' => $target->last_name,
+                'email' => $target->email,
+                'role' => 'admin',
+            ])
+            ->assertRedirect(route('admin.users.index', absolute: false));
+
+        $this->assertSame('invited', $target->fresh()->status);
+        $this->assertSame('admin', $target->fresh()->role);
+    }
+
+    public function test_a_non_boolean_onboarding_flag_fails_closed_instead_of_guessing(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        Http::fake([
+            'https://hub.test/apps/sso/managed-users' => Http::response([
+                'subject' => '550e8400-e29b-41d4-a716-446655440072',
+                'email' => 'weird@uh.edu',
+                'name' => 'Weird Response',
+                'application' => 'grant-review',
+                'role' => 'submitter',
+                'status' => 'active',
+                'onboarding_pending' => 'yes',
+                'created' => true,
+                'invitation_sent' => true,
+            ], 201),
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession($this->hubSession())
+            ->post('/admin/users', [
+                'first_name' => 'Weird',
+                'last_name' => 'Response',
+                'email' => 'weird@uh.edu',
+                'role' => 'submitter',
+            ])
+            ->assertStatus(502);
+
+        $this->assertDatabaseMissing('users', ['email' => 'weird@uh.edu']);
+    }
+
+    public function test_an_authenticated_resolution_activates_even_when_the_hub_reports_pending(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'sso.pending@uh.edu',
+            'status' => 'invited',
+            'invite_token_hash' => hash('sha256', 'legacy-token'),
+            'invite_expires_at' => now()->addDays(5),
+        ]);
+
+        $resolved = app(HubIdentityService::class)->resolve([
+            'subject' => '550e8400-e29b-41d4-a716-446655440073',
+            'email' => $user->email,
+            'name' => 'SSO Pending',
+            'role' => 'submitter',
+            'onboarding_pending' => true,
+        ]);
+
+        $this->assertSame('active', $resolved->status);
+        $this->assertNull($resolved->invite_token_hash);
+        $this->assertNull($resolved->invite_expires_at);
+    }
+
+    public function test_reconciliation_preserves_existing_local_password_hashes(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'sso_sub' => '550e8400-e29b-41d4-a716-446655440030',
+        ]);
+        $reviewer = User::factory()->create([
+            'email' => 'reviewer@uh.edu',
+            'role' => 'reviewer',
+            'status' => 'active',
+            'sso_sub' => '550e8400-e29b-41d4-a716-446655440050',
+            'password_hash' => Hash::make('legacy-password'),
+        ]);
+        Http::fake([
+            'https://hub.test/apps/sso/managed-users' => Http::response([
+                'application' => 'grant-review',
+                'users' => [
+                    $this->managedIdentity($admin->sso_sub, $admin->email, $admin->full_name, 'admin'),
+                    $this->managedIdentity($reviewer->sso_sub, $reviewer->email, $reviewer->full_name, 'reviewer'),
+                ],
+            ]),
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession($this->hubSession())
+            ->get('/admin/users')
+            ->assertOk();
+
+        $this->assertTrue(Hash::check('legacy-password', $reviewer->fresh()->password_hash));
     }
 
     public function test_revoke_access_archives_the_profile_without_deleting_it(): void
@@ -331,9 +543,9 @@ class ApplicationAdminManagementTest extends TestCase
         $this->assertSame('admin', $target->fresh()->role);
     }
 
-    private function managedIdentity(string $subject, string $email, string $name, string $role): array
+    private function managedIdentity(string $subject, string $email, string $name, string $role, array $extra = []): array
     {
-        return compact('subject', 'email', 'name', 'role') + ['status' => 'active'];
+        return compact('subject', 'email', 'name', 'role') + ['status' => 'active'] + $extra;
     }
 
     private function hubSession(): array

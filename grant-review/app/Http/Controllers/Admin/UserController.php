@@ -50,7 +50,11 @@ class UserController extends Controller
 
         $query = User::query();
         if (config('hub.enabled')) {
-            $query->where('status', $showArchived ? 'disabled' : 'active');
+            $query->when(
+                $showArchived,
+                fn ($q) => $q->where('status', 'disabled'),
+                fn ($q) => $q->whereIn('status', ['active', 'invited']),
+            );
         }
 
         if ($search !== '') {
@@ -93,7 +97,7 @@ class UserController extends Controller
                     'role' => $request->role,
                 ],
             );
-            $user = $identities->resolve($identity);
+            $user = $identities->resolve($identity, false);
             $this->syncRoundInvitations($user, $request->input('round_ids', []));
             $message = $identity['created']
                 ? "User {$user->email} created in UHPH App Hub and assigned to Pilot Central."
@@ -245,7 +249,7 @@ class UserController extends Controller
             if ($existing !== null && $existing['role'] !== 'submitter') {
                 // A submitter import must never demote a reviewer/admin — sync the
                 // profile and attach the round invitation, but leave the role alone.
-                $user = $identities->resolve($existing);
+                $user = $identities->resolve($existing, false);
                 RoundInvitation::firstOrCreate(['round_id' => $request->round_id, 'user_id' => $user->id]);
                 $keptRole[] = $email;
 
@@ -258,7 +262,7 @@ class UserController extends Controller
                     'email' => $email,
                     'role' => 'submitter',
                 ]);
-                $user = $identities->resolve($identity);
+                $user = $identities->resolve($identity, false);
                 if ($name === '') {
                     // No name in the CSV — leave local names blank so the real
                     // Entra directory name fills in on the user's first sign-in.
@@ -349,10 +353,10 @@ class UserController extends Controller
                     'role' => $data['role'],
                 ],
             );
-            $user = $identities->resolve($identity);
+            $user = $identities->resolve($identity, false);
             $data['email'] = $identity['email'];
             $data['role'] = $identity['role'];
-            $data['status'] = 'active';
+            $data['status'] = $user->status;
         }
 
         // Sync round invitations if checkboxes were submitted

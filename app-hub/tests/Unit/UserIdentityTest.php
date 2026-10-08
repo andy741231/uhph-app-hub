@@ -34,4 +34,31 @@ class UserIdentityTest extends TestCase
         $this->assertSame('MC', User::factory()->make(['name' => '  Maria  Consuelo  Lopez  '])->initials());
         $this->assertSame('', User::factory()->make(['name' => '   '])->initials());
     }
+
+    public function test_onboarding_pending_requires_no_credential_or_sign_in_evidence(): void
+    {
+        $this->assertTrue(User::factory()->make([
+            'password' => null,
+            'last_login_at' => null,
+            'external_subject' => null,
+        ])->onboardingPending());
+
+        $this->assertFalse(User::factory()->make([
+            'password' => 'stored-bcrypt-hash',
+            'last_login_at' => null,
+            'external_subject' => null,
+        ])->onboardingPending());
+
+        $this->assertFalse(User::factory()->make([
+            'password' => null,
+            'last_login_at' => now(),
+            'external_subject' => null,
+        ])->onboardingPending());
+
+        $this->assertFalse(User::factory()->make([
+            'password' => null,
+            'last_login_at' => null,
+            'external_subject' => 'entra-subject-123',
+        ])->onboardingPending());
+    }
 }

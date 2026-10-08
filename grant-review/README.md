@@ -2,6 +2,30 @@
 
 RCMI Pilot Grant Program review application (Laravel), deployed as an IIS child application under the UHPH App Hub at `/apps/grant-review`.
 
+## Authentication runbook
+
+Grant Review signs in through the UHPH App Hub when its ignored `.env` sets `HUB_SSO_ENABLED=true`; `false` keeps the legacy local login form. The flag is Grant Review's own switch — the Hub's `HUB_LOGIN_MODE` (`local`, `sso`, or `hybrid`, set only in `app-hub/.env`) independently controls which sign-in methods the Hub itself offers.
+
+| Setting | Production (required) | Local |
+| --- | --- | --- |
+| `HUB_SSO_ENABLED` | `true` | `false` exercises legacy local login only — it does not test centralized sign-in or coordinated logout; `true` for end-to-end SSO testing |
+| `HUB_URL` | `https://uhph.uh.edu/apps` | Environment-specific Hub, e.g. `http://localhost:8000/apps` |
+| `HUB_CALLBACK_URI` | `/apps/grant-review/auth/hub/callback` | Same path, matching the local Hub registration exactly |
+| `HUB_CLIENT_ID` / `HUB_CLIENT_SECRET` | From the Hub application editor (shown once) | Generated locally — never copy production secrets |
+| `HUB_VERIFY_TLS` | `true` — never disable as a workaround | `true` |
+
+Before enabling in any environment: register credentials in that environment's Hub, match the callback URI to the registered `/apps/...` path exactly, and confirm each account has a Grant Review assignment — the acceptance round trip can only run after the integration is on. Then set `HUB_SSO_ENABLED=true` and clear that app's cache — `composer exec --working-dir="E:/apps/grant-review" -- php artisan config:clear`; no `npm run build` is needed for environment changes. Verify in a browser: a fresh SSO sign-in plus a coordinated global-logout round trip.
+
+Diagnose failures by status and endpoint: a **403** during Hub authorization can indicate a missing or revoked assignment, while a **403** from the scoped managed-users API can indicate a rejected actor token — check which endpoint failed; a **502** during the callback can indicate an exchange, connectivity, or Hub response-validation failure (`HUB_URL`, credentials, callback match, or TLS).
+
+Hub and legacy local passwords are independent stores: mapping an SSO identity preserves the existing `password_hash` for every role during the transition (hashes already cleared by earlier releases are not restored by rolling back). Never sync passwords to fix a login problem. For a full local setup — standalone or end-to-end SSO — see `docs/local-authentication-setup.md`.
+
+The Hub coordinates global logout through the registered frontchannel endpoint `/apps/grant-review/auth/hub/logout`, which returns **404 while `HUB_SSO_ENABLED=false`**. The production cutover completed on 2026-10-07: `HUB_SSO_ENABLED=true` is live, so the endpoint now participates in coordinated logout normally; the 404 remains relevant only for other environments that disable the flag while the endpoint stays registered. It validates the Hub's single-use, two-minute logout token before clearing the local session; an expired logout URL cannot be reused — sign out again for a fresh transaction.
+
+With SSO enabled, passwords are owned centrally by the Hub: Grant Review's forgot/reset-password pages redirect to the Hub, local password submissions return 405, and the profile page links to the Hub's `/apps/account/password` page (or explains that CougarNet manages the password when the Hub is in `sso` mode).
+
+`.env` is gitignored along with `bootstrap/cache` config caches and `public/build`: git carries code and docs only, and each deployment keeps its own environment — never edit config defaults to push production values onto local.
+
 ## COI & confidentiality audit trail
 
 - **Where things live**: reviewers declare per-proposal conflicts at `/reviewer/conflicts/{round}`; admins review coverage at `/admin/conflicts` and audit every declaration version (current and superseded) at `/admin/conflicts/{declaration}` ("View declaration history" on each submitted row). Confidentiality acceptances are shown on the admin user profile.

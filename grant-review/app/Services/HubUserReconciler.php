@@ -17,7 +17,7 @@ class HubUserReconciler
         $activeEmails = [];
 
         foreach ($hubUsers as $identity) {
-            $identities->resolve($identity);
+            $identities->resolve($identity, false);
             $activeSubjects[] = $identity['subject'];
             $activeEmails[] = $identity['email'];
         }

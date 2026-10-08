@@ -41,4 +41,20 @@ class PasswordConfirmationTest extends TestCase
 
         $response->assertSessionHasErrors();
     }
+
+    public function test_confirm_password_routes_are_disabled_when_sso_is_enabled(): void
+    {
+        config()->set('hub.enabled', true);
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->withSession(['hub_authenticated_at' => now()->timestamp])
+            ->get('/confirm-password')
+            ->assertMethodNotAllowed();
+
+        $this->actingAs($user)
+            ->withSession(['hub_authenticated_at' => now()->timestamp])
+            ->post('/confirm-password', ['password' => 'password'])
+            ->assertMethodNotAllowed();
+    }
 }

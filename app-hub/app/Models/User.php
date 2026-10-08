@@ -86,6 +86,13 @@ class User extends Authenticatable
         return $this->status === self::STATUS_ACTIVE;
     }
 
+    public function onboardingPending(): bool
+    {
+        return $this->password === null
+            && $this->last_login_at === null
+            && $this->external_subject === null;
+    }
+
     public function initials(): string
     {
         return collect(preg_split('/\s+/', trim($this->name)))

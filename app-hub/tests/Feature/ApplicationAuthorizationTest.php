@@ -74,6 +74,74 @@ class ApplicationAuthorizationTest extends TestCase
             ->assertDontSee('href="'.route('applications.launch', $application).'"', false);
     }
 
+    public function test_dashboard_links_a_configured_flipbook_tile_to_its_login_page(): void
+    {
+        $user = User::factory()->create();
+        $application = Application::create([
+            'key' => 'flipbook',
+            'name' => 'Flipbook',
+            'path' => '/apps/flipbook',
+            'callback_url' => '/apps/flipbook/auth/callback.php',
+            'client_id' => 'hub_flipbook',
+            'client_secret_hash' => hash('sha256', 'flipbook-secret'),
+        ]);
+        $user->applications()->syncWithoutDetaching([$application->id => [
+            'granted_by' => $user->id,
+            'granted_at' => now(),
+        ]]);
+
+        $this->actingAs($user)
+            ->get('/dashboard')
+            ->assertOk()
+            ->assertSee('href="/apps/flipbook/auth/login.php"', false);
+    }
+
+    public function test_launching_a_configured_flipbook_redirects_to_its_login_page_and_audits(): void
+    {
+        $user = User::factory()->create();
+        $application = Application::create([
+            'key' => 'flipbook',
+            'name' => 'Flipbook',
+            'path' => '/apps/flipbook',
+            'callback_url' => '/apps/flipbook/auth/callback.php',
+            'client_id' => 'hub_flipbook',
+            'client_secret_hash' => hash('sha256', 'flipbook-secret'),
+        ]);
+        $user->applications()->syncWithoutDetaching([$application->id => [
+            'granted_by' => $user->id,
+            'granted_at' => now(),
+        ]]);
+
+        $this->actingAs($user)
+            ->get('/launch/flipbook')
+            ->assertRedirect('/apps/flipbook/auth/login.php');
+
+        $this->assertDatabaseHas('application_launch_audits', [
+            'user_id' => $user->id,
+            'application_id' => $application->id,
+            'succeeded' => true,
+            'failure_reason' => null,
+        ]);
+    }
+
+    public function test_an_unconfigured_flipbook_keeps_the_legacy_launch_root(): void
+    {
+        $user = User::factory()->create();
+        $application = Application::create([
+            'key' => 'flipbook',
+            'name' => 'Flipbook',
+            'path' => '/apps/flipbook',
+        ]);
+        $user->applications()->syncWithoutDetaching([$application->id => [
+            'granted_by' => $user->id,
+            'granted_at' => now(),
+        ]]);
+
+        $this->actingAs($user)
+            ->get('/launch/flipbook')
+            ->assertRedirect('/apps/flipbook');
+    }
+
     public function test_assigned_users_can_launch_an_enabled_application(): void
     {
         $user = User::factory()->create();

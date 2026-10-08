@@ -48,4 +48,23 @@ class PasswordUpdateTest extends TestCase
             ->assertSessionHasErrorsIn('updatePassword', 'current_password')
             ->assertRedirect('/profile');
     }
+
+    public function test_password_update_is_disabled_and_leaves_the_hash_untouched_when_sso_is_enabled(): void
+    {
+        config()->set('hub.enabled', true);
+        $user = User::factory()->create();
+        $hash = $user->password_hash;
+
+        $this->actingAs($user)
+            ->withSession(['hub_authenticated_at' => now()->timestamp])
+            ->from('/profile')
+            ->put('/password', [
+                'current_password' => 'password',
+                'password' => 'new-password',
+                'password_confirmation' => 'new-password',
+            ])
+            ->assertMethodNotAllowed();
+
+        $this->assertSame($hash, $user->fresh()->password_hash);
+    }
 }

@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\UserImportController;
 use App\Http\Controllers\ApplicationLaunchController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\EntraOidcController;
+use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\SetPasswordController;
 use App\Http\Controllers\DashboardController;
@@ -51,6 +52,12 @@ Route::middleware(['auth', 'active', 'login-mode'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/launch/{application}', ApplicationLaunchController::class)->name('applications.launch');
     Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+    Route::get('/account/password', [PasswordController::class, 'create'])
+        ->middleware('login-mode:local')
+        ->name('account.password.edit');
+    Route::put('/account/password', [PasswordController::class, 'update'])
+        ->middleware(['login-mode:local', 'throttle:6,1'])
+        ->name('account.password.update');
 
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('users/import', [UserImportController::class, 'create'])->name('users.import.create');
