@@ -238,6 +238,10 @@ $csrfToken = flipbook_csrf_token();
                                 <input type="checkbox" id="optExcludeFirstPage">
                                 <span>Exclude first page (cover) from counting</span>
                             </label>
+                            <label class="edit-option">
+                                <input type="checkbox" id="optSinglePage">
+                                <span>Single page view (one page at a time)</span>
+                            </label>
                         </div>
                         <div class="edit-tips">
                             <div class="edit-tip"><i class="fas fa-arrows-alt"></i><span>Drag videos to reposition</span></div>

@@ -21,7 +21,7 @@ let fitScale = 1;
 let resizeTimer = null;
 let pageRenderScale = 0;    // render scale used for all pages
 let pageDims = { w: 0, h: 0 }; // base page pixel dimensions (for re-init on viewport change)
-let currentViewportMode = null; // 'mobile' | 'desktop' — tracked to re-init on breakpoint crossing
+let currentLayoutMode = null;   // 'single' | 'double' — rendered layout, re-init when it changes
 let pageCacheDB = null;     // IndexedDB for rendered page blobs
 let pageCacheKey = '';      // cache namespace (flipbook id + pdf hash)
 let renderingPages = new Set(); // pages currently being rendered (prevents duplicate work)
@@ -70,7 +70,7 @@ let customToc = null;     // null = use PDF outline; array = custom items
 let tocEditBuffer = [];   // working copy while editing
 
 // Per-flipbook display settings (parsed from flipbookData.settings_json)
-let displaySettings = { showPageNumbers: false, excludeFirstPage: false };
+let displaySettings = { showPageNumbers: false, excludeFirstPage: false, singlePage: false };
 let savedDisplaySettings = null; // snapshot for cancel/restore while editing
 
 // Search highlighting
@@ -207,6 +207,7 @@ async function initViewer(slug, base, embed) {
                 displaySettings = {
                     showPageNumbers: !!s.showPageNumbers,
                     excludeFirstPage: !!s.excludeFirstPage,
+                    singlePage: !!s.singlePage,
                 };
             } catch(e) { /* keep defaults */ }
         }
@@ -312,12 +313,12 @@ async function loadPDF(url) {
     });
 
     // Re-initialize the page flip when crossing the mobile/desktop breakpoint
-    // so the spread switches between single-page (mobile) and two-page (desktop).
+    // so the spread switches between single-page and two-page layouts.
     const mobileMq = window.matchMedia('(max-width: 768px)');
     if (mobileMq.addEventListener) {
-        mobileMq.addEventListener('change', onViewportModeChange);
+        mobileMq.addEventListener('change', syncLayoutMode);
     } else if (mobileMq.addListener) {
-        mobileMq.addListener(onViewportModeChange); // older Safari
+        mobileMq.addListener(syncLayoutMode); // older Safari
     }
 
     updateLoading('Ready!', 100);
@@ -499,12 +500,13 @@ function fitFlipbookToContainer() {
 function initPageFlip(pageW, pageH) {
     const container = document.getElementById('flipbookContainer');
     container.innerHTML = '';
-    // Single page on mobile, two-page spread on desktop. StPageFlip switches
-    // to portrait (single-page) mode when the block width is below 2*pageW,
-    // so a single-page-wide container on mobile yields portrait orientation
-    // while the desktop container stays a full two-page spread.
-    const mobile = isMobile();
-    const bookWidth = mobile ? pageW : pageW * 2;
+    // Single page on mobile (or when the "single page view" setting is on),
+    // two-page spread otherwise. StPageFlip switches to portrait (single-page)
+    // mode when the block width is below 2*pageW, so a single-page-wide
+    // container yields portrait orientation while a full-width container
+    // stays a two-page spread.
+    const singlePage = useSinglePageView();
+    const bookWidth = singlePage ? pageW : pageW * 2;
     container.style.width = bookWidth + 'px';
     container.style.height = pageH + 'px';
     container.dataset.baseWidth = pageW * 2; // full spread width (used by fit calc)
@@ -573,11 +575,11 @@ function initPageFlip(pageW, pageH) {
             usePortrait: true,
             startPage: 0,
             drawShadow: true,
-            // No visible flip animation in single-page (mobile) mode: a near-zero
-            // flippingTime makes any direct click/swipe flip complete instantly.
-            // Programmatic navigation uses turnTo* (no animation at all) — see
-            // flipNext/flipPrev/goToPage.
-            flippingTime: mobile ? 1 : 600,
+            // No visible flip animation in single-page (portrait) mode: a
+            // near-zero flippingTime makes any direct click/swipe flip
+            // complete instantly. Programmatic navigation uses turnTo* (no
+            // animation at all) — see flipNext/flipPrev/goToPage.
+            flippingTime: singlePage ? 1 : 600,
             useMouseEvents: true,
             swipeDistance: 30,
             showPageCorners: false,
@@ -609,8 +611,8 @@ function initPageFlip(pageW, pageH) {
         // Render on-page number badges if the setting is enabled
         renderPageNumberBadges();
 
-        // Track the viewport mode so we can re-init when crossing the breakpoint
-        currentViewportMode = mobile ? 'mobile' : 'desktop';
+        // Track the rendered layout so we can re-init when it changes
+        currentLayoutMode = singlePage ? 'single' : 'double';
 
         // Re-fit now that the page flip instance exists and orientation is known
         fitFlipbookToContainer();
@@ -633,12 +635,12 @@ function loadPageFlipLibrary(callback) {
     document.head.appendChild(script);
 }
 
-// Re-initialize the page flip when the viewport crosses the 768px breakpoint,
-// switching between single-page (mobile) and two-page (desktop) spreads while
-// preserving the page the reader is currently on.
-function onViewportModeChange() {
-    const mode = isMobile() ? 'mobile' : 'desktop';
-    if (mode === currentViewportMode) return;
+// Re-initialize the page flip when the effective layout changes between
+// single-page and two-page spreads — on breakpoint crossing or when the
+// "single page view" setting is toggled — preserving the current page.
+function syncLayoutMode() {
+    const mode = useSinglePageView() ? 'single' : 'double';
+    if (mode === currentLayoutMode) return;
     if (!pageDims.w) return;
 
     // Capture the page the reader is currently on before tearing down.
@@ -656,6 +658,7 @@ function onViewportModeChange() {
         renderSinglePage(restoreIndex);
         renderSinglePage(restoreIndex + 1);
         prefetchAdjacentPages(restoreIndex);
+        restoreEditStateAfterReinit();
         fitFlipbookToContainer();
     };
     if (typeof St !== 'undefined' && St.PageFlip) {
@@ -663,6 +666,37 @@ function onViewportModeChange() {
     } else {
         setTimeout(restore, 300);
     }
+}
+
+// After the page flip is rebuilt mid-edit-session (toggling single-page view
+// re-creates every page element), put the new DOM back into an editing state:
+// keep flipping locked, drop overlays already marked for deletion, re-apply
+// unsaved position/size edits, and re-attach drag/resize/delete controls.
+function restoreEditStateAfterReinit() {
+    if (!editMode || !pageFlipInstance) return;
+    pageFlipInstance.getSettings().useMouseEvents = false;
+
+    document.querySelectorAll('.video-overlay').forEach(el => {
+        if (pendingDeletes.has(String(el.dataset.videoId))) el.remove();
+    });
+    document.querySelectorAll('.link-overlay').forEach(el => {
+        if (pendingLinkDeletes.has(String(el.dataset.linkId))) el.remove();
+    });
+
+    const applyEdits = (edits, selector, attr) => {
+        for (const [id, ch] of Object.entries(edits)) {
+            const el = document.querySelector(`${selector}[data-${attr}="${id}"]`);
+            if (!el) continue;
+            if (ch.pos_x_percent !== undefined)  el.style.left   = ch.pos_x_percent + '%';
+            if (ch.pos_y_percent !== undefined)  el.style.top    = ch.pos_y_percent + '%';
+            if (ch.width_percent !== undefined)  el.style.width  = ch.width_percent + '%';
+            if (ch.height_percent !== undefined) el.style.height = ch.height_percent + '%';
+        }
+    };
+    applyEdits(pendingEdits, '.video-overlay', 'video-id');
+    applyEdits(pendingLinkEdits, '.link-overlay', 'link-id');
+
+    enableVideoDragging();
 }
 
 // Fallback if page-flip library fails
@@ -1114,6 +1148,12 @@ function playFlipSound() {
 // ============================================================
 function isMobile() {
     return window.matchMedia('(max-width: 768px)').matches;
+}
+
+// True when the book should show one page at a time — always on narrow
+// viewports, or on any viewport when "single page view" is enabled.
+function useSinglePageView() {
+    return isMobile() || !!displaySettings.singlePage;
 }
 
 // True when StPageFlip is showing a single page (portrait/mobile mode).
@@ -1798,9 +1838,10 @@ function setupControls() {
     const cancelBtn = document.getElementById('btnCancelEdit');
     if (cancelBtn) cancelBtn.addEventListener('click', cancelEdit);
 
-    // Display settings toggles (Show page number / Exclude first page)
+    // Display settings toggles (Show page number / Exclude first page / Single page)
     const optShowPageNumbers = document.getElementById('optShowPageNumbers');
     const optExcludeFirstPage = document.getElementById('optExcludeFirstPage');
+    const optSinglePage = document.getElementById('optSinglePage');
     if (optShowPageNumbers) {
         optShowPageNumbers.checked = displaySettings.showPageNumbers;
         optShowPageNumbers.addEventListener('change', () => {
@@ -1813,6 +1854,13 @@ function setupControls() {
         optExcludeFirstPage.addEventListener('change', () => {
             displaySettings.excludeFirstPage = optExcludeFirstPage.checked;
             renderPageNumberBadges();
+        });
+    }
+    if (optSinglePage) {
+        optSinglePage.checked = displaySettings.singlePage;
+        optSinglePage.addEventListener('change', () => {
+            displaySettings.singlePage = optSinglePage.checked;
+            syncLayoutMode();
         });
     }
 
@@ -1974,8 +2022,10 @@ function toggleEditMode() {
 function syncDisplaySettingControls() {
     const optShow = document.getElementById('optShowPageNumbers');
     const optExclude = document.getElementById('optExcludeFirstPage');
+    const optSingle = document.getElementById('optSinglePage');
     if (optShow) optShow.checked = displaySettings.showPageNumbers;
     if (optExclude) optExclude.checked = displaySettings.excludeFirstPage;
+    if (optSingle) optSingle.checked = displaySettings.singlePage;
 }
 
 function enterEditMode() {
@@ -2114,10 +2164,11 @@ async function saveEdit() {
                 body: JSON.stringify(payload)
             });
         }
-        // 7. Persist display settings (show page numbers / exclude first page)
+        // 7. Persist display settings (page numbers / first page / layout)
         const settingsPayload = {
             showPageNumbers: !!displaySettings.showPageNumbers,
             excludeFirstPage: !!displaySettings.excludeFirstPage,
+            singlePage: !!displaySettings.singlePage,
         };
         const resp = await fetch('api/flipbooks.php', {
             method: 'PUT',
@@ -2146,10 +2197,7 @@ function cancelEdit() {
     if (savedDisplaySettings) {
         displaySettings = { ...savedDisplaySettings };
         savedDisplaySettings = null;
-        const optShow = document.getElementById('optShowPageNumbers');
-        const optExclude = document.getElementById('optExcludeFirstPage');
-        if (optShow) optShow.checked = displaySettings.showPageNumbers;
-        if (optExclude) optExclude.checked = displaySettings.excludeFirstPage;
+        syncDisplaySettingControls();
     }
     pendingAdds.forEach(v => {
         const i = videoOverlays.findIndex(x => x.id === v.id);
@@ -2179,6 +2227,8 @@ function cancelEdit() {
     renderVideoOverlays();
     renderLinkOverlays();
     updatePageInfo();
+    // If the layout was toggled during this session, rebuild to undo it
+    syncLayoutMode();
 }
 
 function enableVideoDragging() {
