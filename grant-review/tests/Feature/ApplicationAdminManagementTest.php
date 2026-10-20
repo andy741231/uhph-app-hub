@@ -260,6 +260,7 @@ class ApplicationAdminManagementTest extends TestCase
     public function test_a_non_boolean_onboarding_flag_fails_closed_instead_of_guessing(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
+        $round = Round::factory()->create(['status' => 'open']);
         Http::fake([
             'https://hub.test/apps/sso/managed-users' => Http::response([
                 'subject' => '550e8400-e29b-41d4-a716-446655440072',
@@ -281,6 +282,7 @@ class ApplicationAdminManagementTest extends TestCase
                 'last_name' => 'Response',
                 'email' => 'weird@uh.edu',
                 'role' => 'submitter',
+                'round_ids' => [$round->id],
             ])
             ->assertStatus(502);
 
@@ -488,6 +490,7 @@ class ApplicationAdminManagementTest extends TestCase
     public function test_hub_validation_failure_does_not_create_a_local_user(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);
+        $round = Round::factory()->create(['status' => 'open']);
         Http::fake([
             'https://hub.test/apps/sso/managed-users' => Http::response([
                 'errors' => ['email' => ['The identity cannot be created.']],
@@ -501,10 +504,63 @@ class ApplicationAdminManagementTest extends TestCase
                 'last_name' => 'User',
                 'email' => 'new.user@uh.edu',
                 'role' => 'submitter',
+                'round_ids' => [$round->id],
             ])
             ->assertSessionHasErrors('email');
 
         $this->assertDatabaseMissing('users', ['email' => 'new.user@uh.edu']);
+    }
+
+    public function test_a_submitter_must_be_invited_to_at_least_one_cycle(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        Round::factory()->create(['status' => 'open']);
+        Http::fake();
+
+        $this->actingAs($admin)
+            ->withSession($this->hubSession())
+            ->post('/admin/users', [
+                'first_name' => 'New',
+                'last_name' => 'Submitter',
+                'email' => 'new.submitter@uh.edu',
+                'role' => 'submitter',
+            ])
+            ->assertSessionHasErrors('round_ids');
+
+        Http::assertNothingSent();
+        $this->assertDatabaseMissing('users', ['email' => 'new.submitter@uh.edu']);
+    }
+
+    public function test_non_submitter_roles_do_not_require_a_cycle(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        Round::factory()->create(['status' => 'open']);
+        Http::fake([
+            'https://hub.test/apps/sso/managed-users' => Http::response([
+                'subject' => '550e8400-e29b-41d4-a716-446655440090',
+                'email' => 'new.reviewer@uh.edu',
+                'name' => 'New Reviewer',
+                'application' => 'grant-review',
+                'role' => 'reviewer',
+                'status' => 'active',
+                'onboarding_pending' => true,
+                'created' => true,
+                'invitation_sent' => true,
+            ], 201),
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession($this->hubSession())
+            ->post('/admin/users', [
+                'first_name' => 'New',
+                'last_name' => 'Reviewer',
+                'email' => 'new.reviewer@uh.edu',
+                'role' => 'reviewer',
+            ])
+            ->assertRedirect(route('admin.users.index', absolute: false))
+            ->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('users', ['email' => 'new.reviewer@uh.edu', 'role' => 'reviewer']);
     }
 
     public function test_grant_review_admin_can_change_a_users_grant_review_role(): void

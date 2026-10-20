@@ -42,8 +42,16 @@ class StoreUserRequest extends FormRequest
             'first_name' => ['required', 'string', 'max:255'],
             'last_name' => ['required', 'string', 'max:255'],
             'role' => ['required', 'in:admin,submitter,reviewer'],
-            'round_ids' => ['sometimes', 'array'],
+            'round_ids' => ['required_if:role,submitter', 'array', 'min:1'],
             'round_ids.*' => ['exists:rounds,id'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'round_ids.required_if' => 'Select at least one cycle for submitters.',
+            'round_ids.min' => 'Select at least one cycle for submitters.',
         ];
     }
 }

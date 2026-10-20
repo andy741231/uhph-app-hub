@@ -52,7 +52,7 @@
                 </select>
             </div>
             <div>
-                <span class="label">Invite to Cycles <span class="text-gray-400 font-normal">(optional)</span></span>
+                <span class="label">Invite to Cycles <span class="text-gray-400 font-normal">(required for submitters)</span></span>
                 <div class="max-h-40 overflow-y-auto border border-uh-border rounded-md p-3 space-y-2">
                     @forelse ($rounds as $round)
                         <label class="flex items-center gap-2 text-sm cursor-pointer">
@@ -68,6 +68,9 @@
                         <p class="text-sm text-gray-400">No non-closed cycles available.</p>
                     @endforelse
                 </div>
+                @error('round_ids')
+                    <p class="text-sm text-uh-red mt-1">{{ $message }}</p>
+                @enderror
             </div>
             <div class="pt-2">
                 <button type="submit" class="btn-primary w-full">

@@ -92,12 +92,19 @@ class SubmitterWorkflowTest extends TestCase
         $admin = User::factory()->create([
             'role' => 'admin',
         ]);
+        $round = Round::create([
+            'name' => 'Fall 2027 Grants',
+            'opens_at' => now(),
+            'deadline_at' => now()->addDays(30),
+            'status' => 'open',
+        ]);
 
         $response = $this->actingAs($admin)->post(route('admin.users.store'), [
             'first_name' => 'Jane',
             'last_name' => 'Submitter',
             'email' => 'jane.submitter@uh.edu',
             'role' => 'submitter',
+            'round_ids' => [$round->id],
         ]);
 
         $response->assertRedirect(route('admin.users.index'));
