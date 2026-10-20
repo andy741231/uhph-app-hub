@@ -304,8 +304,23 @@ class UserController extends Controller
         ]);
     }
 
-    public function resendInvite(User $user): RedirectResponse
+    public function resendInvite(Request $request, User $user, HubClient $hub): RedirectResponse
     {
+        if (config('hub.enabled')) {
+            abort_unless(is_string($user->sso_sub), 404);
+            if ($user->status !== 'invited') {
+                return back()->withErrors(['user' => "{$user->full_name} is not awaiting an invitation."]);
+            }
+            $sent = $hub->resendManagedUserInvitation(
+                (string) $request->session()->get(config('hub.actor_token_session_key', 'hub_actor_token')),
+                $user->sso_sub,
+            );
+
+            return back()->with('status', $sent
+                ? "UHPH App Hub invitation resent to {$user->email}."
+                : "The UHPH App Hub invitation to {$user->email} could not be sent.");
+        }
+
         $token = Str::random(64);
         $user->update([
             'invite_token_hash' => hash('sha256', $token),

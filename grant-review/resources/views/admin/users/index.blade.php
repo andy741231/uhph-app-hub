@@ -169,7 +169,7 @@
                                         </button>
                                     </form>
                                 @endif
-                                @if (! config('hub.enabled') && $user->status === 'invited')
+                                @if ($user->status === 'invited')
                                     <form action="{{ route('admin.users.resend-invite', $user) }}" method="POST">
                                         @csrf
                                         <button type="submit"

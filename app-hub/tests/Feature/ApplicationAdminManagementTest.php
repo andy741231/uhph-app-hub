@@ -296,6 +296,68 @@ class ApplicationAdminManagementTest extends TestCase
             ->assertJsonMissingPath('password_hash');
     }
 
+    public function test_application_admin_can_resend_an_invitation_to_a_pending_user(): void
+    {
+        Notification::fake();
+        Event::fake([PasswordResetLinkSent::class]);
+        [$application, $actor, $token] = $this->applicationAdmin();
+        $target = User::factory()->create(['password' => null]);
+        $target->applications()->attach($application, ['role' => 'submitter', 'granted_by' => $actor->id, 'granted_at' => now()]);
+
+        $this->asApplicationClient($application)
+            ->withHeader('X-Hub-Actor-Token', $token)
+            ->postJson('/sso/managed-users/'.$target->public_id.'/resend-invitation')
+            ->assertOk()
+            ->assertJson([
+                'subject' => $target->public_id,
+                'email' => $target->email,
+                'application' => 'grant-review',
+                'onboarding_pending' => true,
+                'invitation_sent' => true,
+            ]);
+
+        Notification::assertSentTo($target, SetPasswordInvitation::class);
+        $this->assertDatabaseHas('application_admin_audits', [
+            'application_id' => $application->id,
+            'actor_user_id' => $actor->id,
+            'target_user_id' => $target->id,
+            'action' => 'invitation_resent',
+        ]);
+    }
+
+    public function test_invitation_resend_is_rejected_once_onboarding_is_complete(): void
+    {
+        Notification::fake();
+        [$application, $actor, $token] = $this->applicationAdmin();
+        $target = User::factory()->create(['last_login_at' => now()]);
+        $target->applications()->attach($application, ['role' => 'submitter', 'granted_by' => $actor->id, 'granted_at' => now()]);
+
+        $this->asApplicationClient($application)
+            ->withHeader('X-Hub-Actor-Token', $token)
+            ->postJson('/sso/managed-users/'.$target->public_id.'/resend-invitation')
+            ->assertStatus(409);
+
+        Notification::assertNothingSent();
+        $this->assertDatabaseMissing('application_admin_audits', [
+            'target_user_id' => $target->id,
+            'action' => 'invitation_resent',
+        ]);
+    }
+
+    public function test_invitation_resend_is_limited_to_the_calling_applications_assignments(): void
+    {
+        Notification::fake();
+        [$application, $actor, $token] = $this->applicationAdmin();
+        $target = User::factory()->create(['password' => null]);
+
+        $this->asApplicationClient($application)
+            ->withHeader('X-Hub-Actor-Token', $token)
+            ->postJson('/sso/managed-users/'.$target->public_id.'/resend-invitation')
+            ->assertNotFound();
+
+        Notification::assertNothingSent();
+    }
+
     private function applicationAdmin(): array
     {
         $application = Application::create([

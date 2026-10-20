@@ -169,6 +169,42 @@ class HubClient
         return $identity->validated();
     }
 
+    public function resendManagedUserInvitation(string $actorToken, string $subject): bool
+    {
+        abort_unless($this->configured() && filled($actorToken), 503);
+
+        try {
+            $response = Http::asJson()
+                ->acceptJson()
+                ->withBasicAuth(config('hub.client_id'), config('hub.client_secret'))
+                ->withHeader('X-Hub-Actor-Token', $actorToken)
+                ->withOptions(['verify' => config('hub.verify_tls')])
+                ->timeout(max(1, (int) config('hub.request_timeout_seconds', 10)))
+                ->post(rtrim((string) config('hub.managed_users_url'), '/').'/'.$subject.'/resend-invitation');
+        } catch (ConnectionException) {
+            abort(502);
+        }
+
+        if ($response->status() === 409) {
+            throw ValidationException::withMessages(['user' => $response->json('message') ?? 'This user has already completed onboarding.']);
+        }
+        abort_if($response->status() === 403, 403);
+        abort_if($response->status() === 404, 404);
+        abort_unless($response->successful(), 502);
+        $payload = $response->json();
+        abort_unless(is_array($payload), 502);
+        $validated = Validator::make($payload, [
+            'subject' => ['required', 'uuid'],
+            'email' => ['required', 'email', 'max:255'],
+            'application' => ['required', Rule::in([config('hub.application_key')])],
+            'onboarding_pending' => ['sometimes', 'boolean'],
+            'invitation_sent' => ['required', 'boolean'],
+        ]);
+        abort_if($validated->fails(), 502);
+
+        return (bool) $validated->validated()['invitation_sent'];
+    }
+
     public function revokeManagedUser(string $actorToken, string $subject): void
     {
         abort_unless($this->configured() && filled($actorToken), 503);

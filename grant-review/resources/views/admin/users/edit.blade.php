@@ -103,5 +103,22 @@
             </button>
         </div>
     </form>
+
+    @if ($user->status === 'invited')
+        <div class="mt-4 pt-4 border-t border-uh-border flex items-center justify-between gap-4">
+            <p class="text-sm text-gray-500">
+                {{ config('hub.enabled') ? 'This user has not finished UHPH App Hub onboarding.' : 'This user has not accepted the invitation yet.' }}
+            </p>
+            <form action="{{ route('admin.users.resend-invite', $user) }}" method="POST">
+                @csrf
+                <button type="submit" class="btn-secondary text-sm inline-flex items-center gap-1.5 whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                    </svg>
+                    Resend invitation
+                </button>
+            </form>
+        </div>
+    @endif
 </div>
 @endsection

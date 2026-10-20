@@ -131,6 +131,40 @@ class ManagedUserController extends Controller
         ], $result['created'] ? 201 : 200)->header('Cache-Control', 'no-store, private');
     }
 
+    public function resendInvitation(
+        Request $request,
+        string $subject,
+        ApplicationClientAuthenticator $clients,
+        ApplicationActorToken $tokens,
+        InvitationSender $invitations,
+    ): JsonResponse {
+        [$application, $actor] = $this->context($request, $clients, $tokens);
+        $target = User::where('public_id', $subject)->firstOrFail();
+        abort_unless($target->applications()->whereKey($application->id)->exists(), 404);
+        abort_if($target->status === User::STATUS_DISABLED, 409, 'The UHPH App Hub identity is disabled.');
+        abort_unless($target->onboardingPending(), 409, 'The user has already completed onboarding.');
+
+        $sent = $invitations->send($target, [$application]);
+
+        ApplicationAdminAudit::create([
+            'application_id' => $application->id,
+            'actor_user_id' => $actor->id,
+            'target_user_id' => $target->id,
+            'action' => 'invitation_resent',
+            'details' => ['invitation_sent' => $sent],
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+        ]);
+
+        return response()->json([
+            'subject' => $target->public_id,
+            'email' => $target->email,
+            'application' => $application->key,
+            'onboarding_pending' => $target->onboardingPending(),
+            'invitation_sent' => $sent,
+        ])->header('Cache-Control', 'no-store, private');
+    }
+
     public function destroy(
         Request $request,
         string $subject,

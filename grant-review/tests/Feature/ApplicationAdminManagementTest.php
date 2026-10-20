@@ -543,6 +543,73 @@ class ApplicationAdminManagementTest extends TestCase
         $this->assertSame('admin', $target->fresh()->role);
     }
 
+    public function test_resend_invite_asks_the_hub_to_resend_for_an_invited_user(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $target = User::factory()->create([
+            'email' => 'pending@uh.edu',
+            'status' => 'invited',
+            'sso_sub' => '550e8400-e29b-41d4-a716-446655440080',
+        ]);
+        Http::fake([
+            'https://hub.test/apps/sso/managed-users/'.$target->sso_sub.'/resend-invitation' => Http::response([
+                'subject' => $target->sso_sub,
+                'email' => $target->email,
+                'application' => 'grant-review',
+                'onboarding_pending' => true,
+                'invitation_sent' => true,
+            ]),
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession($this->hubSession())
+            ->post('/admin/users/'.$target->id.'/resend-invite')
+            ->assertRedirect()
+            ->assertSessionHas('status', 'UHPH App Hub invitation resent to pending@uh.edu.');
+
+        Http::assertSent(fn ($request): bool => $request->method() === 'POST'
+            && $request->url() === 'https://hub.test/apps/sso/managed-users/'.$target->sso_sub.'/resend-invitation'
+            && $request->hasHeader('Authorization', 'Basic '.base64_encode('hub_grant_review:test-client-secret'))
+            && $request->hasHeader('X-Hub-Actor-Token', 'actor-token'));
+    }
+
+    public function test_resend_invite_does_not_call_the_hub_for_an_active_user(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $target = User::factory()->create([
+            'email' => 'active@uh.edu',
+            'status' => 'active',
+            'sso_sub' => '550e8400-e29b-41d4-a716-446655440081',
+        ]);
+        Http::fake();
+
+        $this->actingAs($admin)
+            ->withSession($this->hubSession())
+            ->post('/admin/users/'.$target->id.'/resend-invite')
+            ->assertRedirect()
+            ->assertSessionHasErrors('user');
+
+        Http::assertNothingSent();
+    }
+
+    public function test_resend_invite_requires_a_hub_linked_profile(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $target = User::factory()->create([
+            'email' => 'unlinked@uh.edu',
+            'status' => 'invited',
+            'sso_sub' => null,
+        ]);
+        Http::fake();
+
+        $this->actingAs($admin)
+            ->withSession($this->hubSession())
+            ->post('/admin/users/'.$target->id.'/resend-invite')
+            ->assertNotFound();
+
+        Http::assertNothingSent();
+    }
+
     private function managedIdentity(string $subject, string $email, string $name, string $role, array $extra = []): array
     {
         return compact('subject', 'email', 'name', 'role') + ['status' => 'active'] + $extra;

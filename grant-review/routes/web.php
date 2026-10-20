@@ -39,7 +39,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::delete('users/{user}', [UserController::class, 'destroy'])->middleware('hub-sso-disabled')->name('users.destroy');
     Route::post('users/import', [UserController::class, 'import'])->name('users.import');
     Route::get('users/import/template', [UserController::class, 'importTemplate'])->name('users.import.template');
-    Route::post('users/{user}/resend-invite', [UserController::class, 'resendInvite'])->middleware('hub-sso-disabled')->name('users.resend-invite');
+    Route::post('users/{user}/resend-invite', [UserController::class, 'resendInvite'])->name('users.resend-invite');
     Route::get('review-assignments', [ReviewAssignmentController::class, 'index'])->name('review-assignments.index');
     Route::put('review-assignments/{submission}', [ReviewAssignmentController::class, 'update'])->name('review-assignments.update');
     Route::get('review-invitations', [ReviewInvitationController::class, 'index'])->name('review-invitations.index');

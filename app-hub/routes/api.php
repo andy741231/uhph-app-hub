@@ -17,6 +17,10 @@ Route::get('/sso/managed-users', [ManagedUserController::class, 'index'])
 Route::put('/sso/managed-users', [ManagedUserController::class, 'update'])
     ->middleware('throttle:60,1')
     ->name('sso.managed-users.update');
+Route::post('/sso/managed-users/{subject}/resend-invitation', [ManagedUserController::class, 'resendInvitation'])
+    ->whereUuid('subject')
+    ->middleware('throttle:60,1')
+    ->name('sso.managed-users.resend-invitation');
 Route::delete('/sso/managed-users/{subject}', [ManagedUserController::class, 'destroy'])
     ->whereUuid('subject')
     ->middleware('throttle:60,1')
