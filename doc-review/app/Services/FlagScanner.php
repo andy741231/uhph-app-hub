@@ -49,6 +49,16 @@ class FlagScanner
     }
 
     /**
+     * Whether the flag word is a single "stem" word eligible for prefix
+     * matching: letters/numbers/underscore only, starting with a letter.
+     * Anything else (phrases, punctuation) is matched literally.
+     */
+    public static function isStemWord(string $word): bool
+    {
+        return (bool) preg_match('/^\p{L}[\p{L}\p{N}_]*$/u', $word);
+    }
+
+    /**
      * Count case-insensitive occurrences of $needle in $haystack.
      *
      * Single-word needles use a leading Unicode word boundary but NO trailing
@@ -68,7 +78,7 @@ class FlagScanner
         // Add a leading Unicode word boundary when the needle starts with a word
         // character. The trailing boundary is intentionally omitted so that stem
         // words match their derivatives (e.g. "divers" → "diverse", "diversity").
-        if (preg_match('/^\p{L}[\p{L}\p{N}_]*$/u', $needle)) {
+        if (self::isStemWord($needle)) {
             $pattern = '/\b'.preg_quote($needle, '/').'/ui';
         }
 
@@ -95,7 +105,7 @@ class FlagScanner
         $parts = array_map(function ($w) {
             $quoted = preg_quote($w, '/');
             // Add a leading word boundary for single-word needles (stem/prefix matching)
-            if (preg_match('/^\p{L}[\p{L}\p{N}_]*$/u', $w)) {
+            if (self::isStemWord($w)) {
                 return '\b'.$quoted;
             }
 

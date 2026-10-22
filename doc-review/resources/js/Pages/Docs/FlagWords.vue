@@ -1,5 +1,5 @@
 <script setup>
-import { Head, Link, useForm, router } from '@inertiajs/vue3';
+import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
 import DocReviewLayout from '@/Layouts/DocReviewLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -8,7 +8,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import Checkbox from '@/Components/Checkbox.vue';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 
 const props = defineProps({
     flagWords: { type: Object, required: true },
@@ -48,6 +48,40 @@ const destroy = (id) => {
     if (confirm('Remove this flag word?')) {
         router.delete(route('docs.flag-words.destroy', id));
     }
+};
+
+// ---- Import / Export ----
+const page = usePage();
+const showImportModal = ref(false);
+const importForm = useForm({ file: null });
+
+const importResult = computed(() => page.props.flash?.importResult || null);
+const importResultDismissed = ref(false);
+watch(importResult, (value) => {
+    if (value) importResultDismissed.value = false;
+});
+
+const openImportModal = () => {
+    importForm.clearErrors();
+    showImportModal.value = true;
+};
+
+const closeImportModal = () => {
+    showImportModal.value = false;
+    importForm.reset();
+    importForm.clearErrors();
+};
+
+const onImportFileChange = (e) => {
+    importForm.file = e.target.files[0] ?? null;
+};
+
+const submitImport = () => {
+    importForm.post(route('docs.flag-words.import'), {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => closeImportModal(),
+    });
 };
 
 // ---- Batch selection ----
@@ -197,10 +231,23 @@ const saveEdit = (fw) => {
                             {{ flagWords.total }} total
                         </span>
                     </div>
-                    <PrimaryButton type="button" @click="openAddModal">
-                        <i class="fa-solid fa-plus text-sm mr-1.5 -ml-0.5" aria-hidden="true"></i>
-                        Add Flag Word
-                    </PrimaryButton>
+                    <div class="flex items-center gap-2">
+                        <SecondaryButton type="button" @click="openImportModal">
+                            <i class="fa-solid fa-file-import text-sm mr-1.5 -ml-0.5" aria-hidden="true"></i>
+                            Import
+                        </SecondaryButton>
+                        <a
+                            :href="route('docs.flag-words.export')"
+                            class="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 shadow-sm transition duration-150 ease-in-out hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                        >
+                            <i class="fa-solid fa-file-export text-sm mr-1.5 -ml-0.5" aria-hidden="true"></i>
+                            Export
+                        </a>
+                        <PrimaryButton type="button" @click="openAddModal">
+                            <i class="fa-solid fa-plus text-sm mr-1.5 -ml-0.5" aria-hidden="true"></i>
+                            Add Flag Word
+                        </PrimaryButton>
+                    </div>
                 </div>
                 <!-- Search + sort filters -->
                 <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
@@ -277,6 +324,38 @@ const saveEdit = (fw) => {
                         </div>
                     </div>
                 </Transition>
+
+                <!-- Import result -->
+                <div
+                    v-if="importResult && !importResultDismissed"
+                    class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-3"
+                >
+                    <div class="flex items-start justify-between gap-3">
+                        <p class="text-sm font-medium text-gray-800 dark:text-gray-200">
+                            Import complete — {{ importResult.imported }} added,
+                            {{ importResult.skipped.length }} skipped
+                        </p>
+                        <button
+                            type="button"
+                            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
+                            aria-label="Dismiss import result"
+                            @click="importResultDismissed = true"
+                        >
+                            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <ul
+                        v-if="importResult.skipped.length"
+                        class="mt-2 space-y-1 text-sm text-gray-600 dark:text-gray-400 max-h-48 overflow-y-auto"
+                    >
+                        <li v-for="(item, i) in importResult.skipped" :key="i">
+                            <span class="font-medium text-gray-800 dark:text-gray-200">{{ item.word }}</span>
+                            <span v-if="item.reason === 'exists'"> — already exists</span>
+                            <span v-else-if="item.reason === 'covered'"> — covered by &quot;{{ item.covered_by }}&quot;</span>
+                            <span v-else> — invalid (over 255 characters)</span>
+                        </li>
+                    </ul>
+                </div>
 
                 <!-- List (desktop table) -->
                 <div class="hidden sm:block bg-white dark:bg-gray-800 overflow-hidden shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
@@ -589,6 +668,61 @@ const saveEdit = (fw) => {
                         </SecondaryButton>
                         <PrimaryButton type="submit" :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
                             Add
+                        </PrimaryButton>
+                    </div>
+                </form>
+            </div>
+        </Modal>
+
+        <!-- Import Flag Words Modal -->
+        <Modal :show="showImportModal" max-width="lg" @close="closeImportModal">
+            <div class="p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Import Flag Words</h3>
+                    <button
+                        type="button"
+                        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded"
+                        aria-label="Close dialog"
+                        @click="closeImportModal"
+                    >
+                        <i class="fa-solid fa-xmark fa-lg" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <form @submit.prevent="submitImport" class="space-y-4">
+                    <div>
+                        <InputLabel for="import-file" value="CSV file" />
+                        <input
+                            id="import-file"
+                            type="file"
+                            accept=".csv,.txt,text/csv,text/plain"
+                            class="mt-1 block w-full text-sm text-gray-700 dark:text-gray-300 file:mr-4 file:rounded-md file:border-0 file:bg-uh-teal/10 file:px-4 file:py-2 file:text-xs file:font-semibold file:uppercase file:tracking-widest file:text-uh-teal hover:file:bg-uh-teal/20"
+                            @change="onImportFileChange"
+                        />
+                        <InputError class="mt-1" :message="importForm.errors.file" />
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        Columns: <code class="font-mono">word</code> and
+                        <code class="font-mono">suggested_replacement</code> (optional).
+                        <a
+                            :href="route('docs.flag-words.import-template')"
+                            class="text-indigo-600 dark:text-indigo-400 underline hover:text-indigo-800 dark:hover:text-indigo-300"
+                        >Download the CSV template</a>.
+                    </p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        Words that already exist are skipped. A single word is also skipped when a shorter
+                        flag word already covers it as a stem (e.g. &quot;divers&quot; covers
+                        &quot;diverse&quot;); multi-word phrases are never skipped that way.
+                    </p>
+                    <div class="flex items-center justify-end gap-3 pt-2">
+                        <SecondaryButton type="button" @click="closeImportModal">
+                            Cancel
+                        </SecondaryButton>
+                        <PrimaryButton
+                            type="submit"
+                            :class="{ 'opacity-25': importForm.processing }"
+                            :disabled="importForm.processing || !importForm.file"
+                        >
+                            {{ importForm.processing ? 'Importing…' : 'Import' }}
                         </PrimaryButton>
                     </div>
                 </form>

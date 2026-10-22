@@ -31,6 +31,9 @@ Route::middleware(['auth', 'active'])->name('docs.')->group(function () {
     Route::prefix('flag-words')->name('flag-words.')->group(function () {
         Route::get('/', [DocumentFlagWordController::class, 'index'])->name('index');
         Route::post('/', [DocumentFlagWordController::class, 'store'])->name('store');
+        Route::get('/export', [DocumentFlagWordController::class, 'export'])->name('export');
+        Route::get('/import/template', [DocumentFlagWordController::class, 'template'])->name('import-template');
+        Route::post('/import', [DocumentFlagWordController::class, 'import'])->name('import');
         Route::put('/{flagWord}', [DocumentFlagWordController::class, 'update'])->name('update')->whereNumber('flagWord');
         Route::delete('/bulk', [DocumentFlagWordController::class, 'bulkDestroy'])->name('bulk-destroy');
         Route::delete('/{flagWord}', [DocumentFlagWordController::class, 'destroy'])->name('destroy')->whereNumber('flagWord');

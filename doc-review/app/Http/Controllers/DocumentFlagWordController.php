@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\DocumentFlagWord;
+use App\Services\FlagWordImporter;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Throwable;
 
 class DocumentFlagWordController extends Controller
 {
@@ -146,5 +148,68 @@ class DocumentFlagWordController extends Controller
         return redirect()
             ->route('docs.flag-words.index')
             ->with('success', $count.' flag word'.($count === 1 ? '' : 's').' removed.');
+    }
+
+    public function export()
+    {
+        $this->authorize('docs.flagword.manage');
+
+        $words = DocumentFlagWord::query()
+            ->orderBy('word')
+            ->get(['word', 'suggested_replacement']);
+
+        return response()->streamDownload(function () use ($words) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['word', 'suggested_replacement'], escape: '');
+            foreach ($words as $word) {
+                fputcsv($out, [$word->word, $word->suggested_replacement], escape: '');
+            }
+            fclose($out);
+        }, 'flag-words-'.now()->toDateString().'.csv', [
+            'Content-Type' => 'text/csv',
+        ]);
+    }
+
+    public function template()
+    {
+        $this->authorize('docs.flagword.manage');
+
+        return response()->streamDownload(function () {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['word', 'suggested_replacement'], escape: '');
+            fputcsv($out, ['divers', 'inclusive language'], escape: '');
+            fclose($out);
+        }, 'flag-words-template.csv', [
+            'Content-Type' => 'text/csv',
+        ]);
+    }
+
+    public function import(Request $request, FlagWordImporter $importer)
+    {
+        $this->authorize('docs.flagword.manage');
+
+        $validated = $request->validate([
+            'file' => ['required', 'file', 'extensions:csv,txt', 'max:2048'],
+        ]);
+
+        try {
+            $result = $importer->importCsv(
+                $validated['file']->getRealPath(),
+                $request->user()->id
+            );
+        } catch (Throwable) {
+            return redirect()
+                ->back()
+                ->withErrors(['file' => 'The file could not be read as CSV.'])
+                ->withInput();
+        }
+
+        $imported = $result['imported'];
+        $skipped = count($result['skipped']);
+
+        return redirect()
+            ->route('docs.flag-words.index')
+            ->with('success', 'Import complete: '.$imported.' flag word'.($imported === 1 ? '' : 's').' added, '.$skipped.' skipped.')
+            ->with('import_result', $result);
     }
 }
