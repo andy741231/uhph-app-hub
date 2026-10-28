@@ -28,15 +28,31 @@ class EntraOidcController extends Controller
         $claims = $entra->claims($request);
         $email = Str::lower(trim((string) ($claims['email'] ?? '')));
 
+        $identifiers = collect([$email, (string) ($claims['preferred_username'] ?? '')])
+            ->map(fn ($v) => Str::lower(trim($v)))
+            ->filter(fn ($v) => filter_var($v, FILTER_VALIDATE_EMAIL) !== false)
+            ->unique()
+            ->values();
+
         if ($email === '') {
-            $fallback = Str::lower(trim((string) ($claims['preferred_username'] ?? '')));
-            $email = filter_var($fallback, FILTER_VALIDATE_EMAIL) ? $fallback : '';
+            $email = (string) $identifiers->first('');
         }
 
         $user = User::where('external_subject', $claims['sub'])->first();
 
         if ($user === null) {
-            $user = $email !== '' ? User::where('email', $email)->first() : null;
+            if ($identifiers->isNotEmpty()) {
+                $candidates = User::whereIn('email', $identifiers)->get()->keyBy('id');
+
+                if ($candidates->count() > 1) {
+                    $this->audit($request, null, $email !== '' ? $email : 'unknown', false, 'identity_ambiguous', $claims['sub']);
+
+                    return redirect()->route('login')
+                        ->with('error', 'This UH account matched multiple accounts. Contact your administrator.');
+                }
+
+                $user = $candidates->first();
+            }
 
             if ($user !== null && $user->external_subject !== null) {
                 $this->audit($request, $user, $email, false, 'subject_conflict', $claims['sub']);

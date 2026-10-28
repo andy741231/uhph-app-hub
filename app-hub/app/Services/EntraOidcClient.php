@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -70,13 +71,16 @@ class EntraOidcClient
         $idToken = $this->exchange($validated['code']);
         $claims = $this->decode($idToken);
 
-        abort_unless(($claims['iss'] ?? null) === config('entra.issuer'), 502);
+        if (($claims['iss'] ?? null) !== config('entra.issuer')) {
+            Log::warning('entra callback rejected: issuer mismatch', ['iss' => $claims['iss'] ?? null]);
+            abort(502);
+        }
         $aud = $claims['aud'] ?? null;
-        abort_unless(
-            $aud === config('entra.client_id')
-                || (is_array($aud) && in_array(config('entra.client_id'), $aud, true)),
-            502,
-        );
+        if (! ($aud === config('entra.client_id')
+            || (is_array($aud) && in_array(config('entra.client_id'), $aud, true)))) {
+            Log::warning('entra callback rejected: audience mismatch', ['aud' => $aud]);
+            abort(502);
+        }
         abort_unless(
             isset($claims['nonce'])
                 && is_string($claims['nonce'])
@@ -92,7 +96,10 @@ class EntraOidcClient
             'given_name' => ['nullable', 'string', 'max:255'],
             'family_name' => ['nullable', 'string', 'max:255'],
         ]);
-        abort_if($claims->fails(), 502);
+        if ($claims->fails()) {
+            Log::warning('entra callback rejected: invalid claims', ['fields' => $claims->errors()->keys()]);
+            abort(502);
+        }
 
         return $claims->validated();
     }
@@ -106,12 +113,22 @@ class EntraOidcClient
             && (! app()->isProduction() || str_starts_with((string) config('app.url'), 'https://'));
     }
 
+    private function httpOptions(): array
+    {
+        $options = ['verify' => config('entra.verify_tls')];
+        if (filled(config('entra.http_proxy'))) {
+            $options['proxy'] = config('entra.http_proxy');
+        }
+
+        return $options;
+    }
+
     private function exchange(string $code): string
     {
         try {
             $response = Http::asForm()
                 ->acceptJson()
-                ->withOptions(['verify' => config('entra.verify_tls')])
+                ->withOptions($this->httpOptions())
                 ->timeout(max(1, (int) config('entra.request_timeout_seconds', 10)))
                 ->post(config('entra.token_url'), [
                     'grant_type' => 'authorization_code',
@@ -120,13 +137,24 @@ class EntraOidcClient
                     'code' => $code,
                     'redirect_uri' => route('oidc.callback'),
                 ]);
-        } catch (ConnectionException) {
+        } catch (ConnectionException $e) {
+            Log::warning('entra token exchange connection failure', ['error' => $e->getMessage()]);
             abort(502);
         }
 
-        abort_unless($response->successful(), 502);
+        if (! $response->successful()) {
+            Log::warning('entra token exchange rejected', [
+                'status' => $response->status(),
+                'error' => $response->json('error'),
+                'description' => Str::limit((string) $response->json('error_description'), 300),
+            ]);
+            abort(502);
+        }
         $idToken = $response->json('id_token');
-        abort_unless(is_string($idToken) && $idToken !== '', 502);
+        if (! is_string($idToken) || $idToken === '') {
+            Log::warning('entra token response missing id_token', ['keys' => array_keys($response->json() ?? [])]);
+            abort(502);
+        }
 
         return $idToken;
     }
@@ -138,9 +166,10 @@ class EntraOidcClient
     {
         foreach ([true, false] as $cached) {
             try {
-                return (array) JWT::decode($idToken, JWK::parseKeySet($this->jwks($cached)));
-            } catch (\Throwable) {
+                return (array) JWT::decode($idToken, JWK::parseKeySet($this->jwks($cached), 'RS256'));
+            } catch (\Throwable $e) {
                 if (! $cached) {
+                    Log::warning('entra id token verification failed', ['error' => $e->getMessage()]);
                     abort(502);
                 }
             }
@@ -164,13 +193,17 @@ class EntraOidcClient
             function (): array {
                 try {
                     $response = Http::acceptJson()
-                        ->withOptions(['verify' => config('entra.verify_tls')])
+                        ->withOptions($this->httpOptions())
                         ->timeout(max(1, (int) config('entra.request_timeout_seconds', 10)))
                         ->get(config('entra.jwks_uri'));
-                } catch (ConnectionException) {
+                } catch (ConnectionException $e) {
+                    Log::warning('entra jwks fetch connection failure', ['error' => $e->getMessage()]);
                     abort(502);
                 }
-                abort_unless($response->successful(), 502);
+                if (! $response->successful()) {
+                    Log::warning('entra jwks fetch rejected', ['status' => $response->status()]);
+                    abort(502);
+                }
                 $jwks = $response->json();
                 abort_unless(is_array($jwks) && is_array($jwks['keys'] ?? null), 502);
 
