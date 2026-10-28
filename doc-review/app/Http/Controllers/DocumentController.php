@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Document;
 use App\Models\DocumentFlag;
 use App\Models\DocumentFlagWord;
+use App\Services\ActivityLogger;
 use App\Services\DocumentTextExtractor;
 use App\Services\DocxToPdfConverter;
 use App\Services\FlagScanner;
@@ -60,7 +62,7 @@ class DocumentController extends Controller
         return Inertia::render('Docs/Create');
     }
 
-    public function store(Request $request, DocumentTextExtractor $extractor, DocxToPdfConverter $converter, FlagScanner $scanner)
+    public function store(Request $request, DocumentTextExtractor $extractor, DocxToPdfConverter $converter, FlagScanner $scanner, ActivityLogger $logger)
     {
         $this->authorize('create', Document::class);
 
@@ -95,15 +97,30 @@ class DocumentController extends Controller
                 ->withErrors(['file' => 'The file could not be stored. Try again or contact an administrator.']);
         }
 
-        $document = Document::create([
-            'user_id' => auth()->id(),
-            'original_name' => $originalName,
-            'file_path' => $storedPath,
-            'mime_type' => $mimeType,
-            'size' => $size,
-            'status' => 'pending',
-            'flag_count' => 0,
-        ]);
+        // Document row and audit entry commit together: an upload is logged
+        // exactly once, and a logging failure rolls the document back too.
+        // The freshly stored file must not be orphaned when that happens.
+        try {
+            $document = DB::transaction(function () use ($request, $logger, $originalName, $storedPath, $mimeType, $size) {
+                $document = Document::create([
+                    'user_id' => auth()->id(),
+                    'original_name' => $originalName,
+                    'file_path' => $storedPath,
+                    'mime_type' => $mimeType,
+                    'size' => $size,
+                    'status' => 'pending',
+                    'flag_count' => 0,
+                ]);
+
+                $logger->record(ActivityLog::ACTION_DOCUMENT_UPLOADED, $request->user(), $document);
+
+                return $document;
+            });
+        } catch (\Throwable $e) {
+            Storage::disk('local')->delete($storedPath);
+
+            throw $e;
+        }
 
         // Extract text + scan for flag words
         try {
@@ -222,11 +239,20 @@ class DocumentController extends Controller
         ]);
     }
 
-    public function destroy(Request $request, Document $document)
+    public function destroy(Request $request, Document $document, ActivityLogger $logger)
     {
         $this->authorize('delete', $document);
 
-        $document->delete();
+        // The actor is whoever deleted — an admin removing someone else's
+        // upload is logged as the admin, not the owner. The document's id
+        // and filename are snapshotted so the audit row outlives the
+        // document. The log write runs first so an audit failure cannot
+        // delete the private files and then roll the document back.
+        DB::transaction(function () use ($request, $document, $logger) {
+            $logger->record(ActivityLog::ACTION_DOCUMENT_DELETED, $request->user(), $document);
+
+            $document->delete();
+        });
 
         return redirect()
             ->route('docs.index')

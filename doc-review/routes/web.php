@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\Auth\HubSessionController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DocumentController;
@@ -38,6 +39,10 @@ Route::middleware(['auth', 'active'])->name('docs.')->group(function () {
         Route::delete('/bulk', [DocumentFlagWordController::class, 'bulkDestroy'])->name('bulk-destroy');
         Route::delete('/{flagWord}', [DocumentFlagWordController::class, 'destroy'])->name('destroy')->whereNumber('flagWord');
     });
+
+    // Activity log (admin-only, immutable audit history) — literal route
+    // must come before the {document} wildcard below.
+    Route::get('/logs', [ActivityLogController::class, 'index'])->name('logs.index');
 
     Route::get('/{document}', [DocumentController::class, 'show'])->name('show')->whereNumber('document');
     Route::delete('/{document}', [DocumentController::class, 'destroy'])->name('destroy')->whereNumber('document');

@@ -72,6 +72,14 @@ const outlineButtonClass = [
                             >
                                 Flag Words
                             </Link>
+                            <Link
+                                v-if="user?.canViewLogs"
+                                :href="route('docs.logs.index')"
+                                :class="navLinkClass(route().current('docs.logs.*'))"
+                                :aria-current="route().current('docs.logs.*') ? 'page' : undefined"
+                            >
+                                Logs
+                            </Link>
                         </div>
                     </div>
 
@@ -135,6 +143,15 @@ const outlineButtonClass = [
                         @click="mobileNavOpen = false"
                     >
                         Flag Words
+                    </Link>
+                    <Link
+                        v-if="user?.canViewLogs"
+                        :href="route('docs.logs.index')"
+                        :class="[navLinkClass(route().current('docs.logs.*')), 'w-full min-h-11']"
+                        :aria-current="route().current('docs.logs.*') ? 'page' : undefined"
+                        @click="mobileNavOpen = false"
+                    >
+                        Logs
                     </Link>
                     <a
                         v-if="showAllApplications"

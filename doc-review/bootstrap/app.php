@@ -15,6 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    // Event listeners are registered explicitly in AppServiceProvider
+    // (Event::listen). Auto-discovery of app/Listeners is disabled so a
+    // class listener can never be registered twice and fire two audit rows.
+    ->withEvents(discover: false)
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             HandleInertiaRequests::class,

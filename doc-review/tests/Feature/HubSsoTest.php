@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\ActivityLog;
 use App\Models\Document;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -139,6 +140,39 @@ class HubSsoTest extends TestCase
         $this->assertNotEmpty(session('hub_authenticated_at'));
     }
 
+    public function test_successful_callback_records_exactly_one_login_audit_entry(): void
+    {
+        $state = $this->beginAuthorization();
+        $identity = $this->identity([
+            'name' => 'Audited User',
+            'email' => 'audited@example.com',
+        ]);
+        $this->fakeTokenExchange($identity);
+
+        $this->get('/auth/hub/callback?code=auth-code&state='.$state)
+            ->assertRedirect('/');
+
+        $user = User::where('hub_subject', $identity['subject'])->first();
+        $this->assertNotNull($user);
+
+        $log = ActivityLog::sole();
+        $this->assertSame(ActivityLog::ACTION_LOGIN, $log->action);
+        $this->assertSame($user->id, $log->actor_id);
+        $this->assertSame('Audited User', $log->actor_name);
+        $this->assertSame('audited@example.com', $log->actor_email);
+        $this->assertNull($log->document_id);
+        $this->assertNull($log->document_name);
+        // No token material may land in the audit row.
+        $this->assertStringNotContainsString(
+            (string) $identity['actor_token'],
+            json_encode($log->getAttributes())
+        );
+
+        // Ordinary authenticated requests are not sign-ins.
+        $this->get('/')->assertOk();
+        $this->assertSame(1, ActivityLog::count());
+    }
+
     public function test_callback_rejects_invalid_state(): void
     {
         $this->beginAuthorization();
@@ -148,6 +182,7 @@ class HubSsoTest extends TestCase
             ->assertStatus(400);
 
         $this->assertGuest();
+        $this->assertSame(0, ActivityLog::count());
     }
 
     public function test_callback_rejects_replayed_state(): void
@@ -174,6 +209,7 @@ class HubSsoTest extends TestCase
 
         $this->assertGuest();
         $this->assertSame(0, User::count());
+        $this->assertSame(0, ActivityLog::count());
     }
 
     public function test_callback_rejects_unallowed_role(): void
@@ -186,6 +222,7 @@ class HubSsoTest extends TestCase
 
         $this->assertGuest();
         $this->assertSame(0, User::count());
+        $this->assertSame(0, ActivityLog::count());
     }
 
     public function test_email_bound_to_different_subject_is_rejected(): void

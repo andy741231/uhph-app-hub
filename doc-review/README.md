@@ -13,6 +13,9 @@ Hub Document Reviewer. Mounted at `/apps/doc-review` (Hub application key
 - **Files:** stored on the private local disk under
   `storage/app/private/documents`, never under `public/`. Deleting a
   document removes the upload and any generated PDF preview.
+- **Activity log:** `GET /logs` (admin-only) lists an immutable audit
+  trail — sign-ins, document uploads, and document deletions. See
+  [Activity log](#activity-log) below.
 - **Routes:** legacy `docs.*` route names are preserved; app root is the
   document index (`GET /`).
 
@@ -79,6 +82,38 @@ composer exec --working-dir=doc-review -- php artisan flag-words:import flag-wor
 The importer validates the whole file before writing, rejects malformed
 JSON, empty words, and case-insensitive duplicate source/target words, and
 rolls back entirely on failure.
+
+## Activity log
+
+`GET /logs` shows an audit trail to **active admins only** (the
+`docs.logs.view` gate; the nav link appears only when the user has that
+capability). Three events are recorded:
+
+- **Signed in** (`login`) — once per successful Hub SSO callback
+- **Uploaded document** (`document_uploaded`) — committed in the same
+  transaction as the document row, so retained uploads (including ones
+  whose scan later fails) are always logged
+- **Deleted document** (`document_deleted`) — attributed to whoever
+  deleted, so an admin removing another user's upload is logged as the
+  admin
+
+Each row stores the actor's name/email and the document's id/filename as
+snapshots, so entries remain readable after a user is renamed or deleted
+or the document is removed. The table deliberately holds no document
+content, tokens, disk paths, or IP addresses.
+
+The log is **immutable**: there are no edit/delete endpoints and the UI is
+read-only. It is **forward-only** — no backfill of history predating the
+feature. Timestamps are stored in UTC and rendered in the viewer's browser
+time zone.
+
+**Deployment:** `php artisan migrate --force` creates the
+`activity_logs` table and adds `document_flag_words.match_type`, plus the
+usual `npm run build` for the new pages. Do not run migrations against production from a local
+checkout — run them on the server per the deployment steps below.
+
+**Rollback:** revert the code and keep the `activity_logs` table and its
+data — do not run a destructive migration rollback to satisfy a revert.
 
 ## Production deployment
 
@@ -166,3 +201,6 @@ rolls back entirely on failure.
 4. The legacy `/hub` module is untouched, so no changes there are needed.
    Remove the doc-review database and deployment directory only after
    confirming no data must be retained.
+5. When reverting a deployment to a build without the activity log,
+   keep the `activity_logs` table and its data — revert the code only,
+   never run a destructive migration rollback of the audit table.

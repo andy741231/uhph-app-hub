@@ -32,6 +32,7 @@ class HandleInertiaRequests extends Middleware
                     'email' => $user->email,
                     'role' => $user->role,
                     'canManageFlagWords' => $user->can('docs.flagword.manage'),
+                    'canViewLogs' => $user->can('docs.logs.view'),
                 ] : null,
             ],
             'hub' => [
