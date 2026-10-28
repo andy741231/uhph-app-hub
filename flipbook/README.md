@@ -28,7 +28,8 @@ A web-based PDF flipbook viewer with realistic page-turning effects, search, tab
 
 Authentication is Hub SSO (`admin` / `user` application roles). Anonymous
 visitors land on a public gallery (`index.php`); signed-in users get a
-dashboard (`admin` sees every flipbook, `user` sees only their own uploads).
+dashboard (`admin` sees every flipbook, `user` sees only their own uploads)
+with a **Public Gallery** view toggle (`index.php?view=public`).
 
 | Visibility | Gallery | View | Embed |
 | --- | --- | --- | --- |

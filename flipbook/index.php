@@ -8,8 +8,11 @@ $navIndexUser = flipbook_current_user();
 $indexIsAdmin = flipbook_is_admin();
 $indexSignedIn = $navIndexUser !== null || !FLIPBOOK_HUB_SSO_ENABLED;
 // Anonymous visitors get the public gallery; signed-in users get their
-// dashboard (admin sees everything, user sees only their own uploads).
-$heading = !$indexSignedIn ? 'Flipbooks' : ($indexIsAdmin ? 'All Flipbooks' : 'My Flipbooks');
+// dashboard (admin sees everything, user sees only their own uploads) and
+// can switch back to the public gallery via ?view=public.
+$indexPublicView = $indexSignedIn && ($_GET['view'] ?? '') === 'public';
+$dashboardHeading = $indexIsAdmin ? 'All Flipbooks' : 'My Flipbooks';
+$heading = $indexPublicView || !$indexSignedIn ? 'Flipbooks' : $dashboardHeading;
 
 $pageTitle = 'Dashboard';
 require_once 'includes/header.php';
@@ -18,6 +21,13 @@ require_once 'includes/header.php';
 <div class="page-header">
     <h1><?= htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') ?></h1>
 </div>
+
+<?php if ($indexSignedIn): ?>
+<div class="scope-tabs" id="scopeTabs" aria-label="Flipbook list view">
+    <button type="button" class="scope-tab<?= $indexPublicView ? '' : ' active' ?>" data-scope="dashboard" aria-pressed="<?= $indexPublicView ? 'false' : 'true' ?>"><?= $dashboardHeading ?></button>
+    <button type="button" class="scope-tab<?= $indexPublicView ? ' active' : '' ?>" data-scope="public" aria-pressed="<?= $indexPublicView ? 'true' : 'false' ?>">Public Gallery</button>
+</div>
+<?php endif; ?>
 
 <div id="flipbook-list">
     <div class="text-center mt-3">
@@ -73,6 +83,32 @@ const BASE_PATH = '<?= BASE_PATH ?>';
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').content;
 const IS_SIGNED_IN = <?= $indexSignedIn ? 'true' : 'false' ?>;
 const IS_ADMIN = <?= $indexIsAdmin ? 'true' : 'false' ?>;
+const DASHBOARD_HEADING = <?= json_encode($dashboardHeading) ?>;
+let currentScope = <?= $indexPublicView ? "'public'" : "'dashboard'" ?>;
+
+const scopeTabs = document.getElementById('scopeTabs');
+if (scopeTabs) {
+    scopeTabs.addEventListener('click', (e) => {
+        const btn = e.target.closest('.scope-tab');
+        if (!btn || btn.dataset.scope === currentScope) return;
+        currentScope = btn.dataset.scope;
+        scopeTabs.querySelectorAll('.scope-tab').forEach(b => {
+            const active = b === btn;
+            b.classList.toggle('active', active);
+            b.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+        document.querySelector('.page-header h1').textContent =
+            currentScope === 'public' ? 'Flipbooks' : DASHBOARD_HEADING;
+        const url = new URL(window.location.href);
+        if (currentScope === 'public') {
+            url.searchParams.set('view', 'public');
+        } else {
+            url.searchParams.delete('view');
+        }
+        window.history.replaceState(null, '', url);
+        loadFlipbooks();
+    });
+}
 
 const VISIBILITY_BADGES = {
     public:   { icon: 'fa-globe', label: 'Public' },
@@ -90,13 +126,17 @@ function visibilityBadge(v) {
 
 async function loadFlipbooks() {
     try {
-        const resp = await fetch(`api/flipbooks.php`);
+        const resp = await fetch(currentScope === 'public' ? 'api/flipbooks.php?scope=public' : 'api/flipbooks.php');
         const data = await resp.json();
 
         const container = document.getElementById('flipbook-list');
+        // Manage controls (edit/delete, visibility badges, owner) only make
+        // sense on the dashboard scope — the public scope strips owner
+        // identity server-side, so cards there are view + embed only.
+        const canManage = IS_SIGNED_IN && currentScope === 'dashboard';
 
         if (!data.flipbooks || data.flipbooks.length === 0) {
-            container.innerHTML = IS_SIGNED_IN ? `
+            container.innerHTML = canManage ? `
                 <div class="empty-state">
                     <i class="fas fa-book-open"></i>
                     <h3>No flipbooks yet</h3>
@@ -108,7 +148,7 @@ async function loadFlipbooks() {
                 <div class="empty-state">
                     <i class="fas fa-book-open"></i>
                     <h3>No public flipbooks yet</h3>
-                    <p>Sign in to upload and manage flipbooks.</p>
+                    ${IS_SIGNED_IN ? '' : '<p>Sign in to upload and manage flipbooks.</p>'}
                 </div>`;
             return;
         }
@@ -127,14 +167,15 @@ async function loadFlipbooks() {
                 const actions = IS_SIGNED_IN ? `
                     <div class="card-actions">
                         ${embedBtn}
+                        ${canManage ? `
                         <button class="btn btn-icon" data-action="edit" title="Edit">
                             <i class="fas fa-edit"></i>
                         </button>
                         <button class="btn btn-icon" data-action="delete" title="Delete" style="color:var(--danger);">
                             <i class="fas fa-trash"></i>
-                        </button>
+                        </button>` : ''}
                     </div>` : '';
-                const badge = IS_SIGNED_IN ? ' ' + visibilityBadge(fb.visibility) : '';
+                const badge = canManage ? ' ' + visibilityBadge(fb.visibility) : '';
                 const owner = IS_ADMIN && fb.owner_name
                     ? `<p class="card-owner"><i class="fas fa-user"></i> ${escapeHtml(String(fb.owner_name))}</p>` : '';
                 return `

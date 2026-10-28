@@ -127,6 +127,7 @@ expect(preg_match('/if \(\$canEdit\):\s*\?>\s*<!-- Edit Mode Panel/', $viewer) =
 expect(preg_match('/if \(\$canEdit\):\s*\?>\s*<!-- Add Link Modal/', $viewer) === 1, 'Edit modals must only render for owner/admin.');
 
 $index = file_get_contents($root.'/index.php');
+expect(str_contains($index, 'scope=public'), 'index.php must let signed-in users switch back to the public gallery.');
 expect(str_contains($index, 'role="link"'), 'Gallery cards must expose role=link for keyboard/assistive access.');
 expect(str_contains($index, 'tabindex="0"'), 'Gallery cards must be focusable (tabindex=0).');
 expect(str_contains($index, 'aria-label="Open'), 'Gallery cards must carry an accessible label.');

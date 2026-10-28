@@ -62,7 +62,9 @@ never expose `owner_subject`/`owner_email`.
 New uploads store `owner_subject`/`owner_name`/`owner_email` from the
 authenticated session (never from client input) plus a whitelisted
 `visibility`. `index.php` is the public gallery for anonymous visitors and
-the dashboard for signed-in users.
+the dashboard for signed-in users; signed-in users can switch back to the
+public gallery via the Public Gallery toggle (`?view=public`, backed by
+`api/flipbooks.php?scope=public`).
 
 Schema change: `sql/migrations/2026-10-07-ownership-visibility.sql` applied via
 the idempotent CLI runner `php scripts/migrate-ownership.php [--apply]`
