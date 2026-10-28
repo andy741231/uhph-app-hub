@@ -145,6 +145,43 @@ class EntraOidcTest extends TestCase
         ]);
     }
 
+    public function test_first_sign_in_links_the_account_by_upn_when_email_differs(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'andy@cougarnet.uh.edu',
+            'external_subject' => null,
+        ]);
+        $state = $this->beginSso();
+
+        $this->completeSso([
+            'email' => 'andy@central.uh.edu',
+            'preferred_username' => 'andy@cougarnet.uh.edu',
+        ], $state)->assertRedirect(route('dashboard'));
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertSame('entra-sub-1', $user->fresh()->external_subject);
+    }
+
+    public function test_ambiguous_email_and_upn_matches_are_denied(): void
+    {
+        User::factory()->create(['email' => 'andy@central.uh.edu', 'external_subject' => null]);
+        User::factory()->create(['email' => 'andy@cougarnet.uh.edu', 'external_subject' => null]);
+        $state = $this->beginSso();
+
+        $this->completeSso([
+            'email' => 'andy@central.uh.edu',
+            'preferred_username' => 'andy@cougarnet.uh.edu',
+        ], $state)->assertRedirect(route('login'))->assertSessionHas('error');
+
+        $this->assertGuest();
+        $this->assertNull(User::first()->external_subject);
+        $this->assertDatabaseHas('login_audits', [
+            'method' => 'sso',
+            'succeeded' => false,
+            'failure_reason' => 'identity_ambiguous',
+        ]);
+    }
+
     public function test_unknown_accounts_are_denied(): void
     {
         $state = $this->beginSso();

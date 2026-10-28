@@ -234,7 +234,9 @@ IIS site that mirrors the production bindings:
   rewrites non-physical routes to the Hub front controller)
 - Child application `/apps/grant-review` → `E:\apps\grant-review\public`
 - PHP via FastCGI with `maxInstances` greater than 1 so concurrent
-  same-origin requests (the token exchange) can be served
+  same-origin requests (the token exchange) can be served. PHP home is
+  `C:\php-8.4.27` — the `*.php` handler's `scriptProcessor` in
+  `applicationHost.config` points at `php-cgi.exe` there
 - `app-hub` source directory blocked from direct HTTP access, as in
   production
 - `.env` templates above already match `http://localhost:8000` over HTTP
@@ -301,7 +303,7 @@ ships without a default OpenSSL config. Set `OPENSSL_CONF` on the **test
 command only** — never in `.env` or production runtime:
 
 ```bash
-OPENSSL_CONF='C:\php\extras\ssl\openssl.cnf' php vendor/bin/phpunit tests/Feature/EntraOidcTest.php
+OPENSSL_CONF='C:\php-8.4.27\extras\ssl\openssl.cnf' php vendor/bin/phpunit tests/Feature/EntraOidcTest.php
 ```
 
 (Use the `openssl.cnf` bundled under your PHP install's `extras\ssl\`, or a
