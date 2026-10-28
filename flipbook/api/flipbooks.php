@@ -51,8 +51,8 @@ switch ($method) {
             jsonResponse($flipbook);
 
         } else {
-            // List: anonymous -> public only; signed-in user -> own; admin -> all.
-            // ?scope=public forces the public gallery for any caller.
+            // List: anonymous -> public only; signed-in user -> public + own;
+            // admin -> all. ?scope=public forces the gallery for any caller.
             $page = max(1, (int)($_GET['page'] ?? 1));
             $limit = min(50, max(1, (int)($_GET['limit'] ?? 20)));
             $offset = ($page - 1) * $limit;
@@ -62,12 +62,10 @@ switch ($method) {
 
             $where = '';
             $params = [];
-            $stripOwner = false;
             if ($publicOnly || ($user === null && FLIPBOOK_HUB_SSO_ENABLED)) {
                 $where = " WHERE visibility = 'public'";
-                $stripOwner = true;
             } elseif ($user !== null && $user['role'] !== 'admin') {
-                $where = " WHERE owner_subject = ?";
+                $where = " WHERE visibility = 'public' OR owner_subject = ?";
                 $params[] = $user['subject'];
             }
 
@@ -78,9 +76,12 @@ switch ($method) {
             $stmt = $db->prepare("SELECT * FROM flipbooks" . $where . " ORDER BY created_at DESC LIMIT ? OFFSET ?");
             $stmt->execute(array_merge($params, [$limit, $offset]));
             $flipbooks = $stmt->fetchAll();
-            if ($stripOwner) {
-                $flipbooks = array_map('flipbook_strip_owner', $flipbooks);
-            }
+            // can_manage drives manage controls client-side; rows the caller
+            // cannot manage must not expose owner_subject/owner_email.
+            $flipbooks = array_map(function (array $row): array {
+                $row['can_manage'] = flipbook_can_manage($row);
+                return $row['can_manage'] ? $row : flipbook_strip_owner($row);
+            }, $flipbooks);
 
             jsonResponse([
                 'flipbooks' => $flipbooks,

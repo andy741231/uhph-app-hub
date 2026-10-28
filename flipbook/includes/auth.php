@@ -107,10 +107,34 @@ function flipbook_current_user(): ?array
     $authenticatedAt = (int)($identity['authenticated_at'] ?? 0);
     if ($authenticatedAt <= 0 || time() - $authenticatedAt >= FLIPBOOK_HUB_SESSION_REVALIDATION_SECONDS) {
         unset($_SESSION['flipbook_admin']);
+        // Mark the session so public pages can re-authenticate through the
+        // Hub instead of silently rendering the anonymous view.
+        $_SESSION['flipbook_session_stale'] = true;
         return null;
     }
 
     return $identity;
+}
+
+/**
+ * True once when a previously signed-in session went stale. Pages should
+ * answer true with flipbook_redirect_to_login() — the Hub roundtrip is
+ * transparent while the Hub session is still alive.
+ */
+function flipbook_session_is_stale(): bool
+{
+    if (!FLIPBOOK_HUB_SSO_ENABLED) {
+        return false;
+    }
+
+    flipbook_auth_start_session();
+    if (empty($_SESSION['flipbook_session_stale'])) {
+        return false;
+    }
+
+    unset($_SESSION['flipbook_session_stale']);
+
+    return true;
 }
 
 function flipbook_is_admin(): bool
@@ -160,6 +184,9 @@ function flipbook_require_user(): void
 function flipbook_redirect_to_login(): void
 {
     flipbook_auth_start_session();
+    // A login roundtrip follows either way, so consume the stale marker —
+    // otherwise the destination page would trigger another redirect.
+    unset($_SESSION['flipbook_session_stale']);
     $returnTo = $_SERVER['REQUEST_URI'] ?? (BASE_PATH . '/index.php');
     if (flipbook_is_safe_app_path($returnTo)) {
         $_SESSION['flipbook_return_to'] = $returnTo;

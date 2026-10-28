@@ -54,17 +54,20 @@ Enforcement lives in `includes/auth.php`:
   owner-or-admin for mutations.
 
 Every API applies the visibility/ownership rule server-side: `flipbooks.php`
-list filters by caller (anonymous→public, user→own, admin→all; `?scope=public`
-forces the gallery), and child endpoints (`videos`, `links`, `text`, `pdf`,
-`download`) authorize against the parent flipbook row. Anonymous responses
-never expose `owner_subject`/`owner_email`.
+list filters by caller (anonymous→public, user→public+own, admin→all;
+`?scope=public` forces the gallery), and each row carries `can_manage` so
+the UI only shows edit/delete controls on manageable cards. Rows the
+caller cannot manage never expose `owner_subject`/`owner_email`. Child
+endpoints (`videos`, `links`, `text`, `pdf`, `download`) authorize against
+the parent flipbook row.
 
 New uploads store `owner_subject`/`owner_name`/`owner_email` from the
 authenticated session (never from client input) plus a whitelisted
 `visibility`. `index.php` is the public gallery for anonymous visitors and
-the dashboard for signed-in users; signed-in users can switch back to the
-public gallery via the Public Gallery toggle (`?view=public`, backed by
-`api/flipbooks.php?scope=public`).
+a merged list for signed-in users (user: public + own, admin: all). When a
+session goes stale, `index.php`/`viewer.php` consume the
+`flipbook_session_stale` marker and re-authenticate through the Hub
+instead of silently rendering the anonymous view.
 
 Schema change: `sql/migrations/2026-10-07-ownership-visibility.sql` applied via
 the idempotent CLI runner `php scripts/migrate-ownership.php [--apply]`

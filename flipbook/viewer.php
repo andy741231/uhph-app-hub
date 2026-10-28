@@ -55,6 +55,11 @@ if (!flipbook_can_view($viewerFlipbook)) {
 }
 
 $canEdit = flipbook_can_manage($viewerFlipbook);
+// A stale session re-authenticates through the Hub instead of silently
+// losing the signed-in controls. Never redirect inside an embed iframe.
+if (!$isEmbed && flipbook_session_is_stale()) {
+    flipbook_redirect_to_login();
+}
 $canEmbed = ($viewerFlipbook['visibility'] ?? 'public') !== 'private';
 $csrfToken = flipbook_csrf_token();
 ?>

@@ -99,6 +99,9 @@ expect(!str_contains($pdfApi, '31536000'), 'api/pdf.php must not emit a far-futu
 expect(!str_contains($pdfApi, "header('ETag"), 'api/pdf.php must not emit ETag headers.');
 expect(!str_contains($pdfApi, 'IF_NONE_MATCH'), 'api/pdf.php must not answer conditional 304 requests.');
 expect(str_contains(file_get_contents($root.'/api/flipbooks.php'), 'no-store'), 'api/flipbooks.php must mark gallery JSON no-store.');
+$listApi = file_get_contents($root.'/api/flipbooks.php');
+expect(str_contains($listApi, "visibility = 'public' OR owner_subject = ?"), 'The signed-in user list must merge public flipbooks with their own uploads.');
+expect(str_contains($listApi, "'can_manage'"), 'List rows must carry a per-row manage flag for the card actions.');
 
 $header = file_get_contents($root.'/includes/header.php');
 $callback = file_get_contents($root.'/auth/callback.php');
@@ -108,6 +111,7 @@ expect(str_contains($header, 'All Applications'), 'The authenticated header shou
 expect(str_contains($header, 'fa-right-to-bracket'), 'The anonymous header should offer a Sign in control.');
 expect(str_contains($callback, "'application_count'"), 'The callback must retain the assigned application count.');
 expect(str_contains($callback, "'logout_url'"), 'The callback must retain the signed Hub logout URL.');
+expect(str_contains($logout, 'flipbook_current_user()'), 'Logout must read the signed Hub logout URL for any role, not just admins.');
 expect(str_contains($logout, 'flipbook_is_safe_hub_logout_url'), 'Logout must only redirect to a trusted Hub logout URL.');
 expect(str_contains($globalLogout, 'FLIPBOOK_HUB_LOGOUT_CONTINUE_URL'), 'Global logout must validate its token with the Hub.');
 expect(str_contains($globalLogout, 'flipbook_destroy_session'), 'Global logout must destroy the Flipbook session.');
@@ -127,7 +131,7 @@ expect(preg_match('/if \(\$canEdit\):\s*\?>\s*<!-- Edit Mode Panel/', $viewer) =
 expect(preg_match('/if \(\$canEdit\):\s*\?>\s*<!-- Add Link Modal/', $viewer) === 1, 'Edit modals must only render for owner/admin.');
 
 $index = file_get_contents($root.'/index.php');
-expect(str_contains($index, 'scope=public'), 'index.php must let signed-in users switch back to the public gallery.');
+expect(str_contains($index, 'flipbook_session_is_stale()'), 'index.php must re-authenticate stale sessions through the Hub.');
 expect(str_contains($index, 'role="link"'), 'Gallery cards must expose role=link for keyboard/assistive access.');
 expect(str_contains($index, 'tabindex="0"'), 'Gallery cards must be focusable (tabindex=0).');
 expect(str_contains($index, 'aria-label="Open'), 'Gallery cards must carry an accessible label.');
@@ -190,7 +194,10 @@ $asUser($mkIdentity('admin', $adminSubject));
 expect(flipbook_is_admin(), 'An admin-role session must be treated as admin.');
 $asUser(['subject' => $otherSubject, 'email' => 'stale@example.edu', 'name' => 'Stale', 'role' => 'user', 'authenticated_at' => time() - FLIPBOOK_HUB_SESSION_REVALIDATION_SECONDS - 1]);
 expect(flipbook_current_user() === null, 'Stale sessions must be revalidated.');
+expect(flipbook_session_is_stale(), 'A stale session must set the reauth marker once.');
+expect(!flipbook_session_is_stale(), 'The reauth marker must be consumed by the first check.');
 $asAnon();
+expect(!flipbook_session_is_stale(), 'Anonymous sessions never carry the reauth marker.');
 
 if ($failures !== []) {
     fwrite(STDERR, implode(PHP_EOL, $failures).PHP_EOL);

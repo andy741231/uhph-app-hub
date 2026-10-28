@@ -26,10 +26,12 @@ A web-based PDF flipbook viewer with realistic page-turning effects, search, tab
 
 ## Access & Visibility
 
-Authentication is Hub SSO (`admin` / `user` application roles). Anonymous
-visitors land on a public gallery (`index.php`); signed-in users get a
-dashboard (`admin` sees every flipbook, `user` sees only their own uploads)
-with a **Public Gallery** view toggle (`index.php?view=public`).
+Authentication is Hub SSO (`admin` / `user` application roles). Everyone
+lands on `index.php`: anonymous visitors see the public gallery, `user`
+accounts see public flipbooks merged with their own uploads, and `admin`
+accounts see everything. Sessions re-authenticate transparently through
+the Hub when they go stale (15 min by default), so a signed-in visitor
+never silently falls back to the anonymous gallery.
 
 | Visibility | Gallery | View | Embed |
 | --- | --- | --- | --- |
