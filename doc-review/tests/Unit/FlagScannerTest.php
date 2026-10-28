@@ -129,4 +129,79 @@ class FlagScannerTest extends TestCase
         // Longest phrase first, leading boundary for single words only.
         $this->assertSame('/(social security|\bdivers)/ui', $pattern);
     }
+
+    public function test_whole_word_matches_only_full_words(): void
+    {
+        // "AI"/"(ai)" match; aim/gain/training/air/said do not.
+        $result = $this->scanner->scan(
+            'AI (ai) aim gain training air said',
+            ['ai'],
+            ['ai' => 'whole_word']
+        );
+
+        $this->assertSame(2, $result['total']);
+        $this->assertSame(['ai' => 2], $result['words']);
+    }
+
+    public function test_word_root_includes_stems_but_never_mid_word(): void
+    {
+        $result = $this->scanner->scan('aim aid', ['ai'], ['ai' => 'word_root']);
+        $this->assertSame(2, $result['total']);
+
+        // No leading boundary inside "gain".
+        $this->assertSame(0, $this->scanner->scan('gain regain', ['ai'], ['ai' => 'word_root'])['total']);
+    }
+
+    public function test_match_type_map_is_per_word(): void
+    {
+        $result = $this->scanner->scan(
+            'diverse aims AI',
+            ['divers', 'ai'],
+            ['ai' => 'whole_word', 'divers' => 'word_root']
+        );
+
+        $this->assertSame(2, $result['total']);
+        $this->assertSame(['divers' => 1, 'ai' => 1], $result['words']);
+    }
+
+    public function test_scan_per_page_accepts_match_types(): void
+    {
+        $result = $this->scanner->scanPerPage(
+            ['AI aims', 'nothing', 'diverse'],
+            ['ai', 'divers'],
+            ['ai' => 'whole_word', 'divers' => 'word_root']
+        );
+
+        $this->assertSame(2, $result['total']);
+        $this->assertSame(
+            [['page' => 1, 'words' => [['word' => 'ai', 'occurrences' => 1]]],
+                ['page' => 3, 'words' => [['word' => 'divers', 'occurrences' => 1]]]],
+            $result['pages']
+        );
+    }
+
+    public function test_phrases_match_literally_in_both_modes(): void
+    {
+        foreach (['whole_word', 'word_root'] as $type) {
+            $result = $this->scanner->scan(
+                'social security and social insecurity',
+                ['social security'],
+                ['social security' => $type]
+            );
+            $this->assertSame(1, $result['total'], $type);
+        }
+    }
+
+    public function test_highlight_pattern_match_counts_equal_scan(): void
+    {
+        $text = 'AI aim (ai) gain diverse';
+        $map = ['ai' => 'whole_word', 'divers' => 'word_root'];
+
+        $scan = $this->scanner->scan($text, ['ai', 'divers'], $map);
+        $pattern = $this->scanner->buildHighlightPattern(['ai', 'divers'], $map);
+
+        $this->assertNotNull($pattern);
+        $this->assertSame($scan['total'], preg_match_all($pattern, $text));
+        $this->assertSame(3, $scan['total']);
+    }
 }

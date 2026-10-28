@@ -175,6 +175,30 @@ class ImportFlagWordsTest extends TestCase
         );
     }
 
+    public function test_imported_rows_are_word_root_and_existing_modes_survive_updates(): void
+    {
+        DocumentFlagWord::create([
+            'word' => 'alpha',
+            'suggested_replacement' => 'old',
+            'match_type' => DocumentFlagWord::MATCH_WHOLE_WORD,
+            'created_by' => User::factory()->create()->id,
+        ]);
+
+        $path = $this->writeExport($this->payload([
+            $this->row('alpha', 'new'),
+            $this->row('beta'),
+        ]));
+
+        $this->artisan('flag-words:import', ['file' => $path, '--apply' => true])
+            ->assertExitCode(0);
+
+        // Existing row updates replacement but keeps its whole_word mode.
+        $this->assertSame('whole_word', DocumentFlagWord::where('word', 'alpha')->value('match_type'));
+        $this->assertSame('new', DocumentFlagWord::where('word', 'alpha')->value('suggested_replacement'));
+        // Newly created rows are word_root (legacy semantics).
+        $this->assertSame('word_root', DocumentFlagWord::where('word', 'beta')->value('match_type'));
+    }
+
     public function test_missing_file_fails(): void
     {
         $this->artisan('flag-words:import', ['file' => '/nonexistent/export.json'])

@@ -35,8 +35,14 @@ Local run happens via the repo-root `server.php` (`/apps/doc-review`).
   deletes remove the upload and its PDF preview. Rescan stages a new preview,
   extracts/scans first, commits flag/document changes in a transaction, and
   only then deletes the superseded preview; orphaned staged files are removed.
-- `FlagScanner` preserves legacy matching semantics (leading-boundary
-  prefix/stem match for single words). Tests must not assert whole-word.
+- `FlagScanner` supports two explicit single-word modes via
+  `document_flag_words.match_type`: `whole_word` (full `\b..\b` boundaries —
+  "ai" matches "AI"/"(AI)", never "aim"/"gain") and `word_root` (legacy
+  leading-boundary stem match — "divers" matches "diverse"/"diversity").
+  Multi-word phrases match literally in both modes. The DB column default
+  keeps existing rows and raw/legacy inserts on `word_root`; new Eloquent
+  rows default `whole_word`. Scanner callers that omit the match-type map
+  keep legacy word_root semantics.
 - No `v-html` anywhere for document content — extracted text renders
   escaped; Word docs use the generated PDF preview.
 - Session cookie `uhph_doc_review_session` is scoped to

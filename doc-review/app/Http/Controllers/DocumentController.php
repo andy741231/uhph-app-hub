@@ -148,8 +148,8 @@ class DocumentController extends Controller
 
             $text = implode("\n\n", $pages);
 
-            $flagWords = DocumentFlagWord::query()->pluck('word')->all();
-            $perPageScan = $scanner->scanPerPage($pages, $flagWords);
+            $matchTypes = DocumentFlagWord::query()->pluck('match_type', 'word')->all();
+            $perPageScan = $scanner->scanPerPage($pages, array_keys($matchTypes), $matchTypes);
 
             // For Word docs without a PDF preview, keep the plain-text pages so
             // the viewer can page through escaped text (never document-supplied
@@ -198,9 +198,14 @@ class DocumentController extends Controller
             ];
         })->sortByDesc('occurrences')->values()->all();
 
-        // Build a regex pattern the frontend can use to highlight matches in the viewer
+        // Build a regex pattern the frontend can use to highlight matches in
+        // the viewer — each word's stored match type drives its boundaries.
+        $highlightTypes = $document->flags
+            ->mapWithKeys(fn ($f) => [$f->flagWord->word => $f->flagWord->match_type])
+            ->all();
         $highlightPattern = $scanner->buildHighlightPattern(
-            $document->flags->map(fn ($f) => $f->flagWord->word)->all()
+            array_keys($highlightTypes),
+            $highlightTypes
         );
 
         // Build a word → suggested_replacement map for all flag words so the
@@ -295,8 +300,8 @@ class DocumentController extends Controller
 
             $text = implode("\n\n", $pages);
 
-            $flagWords = DocumentFlagWord::query()->pluck('word')->all();
-            $perPageScan = $scanner->scanPerPage($pages, $flagWords);
+            $matchTypes = DocumentFlagWord::query()->pluck('match_type', 'word')->all();
+            $perPageScan = $scanner->scanPerPage($pages, array_keys($matchTypes), $matchTypes);
 
             // Refresh the plain-text fallback pages for Word docs without a
             // PDF preview (escaped text only — never document-supplied HTML).

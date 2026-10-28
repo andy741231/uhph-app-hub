@@ -10,6 +10,15 @@ Hub Document Reviewer. Mounted at `/apps/doc-review` (Hub application key
   scanning with per-page counts and suggested replacements, PDF.js preview,
   rescan, download, delete. Owners see their own documents; `admin` can see
   and manage all documents. Flag-word CRUD and bulk deletion are admin-only.
+- **Flag-word match types:** every flag word has a `match_type` —
+  `whole_word` (single word must match at full word boundaries: "ai"
+  matches "AI"/"(AI)" but not "aim"/"gain"/"training") or `word_root`
+  (legacy leading-boundary stem matching: "divers" matches "diverse",
+  "diversity", "diversify"). Match types apply to single words only;
+  multi-word phrases match literally in both modes. Rows predating the
+  feature and legacy JSON imports stay `word_root`; new words default to
+  `whole_word`. Editing a word's match type does not re-scan existing
+  documents — rescan them to refresh stored counts.
 - **Files:** stored on the private local disk under
   `storage/app/private/documents`, never under `public/`. Deleting a
   document removes the upload and any generated PDF preview.
@@ -81,7 +90,23 @@ composer exec --working-dir=doc-review -- php artisan flag-words:import flag-wor
 
 The importer validates the whole file before writing, rejects malformed
 JSON, empty words, and case-insensitive duplicate source/target words, and
-rolls back entirely on failure.
+rolls back entirely on failure. Legacy JSON rows have no match type — they
+are imported as `word_root` to preserve legacy semantics, and updates to
+existing rows never change their `match_type`.
+
+### Flag-word CSV import/export
+
+`GET /flag-words/export` writes `word,suggested_replacement,match_type` —
+round-tripping a CSV preserves each word's mode. The import column is
+optional and case-insensitive-trimmed: blank/missing means `whole_word`
+(the safer default for new entries); only the machine names `whole_word`
+and `word_root` are accepted — anything else skips the row as invalid.
+
+Coverage rules during import: only `word_root` single-word entries can
+cover longer words with the same prefix ("divers" word_root skips "diverse");
+`whole_word` entries never cover anything ("ai" whole_word never blocks
+"aim"). Exact same-word rows still skip as "exists" regardless of mode,
+and multi-word phrases are never covered.
 
 ## Activity log
 

@@ -6,6 +6,7 @@ use App\Models\DocumentFlagWord;
 use App\Services\FlagWordImporter;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Throwable;
 
@@ -58,6 +59,7 @@ class DocumentFlagWordController extends Controller
         $validated = $request->validate([
             'word' => ['required', 'string', 'max:255'],
             'suggested_replacement' => ['nullable', 'string', 'max:255'],
+            'match_type' => ['nullable', Rule::in(DocumentFlagWord::MATCH_TYPES)],
         ]);
 
         $word = trim($validated['word']);
@@ -78,6 +80,7 @@ class DocumentFlagWordController extends Controller
         DocumentFlagWord::create([
             'word' => $word,
             'suggested_replacement' => $replacement,
+            'match_type' => $validated['match_type'] ?? DocumentFlagWord::MATCH_WHOLE_WORD,
             'created_by' => auth()->id(),
         ]);
 
@@ -93,6 +96,7 @@ class DocumentFlagWordController extends Controller
         $validated = $request->validate([
             'word' => ['required', 'string', 'max:255'],
             'suggested_replacement' => ['nullable', 'string', 'max:255'],
+            'match_type' => ['nullable', Rule::in(DocumentFlagWord::MATCH_TYPES)],
         ]);
 
         $word = trim($validated['word']);
@@ -111,10 +115,16 @@ class DocumentFlagWordController extends Controller
                 ->withInput();
         }
 
-        $flagWord->update([
+        $attributes = [
             'word' => $word,
             'suggested_replacement' => $replacement,
-        ]);
+        ];
+        // An omitted match_type keeps the existing mode.
+        if (array_key_exists('match_type', $validated) && $validated['match_type'] !== null) {
+            $attributes['match_type'] = $validated['match_type'];
+        }
+
+        $flagWord->update($attributes);
 
         return redirect()
             ->route('docs.flag-words.index')
@@ -156,13 +166,13 @@ class DocumentFlagWordController extends Controller
 
         $words = DocumentFlagWord::query()
             ->orderBy('word')
-            ->get(['word', 'suggested_replacement']);
+            ->get(['word', 'suggested_replacement', 'match_type']);
 
         return response()->streamDownload(function () use ($words) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['word', 'suggested_replacement'], escape: '');
+            fputcsv($out, ['word', 'suggested_replacement', 'match_type'], escape: '');
             foreach ($words as $word) {
-                fputcsv($out, [$word->word, $word->suggested_replacement], escape: '');
+                fputcsv($out, [$word->word, $word->suggested_replacement, $word->match_type], escape: '');
             }
             fclose($out);
         }, 'flag-words-'.now()->toDateString().'.csv', [
@@ -176,8 +186,9 @@ class DocumentFlagWordController extends Controller
 
         return response()->streamDownload(function () {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ['word', 'suggested_replacement'], escape: '');
-            fputcsv($out, ['divers', 'inclusive language'], escape: '');
+            fputcsv($out, ['word', 'suggested_replacement', 'match_type'], escape: '');
+            fputcsv($out, ['ai', '', 'whole_word'], escape: '');
+            fputcsv($out, ['divers', 'inclusive language', 'word_root'], escape: '');
             fclose($out);
         }, 'flag-words-template.csv', [
             'Content-Type' => 'text/csv',

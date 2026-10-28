@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\DocumentFlagWord;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class FlagWordManagementTest extends TestCase
@@ -145,5 +147,104 @@ class FlagWordManagementTest extends TestCase
             ->from('/flag-words')
             ->post('/flag-words', ['word' => ''])
             ->assertSessionHasErrors('word');
+    }
+
+    public function test_create_defaults_to_whole_word_and_accepts_word_root(): void
+    {
+        $this->actingAs($this->admin())
+            ->post('/flag-words', ['word' => 'alpha'])
+            ->assertRedirect(route('docs.flag-words.index'));
+
+        $this->assertDatabaseHas('document_flag_words', ['word' => 'alpha', 'match_type' => 'whole_word']);
+
+        $this->actingAs($this->admin())
+            ->post('/flag-words', ['word' => 'divers', 'match_type' => 'word_root']);
+
+        $this->assertDatabaseHas('document_flag_words', ['word' => 'divers', 'match_type' => 'word_root']);
+    }
+
+    public function test_update_omitted_match_type_preserves_existing_mode(): void
+    {
+        $admin = $this->admin();
+        $fw = DocumentFlagWord::create([
+            'word' => 'divers',
+            'match_type' => DocumentFlagWord::MATCH_WORD_ROOT,
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->put('/flag-words/'.$fw->id, ['word' => 'divers', 'suggested_replacement' => 'new'])
+            ->assertRedirect(route('docs.flag-words.index'));
+
+        $this->assertSame('word_root', $fw->refresh()->match_type);
+
+        $this->actingAs($admin)
+            ->put('/flag-words/'.$fw->id, ['word' => 'divers', 'match_type' => 'whole_word']);
+
+        $this->assertSame('whole_word', $fw->refresh()->match_type);
+    }
+
+    public function test_match_type_validation_rejects_unknown_values(): void
+    {
+        $admin = $this->admin();
+        $fw = DocumentFlagWord::create(['word' => 'alpha', 'created_by' => $admin->id]);
+
+        $this->actingAs($admin)
+            ->from('/flag-words')
+            ->post('/flag-words', ['word' => 'beta', 'match_type' => 'stem'])
+            ->assertSessionHasErrors('match_type');
+
+        $this->actingAs($admin)
+            ->from('/flag-words')
+            ->put('/flag-words/'.$fw->id, ['word' => 'alpha', 'match_type' => 'stem'])
+            ->assertSessionHasErrors('match_type');
+    }
+
+    public function test_list_page_includes_match_type(): void
+    {
+        $admin = $this->admin();
+        DocumentFlagWord::create([
+            'word' => 'divers',
+            'match_type' => DocumentFlagWord::MATCH_WORD_ROOT,
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get('/flag-words')
+            ->assertInertia(fn ($page) => $page
+                ->where('flagWords.data.0.match_type', 'word_root')
+            );
+    }
+
+    public function test_raw_db_inserts_keep_word_root_default_while_eloquent_defaults_whole(): void
+    {
+        // Rows written outside Eloquent (legacy/raw inserts) keep the column
+        // default; Eloquent rows default to whole_word.
+        DB::table('document_flag_words')->insert([
+            'word' => 'legacy',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DocumentFlagWord::create(['word' => 'fresh', 'created_by' => $this->admin()->id]);
+
+        $this->assertSame('word_root', DocumentFlagWord::where('word', 'legacy')->value('match_type'));
+        $this->assertSame('whole_word', DocumentFlagWord::where('word', 'fresh')->value('match_type'));
+    }
+
+    public function test_match_type_migration_preserves_existing_rows_as_word_root(): void
+    {
+        $migration = require database_path('migrations/2026_10_28_000002_add_match_type_to_document_flag_words_table.php');
+
+        $migration->down();
+        DB::table('document_flag_words')->insert([
+            'word' => 'divers',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $this->assertFalse(Schema::hasColumn('document_flag_words', 'match_type'));
+
+        $migration->up();
+
+        $this->assertSame('word_root', DocumentFlagWord::where('word', 'divers')->value('match_type'));
     }
 }

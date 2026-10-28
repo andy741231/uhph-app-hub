@@ -11,9 +11,10 @@ class FlagWordImporter
     /**
      * Parse a CSV file and import its rows.
      *
-     * Expected columns: "word" (required) and "suggested_replacement"
-     * (optional). A header row is detected when the first cell is "word";
-     * otherwise the first two columns are used.
+     * Expected columns: "word" (required), "suggested_replacement"
+     * (optional) and "match_type" (optional). A header row is detected
+     * when the first cell is "word"; otherwise columns 1-3 are used.
+     * A missing/blank match_type means whole_word.
      *
      * @return array{imported:int, skipped:array<int,array{word:string,reason:string,covered_by:?string}>}
      */
@@ -50,16 +51,18 @@ class FlagWordImporter
      * Skip rules:
      *  - the same word (case-insensitive) already exists, in the database or
      *    earlier in the file → "exists";
-     *  - a single stem word is covered by a shorter flag word that prefixes it
-     *    (e.g. "diverse" is covered when "divers" exists) → "covered";
-     *  - the word or replacement exceeds 255 characters → "invalid".
+     *  - a single stem word is covered by a shorter word_root flag word that
+     *    prefixes it (e.g. "diverse" is covered when "divers" exists with
+     *    word_root) → "covered"; whole_word entries never cover anything;
+     *  - the word or replacement exceeds 255 characters, or the match_type
+     *    is not blank/whole_word/word_root → "invalid".
      *
      * Multi-word phrases are never covered: "advance diversity" imports even
      * when "divers" exists. Coverage is evaluated against database words plus
      * stem words in the file itself, so precedence does not depend on row
      * order — "divers" beats "diversity" wherever it appears.
      *
-     * @param  array<int, array{word:mixed, suggested_replacement:mixed}>  $rows
+     * @param  array<int, array{word:mixed, suggested_replacement:mixed, match_type?:mixed}>  $rows
      * @return array{imported:int, skipped:array<int,array{word:string,reason:string,covered_by:?string}>}
      */
     public function importRows(array $rows, ?int $userId): array
@@ -68,26 +71,49 @@ class FlagWordImporter
             $known = [];
             $rootsByFirstChar = [];
 
-            foreach (DocumentFlagWord::query()->lockForUpdate()->pluck('word') as $existing) {
-                $this->indexWord($existing, $known, $rootsByFirstChar);
+            foreach (DocumentFlagWord::query()->lockForUpdate()->get(['word', 'match_type']) as $existing) {
+                $known[mb_strtolower($existing->word)] = true;
+                // Only word_root single words cover other single words —
+                // a whole_word entry like "ai" never covers "aim".
+                if ($existing->match_type === DocumentFlagWord::MATCH_WORD_ROOT) {
+                    $this->indexRoot($existing->word, $rootsByFirstChar);
+                }
             }
 
-            // Stem words in the file that are not themselves covered act as
-            // roots too, regardless of where they appear relative to the words
-            // they cover.
+            // The first VALID row for each exact word decides its mode:
+            // invalid rows (bad type, overlong fields) establish nothing,
+            // and words already in the DB can never become file roots.
             $fileCandidates = [];
             foreach ($rows as $row) {
                 $word = trim((string) ($row['word'] ?? ''));
-                if ($word === '' || mb_strlen($word) > 255 || ! FlagScanner::isStemWord($word)) {
+                if ($word === '') {
                     continue;
                 }
-                $fileCandidates[mb_strtolower($word)] ??= $word;
+                $lower = mb_strtolower($word);
+                if (array_key_exists($lower, $fileCandidates) || isset($known[$lower])) {
+                    continue;
+                }
+                $matchType = $this->normalizeMatchType($row['match_type'] ?? null);
+                $replacement = trim((string) ($row['suggested_replacement'] ?? '')) ?: null;
+                if ($matchType === null
+                    || mb_strlen($word) > 255
+                    || ($replacement !== null && mb_strlen($replacement) > 255)
+                    || ! FlagScanner::isStemWord($word)) {
+                    continue;
+                }
+                if ($matchType === DocumentFlagWord::MATCH_WORD_ROOT) {
+                    $fileCandidates[$lower] = $word;
+                } else {
+                    // A first-valid whole_word row blocks a later word_root
+                    // row for the same word from phantom-covering others.
+                    $fileCandidates[$lower] = null;
+                }
             }
             // Shortest first: a candidate survives only when no shorter root
             // covers it.
-            uasort($fileCandidates, fn ($a, $b) => mb_strlen($a) <=> mb_strlen($b));
+            uasort($fileCandidates, fn ($a, $b) => mb_strlen((string) $a) <=> mb_strlen((string) $b));
             foreach ($fileCandidates as $lower => $word) {
-                if ($this->coveringRoot($lower, $rootsByFirstChar) === null) {
+                if ($word !== null && $this->coveringRoot($lower, $rootsByFirstChar) === null) {
                     $this->indexRoot($word, $rootsByFirstChar);
                 }
             }
@@ -102,8 +128,9 @@ class FlagWordImporter
                 }
 
                 $replacement = trim((string) ($row['suggested_replacement'] ?? '')) ?: null;
+                $matchType = $this->normalizeMatchType($row['match_type'] ?? null);
 
-                if (mb_strlen($word) > 255 || ($replacement !== null && mb_strlen($replacement) > 255)) {
+                if (mb_strlen($word) > 255 || ($replacement !== null && mb_strlen($replacement) > 255) || $matchType === null) {
                     $skipped[] = ['word' => $word, 'reason' => 'invalid', 'covered_by' => null];
 
                     continue;
@@ -127,6 +154,7 @@ class FlagWordImporter
                 DocumentFlagWord::create([
                     'word' => $word,
                     'suggested_replacement' => $replacement,
+                    'match_type' => $matchType,
                     'created_by' => $userId,
                 ]);
                 $known[$lower] = true;
@@ -150,6 +178,7 @@ class FlagWordImporter
         $rows = [];
         $wordIdx = 0;
         $replacementIdx = 1;
+        $matchTypeIdx = 2;
         $headerChecked = false;
 
         while (($cells = fgetcsv($handle, 0, $delimiter, '"', '')) !== false) {
@@ -167,6 +196,10 @@ class FlagWordImporter
                     if ($replacementIdx === false) {
                         $replacementIdx = array_search('replacement', $map, true);
                     }
+                    $matchTypeIdx = array_search('match_type', $map, true);
+                    if ($matchTypeIdx === false) {
+                        $matchTypeIdx = array_search('type', $map, true);
+                    }
 
                     continue;
                 }
@@ -175,6 +208,7 @@ class FlagWordImporter
             $rows[] = [
                 'word' => $cells[$wordIdx] ?? '',
                 'suggested_replacement' => $replacementIdx === false ? null : ($cells[$replacementIdx] ?? ''),
+                'match_type' => $matchTypeIdx === false ? null : ($cells[$matchTypeIdx] ?? ''),
             ];
         }
 
@@ -182,13 +216,19 @@ class FlagWordImporter
     }
 
     /**
-     * Register a word in the exact-match set and, when it is a stem word, in
-     * the root index (grouped by first lowercase character).
+     * Normalize a CSV match_type value: blank means whole_word (the safer
+     * new-entry default); valid machine names are returned lowercased; any
+     * other value is invalid (null).
      */
-    protected function indexWord(string $word, array &$known, array &$rootsByFirstChar): void
+    protected function normalizeMatchType($raw): ?string
     {
-        $known[mb_strtolower($word)] = true;
-        $this->indexRoot($word, $rootsByFirstChar);
+        $value = mb_strtolower(trim((string) ($raw ?? '')));
+
+        if ($value === '') {
+            return DocumentFlagWord::MATCH_WHOLE_WORD;
+        }
+
+        return in_array($value, DocumentFlagWord::MATCH_TYPES, true) ? $value : null;
     }
 
     protected function indexRoot(string $word, array &$rootsByFirstChar): void

@@ -19,7 +19,18 @@ const props = defineProps({
 const form = useForm({
     word: '',
     suggested_replacement: '',
+    match_type: 'whole_word',
 });
+
+const matchTypeOptions = [
+    { value: 'whole_word', label: 'Whole word' },
+    { value: 'word_root', label: 'Word root' },
+];
+
+const matchTypeLabel = (t) => t === 'word_root' ? 'Word root' : 'Whole word';
+const matchTypeBadgeClass = (t) => t === 'word_root'
+    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200'
+    : 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200';
 
 const showAddModal = ref(false);
 
@@ -31,6 +42,7 @@ const openAddModal = () => {
 const closeAddModal = () => {
     showAddModal.value = false;
     form.reset('word', 'suggested_replacement');
+    form.match_type = 'whole_word';
     form.clearErrors();
 };
 
@@ -39,6 +51,7 @@ const submit = () => {
         preserveScroll: true,
         onSuccess: () => {
             form.reset('word', 'suggested_replacement');
+            form.match_type = 'whole_word';
             showAddModal.value = false;
         },
     });
@@ -157,11 +170,14 @@ const onSearchInput = () => {
     searchTimer = setTimeout(() => applyFilters(), 300);
 };
 
-// Sortable column headers
-const sortableColumns = [
-    { key: 'word', label: 'Word' },
-    { key: 'suggested_replacement', label: 'Suggested Replacement' },
-    { key: 'created_at', label: 'Added on' },
+// Desktop table columns, in display order. Only sortable columns get the
+// sort button + aria-sort; plain labels otherwise.
+const tableColumns = [
+    { key: 'word', label: 'Word', sortable: true },
+    { key: 'suggested_replacement', label: 'Suggested Replacement', sortable: true },
+    { key: 'match_type', label: 'Match', sortable: false },
+    { key: 'creator', label: 'Added by', sortable: false },
+    { key: 'created_at', label: 'Added on', sortable: true },
 ];
 
 const ariaSort = (column) => {
@@ -189,12 +205,14 @@ const editingId = ref(null);
 const editForm = useForm({
     word: '',
     suggested_replacement: '',
+    match_type: '',
 });
 
 const startEdit = (fw) => {
     editingId.value = fw.id;
     editForm.word = fw.word;
     editForm.suggested_replacement = fw.suggested_replacement || '';
+    editForm.match_type = fw.match_type || 'whole_word';
     editForm.clearErrors();
 };
 
@@ -231,7 +249,7 @@ const saveEdit = (fw) => {
                             {{ flagWords.total }} total
                         </span>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center gap-2">
                         <SecondaryButton type="button" @click="openImportModal">
                             <i class="fa-solid fa-file-import text-sm mr-1.5 -ml-0.5" aria-hidden="true"></i>
                             Import
@@ -352,7 +370,7 @@ const saveEdit = (fw) => {
                             <span class="font-medium text-gray-800 dark:text-gray-200">{{ item.word }}</span>
                             <span v-if="item.reason === 'exists'"> — already exists</span>
                             <span v-else-if="item.reason === 'covered'"> — covered by &quot;{{ item.covered_by }}&quot;</span>
-                            <span v-else> — invalid (over 255 characters)</span>
+                            <span v-else> — invalid{{ item.detail ? ' (' + item.detail + ')' : '' }}</span>
                         </li>
                     </ul>
                 </div>
@@ -373,13 +391,14 @@ const saveEdit = (fw) => {
                                         </label>
                                     </th>
                                     <th
-                                        v-for="col in sortableColumns"
+                                        v-for="col in tableColumns"
                                         :key="col.key"
                                         scope="col"
-                                        :aria-sort="ariaSort(col.key)"
+                                        :aria-sort="col.sortable ? ariaSort(col.key) : undefined"
                                         class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider"
                                     >
                                         <button
+                                            v-if="col.sortable"
                                             type="button"
                                             class="inline-flex items-center gap-1 cursor-pointer select-none hover:text-gray-900 dark:hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded -mx-0.5 px-0.5"
                                             @click="toggleSort(col.key)"
@@ -392,8 +411,8 @@ const saveEdit = (fw) => {
                                             ></i>
                                             <span class="sr-only">Sort by {{ col.label }}</span>
                                         </button>
+                                        <template v-else>{{ col.label }}</template>
                                     </th>
-                                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Added by</th>
                                     <th scope="col" class="px-4 py-3 text-right text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
@@ -432,6 +451,16 @@ const saveEdit = (fw) => {
                                             />
                                             <InputError class="mt-1" :message="editForm.errors.suggested_replacement" />
                                         </td>
+                                        <td class="px-4 py-3">
+                                            <select
+                                                v-model="editForm.match_type"
+                                                aria-label="Edit match type"
+                                                class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                                            >
+                                                <option v-for="opt in matchTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                                            </select>
+                                            <InputError class="mt-1" :message="editForm.errors.match_type" />
+                                        </td>
                                         <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ fw.creator?.name || '—' }}</td>
                                         <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ formatDate(fw.created_at) }}</td>
                                         <td class="px-4 py-3 text-right whitespace-nowrap">
@@ -465,6 +494,12 @@ const saveEdit = (fw) => {
                                             >{{ fw.suggested_replacement }}</span>
                                             <span v-else class="text-gray-400 dark:text-gray-500">—</span>
                                         </td>
+                                        <td class="px-4 py-3 text-xs">
+                                            <span
+                                                class="inline-flex items-center rounded-full px-2.5 py-0.5 font-medium"
+                                                :class="matchTypeBadgeClass(fw.match_type)"
+                                            >{{ matchTypeLabel(fw.match_type) }}</span>
+                                        </td>
                                         <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ fw.creator?.name || '—' }}</td>
                                         <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{{ formatDate(fw.created_at) }}</td>
                                         <td class="px-4 py-3 text-right whitespace-nowrap">
@@ -488,7 +523,7 @@ const saveEdit = (fw) => {
                                     </template>
                                 </tr>
                                 <tr v-if="flagWords.data.length === 0">
-                                    <td colspan="6" class="px-4 py-12 text-center">
+                                    <td colspan="7" class="px-4 py-12 text-center">
                                         <i class="fa-solid fa-file-lines mx-auto text-4xl text-gray-300 dark:text-gray-600" aria-hidden="true"></i>
                                         <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">
                                             No flag words found.
@@ -526,6 +561,14 @@ const saveEdit = (fw) => {
                                 class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
                             />
                             <InputError :message="editForm.errors.suggested_replacement" />
+                            <select
+                                v-model="editForm.match_type"
+                                aria-label="Edit match type"
+                                class="w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                            >
+                                <option v-for="opt in matchTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                            </select>
+                            <InputError :message="editForm.errors.match_type" />
                             <div class="flex items-center justify-end gap-2">
                                 <button
                                     type="button"
@@ -558,6 +601,10 @@ const saveEdit = (fw) => {
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-start justify-between gap-2">
                                     <p class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{{ fw.word }}</p>
+                                    <span
+                                        class="mt-1 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
+                                        :class="matchTypeBadgeClass(fw.match_type)"
+                                    >{{ matchTypeLabel(fw.match_type) }}</span>
                                     <div class="flex items-center gap-2 shrink-0">
                                         <button
                                             type="button"
@@ -659,8 +706,19 @@ const saveEdit = (fw) => {
                         />
                         <InputError class="mt-1" :message="form.errors.suggested_replacement" />
                     </div>
+                    <div>
+                        <InputLabel for="match_type" value="Match type" />
+                        <select
+                            id="match_type"
+                            v-model="form.match_type"
+                            class="mt-1 w-full rounded-md border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        >
+                            <option v-for="opt in matchTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                        </select>
+                        <InputError class="mt-1" :message="form.errors.match_type" />
+                    </div>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                        Matching is case-insensitive. Single words also match stems at a word boundary (e.g. "divers" matches "diversity"); multi-word phrases match literally.
+                        Matching is case-insensitive; match type applies to single words only. <strong>Whole word</strong> requires full word boundaries — &quot;ai&quot; matches &quot;AI&quot; / &quot;(AI)&quot; but not &quot;aim&quot;, &quot;gain&quot;, or &quot;training&quot;. <strong>Word root</strong> matches stems at a leading boundary — &quot;divers&quot; matches &quot;diverse&quot;, &quot;diversity&quot;, &quot;diversify&quot;. Multi-word phrases match literally in both modes. Existing documents need a rescan to pick up match-type changes.
                     </p>
                     <div class="flex items-center justify-end gap-3 pt-2">
                         <SecondaryButton type="button" @click="closeAddModal">
@@ -701,8 +759,10 @@ const saveEdit = (fw) => {
                         <InputError class="mt-1" :message="importForm.errors.file" />
                     </div>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                        Columns: <code class="font-mono">word</code> and
-                        <code class="font-mono">suggested_replacement</code> (optional).
+                        Columns: <code class="font-mono">word</code>,
+                        <code class="font-mono">suggested_replacement</code> (optional) and
+                        <code class="font-mono">match_type</code> (optional — <code class="font-mono">whole_word</code> or
+                        <code class="font-mono">word_root</code>; blank defaults to whole_word).
                         <a
                             :href="route('docs.flag-words.import-template')"
                             class="text-indigo-600 dark:text-indigo-400 underline hover:text-indigo-800 dark:hover:text-indigo-300"
@@ -710,8 +770,9 @@ const saveEdit = (fw) => {
                     </p>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
                         Words that already exist are skipped. A single word is also skipped when a shorter
-                        flag word already covers it as a stem (e.g. &quot;divers&quot; covers
-                        &quot;diverse&quot;); multi-word phrases are never skipped that way.
+                        <em>word_root</em> flag word already covers it as a stem (e.g. &quot;divers&quot; covers
+                        &quot;diverse&quot;); whole_word entries never cover other words, and multi-word
+                        phrases are never skipped that way.
                     </p>
                     <div class="flex items-center justify-end gap-3 pt-2">
                         <SecondaryButton type="button" @click="closeImportModal">

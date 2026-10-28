@@ -337,4 +337,91 @@ class DocumentUploadTest extends TestCase
         $this->assertSame(2, $document->flag_count);
         $this->assertSame(2, $document->flags()->count());
     }
+
+    public function test_upload_scans_with_stored_match_types(): void
+    {
+        $user = User::factory()->create();
+        DocumentFlagWord::create([
+            'word' => 'ai',
+            'match_type' => 'whole_word',
+            'created_by' => $user->id,
+        ]);
+        DocumentFlagWord::create([
+            'word' => 'divers',
+            'match_type' => 'word_root',
+            'created_by' => $user->id,
+        ]);
+
+        // "AI" whole-word hits once; "aim"/"gain" must not count.
+        // "divers" word_root hits "diverse" and "diversity".
+        $file = UploadedFile::fake()->createWithContent(
+            'report.txt',
+            'AI matters, aim gain training. diverse diversity.'
+        );
+
+        $this->actingAs($user)->post('/', ['file' => $file]);
+
+        $document = Document::sole();
+        $this->assertSame('scanned', $document->status);
+        $this->assertSame(3, $document->flag_count);
+        $this->assertSame(
+            [['page' => 1, 'words' => [
+                ['word' => 'divers', 'occurrences' => 2],
+                ['word' => 'ai', 'occurrences' => 1],
+            ]]],
+            $document->flagged_pages
+        );
+    }
+
+    public function test_rescan_uses_current_match_types(): void
+    {
+        $user = User::factory()->create();
+        Storage::disk('local')->put('documents/note.txt', 'aim gain AI diverse');
+
+        $document = Document::create([
+            'user_id' => $user->id,
+            'original_name' => 'note.txt',
+            'file_path' => 'documents/note.txt',
+            'mime_type' => 'text/plain',
+            'size' => 18,
+            'status' => 'scanned',
+            'flag_count' => 0,
+            'extracted_text' => 'aim gain AI diverse',
+        ]);
+
+        DocumentFlagWord::create([
+            'word' => 'ai',
+            'match_type' => 'whole_word',
+            'created_by' => $user->id,
+        ]);
+        DocumentFlagWord::create([
+            'word' => 'divers',
+            'match_type' => 'word_root',
+            'created_by' => $user->id,
+        ]);
+
+        $this->actingAs($user)->post('/'.$document->id.'/rescan')
+            ->assertRedirect(route('docs.show', $document));
+
+        $document->refresh();
+        $this->assertSame(2, $document->flag_count);
+        $this->assertSame(2, $document->flags()->count());
+    }
+
+    public function test_show_page_highlight_pattern_reflects_match_types(): void
+    {
+        $user = User::factory()->create();
+        DocumentFlagWord::create(['word' => 'ai', 'match_type' => 'whole_word', 'created_by' => $user->id]);
+        DocumentFlagWord::create(['word' => 'divers', 'match_type' => 'word_root', 'created_by' => $user->id]);
+
+        $file = UploadedFile::fake()->createWithContent('report.txt', 'AI aim diverse');
+        $this->actingAs($user)->post('/', ['file' => $file]);
+        $document = Document::sole();
+
+        $this->actingAs($user)
+            ->get('/'.$document->id)
+            ->assertInertia(fn ($page) => $page
+                ->where('highlightPattern', '/(\\bdivers|\\bai\\b)/ui')
+            );
+    }
 }

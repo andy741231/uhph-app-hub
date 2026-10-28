@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\DocumentFlagWord;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -65,7 +66,10 @@ class ImportFlagWords extends Command
                     if (! $existing) {
                         $created++;
                         if ($this->option('apply')) {
+                            // Legacy exports predate match types — their
+                            // semantics were always word_root.
                             DB::table('document_flag_words')->insert($row + [
+                                'match_type' => DocumentFlagWord::MATCH_WORD_ROOT,
                                 'created_by' => null,
                                 'created_at' => now(),
                                 'updated_at' => now(),

@@ -5,6 +5,7 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import DangerButton from '@/Components/DangerButton.vue';
 import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
+import { compileFlagRegex, findFlagRanges, computeSpanFlagRanges, buildSpanInnerHtml } from '@/lib/flagHighlight.js';
 
 const props = defineProps({
     document: { type: Object, required: true },
@@ -97,74 +98,17 @@ const pageSpanData = ref({});
 
 // ===================== HIGHLIGHT HELPERS =====================
 
-// Escape text for safe insertion into innerHTML
-const escapeHtml = (text) => {
-    return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-};
+// Compiled once from the backend-provided "/pattern/flags" string.
+const flagRegex = computed(() => compileFlagRegex(props.highlightPattern));
 
-// Find all flag-word match ranges in a raw text string
-const findFlagRanges = (rawText) => {
-    const ranges = [];
-    if (!props.highlightPattern) return ranges;
-    try {
-        let raw = props.highlightPattern;
-        let flags = 'gi';
-        const delimMatch = raw.match(/^\/(.+)\/([a-z]*)$/);
-        if (delimMatch) {
-            raw = delimMatch[1];
-            const phpFlags = delimMatch[2].replace(/u/g, '');
-            flags = phpFlags.includes('i') ? 'gi' : 'g' + phpFlags;
-        }
-        const regex = new RegExp(raw, flags);
-        let m;
-        while ((m = regex.exec(rawText)) !== null) {
-            if (m[0].length === 0) { regex.lastIndex++; continue; }
-            ranges.push({ start: m.index, end: m.index + m[0].length, type: 'flag' });
-        }
-    } catch (e) {}
-    return ranges;
-};
-
-// Build span innerHTML applying both flag-word and search highlights.
-// searchRanges: [{ start, end, active }] — character offsets within rawText
-const buildSpanInnerHtml = (rawText, searchRanges) => {
-    const flagRanges = findFlagRanges(rawText);
-    const allRanges = [
-        ...flagRanges,
-        ...searchRanges.map(r => ({ start: r.start, end: r.end, type: r.active ? 'search-active' : 'search' })),
-    ].sort((a, b) => a.start - b.start);
-
-    let html = '';
-    let pos = 0;
-    for (const range of allRanges) {
-        if (range.start < pos) continue; // skip overlaps
-        if (range.start > pos) {
-            html += escapeHtml(rawText.slice(pos, range.start));
-        }
-        const text = escapeHtml(rawText.slice(range.start, range.end));
-        if (range.type === 'flag') {
-            html += `<mark class="doc-flag-highlight">${text}</mark>`;
-        } else if (range.type === 'search-active') {
-            html += `<mark class="search-highlight search-active-highlight">${text}</mark>`;
-        } else {
-            html += `<mark class="search-highlight">${text}</mark>`;
-        }
-        pos = Math.max(pos, range.end);
-    }
-    if (pos < rawText.length) {
-        html += escapeHtml(rawText.slice(pos));
-    }
-    return html;
-};
+// Flag-word match ranges in an arbitrary text string (plain-text view).
+const findLocalFlagRanges = (rawText) => findFlagRanges(flagRegex.value, rawText);
 // Plain-text fallback: split the extracted text into safe segments so the
 // template can render them without v-html.
 const textSegments = computed(() => {
     const text = props.document.extracted_text || '';
     if (!text) return [];
-    const ranges = findFlagRanges(text);
+    const ranges = findLocalFlagRanges(text);
     const segments = [];
     let pos = 0;
     for (const range of ranges) {
@@ -264,17 +208,27 @@ const renderSinglePage = async (pageNum) => {
     });
     await textLayer.render();
 
-    // Post-process: apply flag-word highlights to the rendered text spans
+    // Post-process: apply flag-word highlights to the rendered text spans.
+    // Ranges are computed once on the page's concatenated text (with line
+    // breaks at hasEOL items) so whole-word boundaries see the real page
+    // context — a word split across spans still matches, and "ai" inside
+    // "gain" never does.
     const textDivs = textLayer.textDivs;
     const textItems = textLayer.textContentItemsStr;
+    const spanFlagRanges = computeSpanFlagRanges(
+        flagRegex.value,
+        textItems || [],
+        (textContent.items || []).map((item) => item.hasEOL)
+    );
     pageSpanData.value[pageNum] = [];
     if (textDivs && textItems) {
         for (let i = 0; i < textDivs.length; i++) {
             const div = textDivs[i];
             const rawText = textItems[i] || '';
-            pageSpanData.value[pageNum].push({ div, rawText });
-            if (rawText && props.highlightPattern) {
-                div.innerHTML = buildSpanInnerHtml(rawText, []);
+            const flagRanges = spanFlagRanges[i] || [];
+            pageSpanData.value[pageNum].push({ div, rawText, flagRanges });
+            if (rawText && flagRanges.length) {
+                div.innerHTML = buildSpanInnerHtml(rawText, flagRanges, []);
             }
         }
     }
@@ -480,9 +434,9 @@ const clearSearchHighlights = () => {
     for (const pageNum of Object.keys(pageSpanData.value)) {
         const spans = pageSpanData.value[pageNum];
         if (!spans) continue;
-        for (const { div, rawText } of spans) {
+        for (const { div, rawText, flagRanges } of spans) {
             if (div && rawText) {
-                div.innerHTML = buildSpanInnerHtml(rawText, []);
+                div.innerHTML = buildSpanInnerHtml(rawText, flagRanges || [], []);
             }
         }
     }
@@ -515,9 +469,9 @@ const applySearchHighlights = () => {
         if (!spans) continue;
         for (const [spanIndexStr, ranges] of Object.entries(spanMap)) {
             const spanIndex = parseInt(spanIndexStr);
-            const { div, rawText } = spans[spanIndex];
+            const { div, rawText, flagRanges } = spans[spanIndex];
             if (div && rawText) {
-                div.innerHTML = buildSpanInnerHtml(rawText, ranges);
+                div.innerHTML = buildSpanInnerHtml(rawText, flagRanges || [], ranges);
             }
         }
     }

@@ -2,23 +2,29 @@
 
 namespace App\Services;
 
+use App\Models\DocumentFlagWord;
+
 class FlagScanner
 {
     /**
      * Scan text for occurrences of the given flag words.
      *
-     * Matching is case-insensitive. Single-word flag words use a leading Unicode
-     * word boundary (\b) with the "u" pattern modifier, allowing stem/prefix
-     * matching (e.g. "divers" matches "diverse", "diversity").
+     * Matching is case-insensitive. Each flag word's match type comes from
+     * $matchTypes (raw word => 'whole_word'|'word_root'); a missing entry
+     * means 'word_root' to preserve the standalone API's legacy semantics.
+     * whole_word adds a trailing Unicode word boundary; word_root keeps the
+     * leading boundary only, allowing stem/prefix matches ("divers" matches
+     * "diverse", "diversity"). Multi-word phrases match literally either way.
      *
      * @param  array<string>  $flagWords  List of raw flag words
+     * @param  array<string, string>  $matchTypes  Raw word => match type
      * @return array{
      *     total:int,
      *     words:array<string,int>,
      *     words_list:array<int,array{word:string,occurrences:int}>
      * }
      */
-    public function scan(string $text, array $flagWords): array
+    public function scan(string $text, array $flagWords, array $matchTypes = []): array
     {
         $words = [];
         $total = 0;
@@ -27,7 +33,7 @@ class FlagScanner
         $unique = array_values(array_unique(array_filter(array_map('trim', $flagWords), fn ($w) => $w !== '')));
 
         foreach ($unique as $word) {
-            $count = $this->countOccurrences($text, $word);
+            $count = $this->countOccurrences($text, $word, $matchTypes[$word] ?? null);
             if ($count > 0) {
                 $words[$word] = $count;
                 $total += $count;
@@ -59,40 +65,47 @@ class FlagScanner
     }
 
     /**
-     * Count case-insensitive occurrences of $needle in $haystack.
-     *
-     * Single-word needles use a leading Unicode word boundary but NO trailing
-     * boundary, so stem/prefix flag words (e.g. "divers", "equit", "minorit")
-     * match their derivatives ("diverse", "diversity", "equity", "minority").
-     * Multi-word phrases are matched as-is (no word boundaries).
+     * Count case-insensitive occurrences of $needle in $haystack under the
+     * given match type (null/missing means word_root).
      */
-    protected function countOccurrences(string $haystack, string $needle): int
+    protected function countOccurrences(string $haystack, string $needle, ?string $matchType): int
     {
         if ($needle === '') {
             return 0;
         }
 
-        // Escape regex meta-characters in the needle
-        $pattern = '/'.preg_quote($needle, '/').'/ui';
-
-        // Add a leading Unicode word boundary when the needle starts with a word
-        // character. The trailing boundary is intentionally omitted so that stem
-        // words match their derivatives (e.g. "divers" → "diverse", "diversity").
-        if (self::isStemWord($needle)) {
-            $pattern = '/\b'.preg_quote($needle, '/').'/ui';
-        }
+        $pattern = '/'.$this->patternPart($needle, $matchType).'/ui';
 
         return preg_match_all($pattern, $haystack);
     }
 
     /**
-     * Build a regex alternation pattern that matches any of the flag words (case-insensitive).
+     * Regex fragment for one flag word — shared by scanning and the
+     * highlight pattern so both use identical boundary semantics.
      *
-     * Single-word flag words get a leading Unicode word boundary (but no trailing
-     * boundary) so stem words match their derivatives, consistent with countOccurrences.
+     * Only single stem words get boundaries: whole_word adds a leading AND
+     * trailing \b; word_root keeps the legacy leading-only \b. Phrases and
+     * punctuation-containing words match literally in both modes.
+     */
+    protected function patternPart(string $word, ?string $matchType): string
+    {
+        $quoted = preg_quote($word, '/');
+
+        if (! self::isStemWord($word)) {
+            return $quoted;
+        }
+
+        return $matchType === DocumentFlagWord::MATCH_WHOLE_WORD
+            ? '\b'.$quoted.'\b'
+            : '\b'.$quoted;
+    }
+
+    /**
+     * Build a regex alternation pattern that matches any of the flag words
+     * (case-insensitive) using the same per-word match types as scan().
      * Returns null when no flag words are provided.
      */
-    public function buildHighlightPattern(array $flagWords): ?string
+    public function buildHighlightPattern(array $flagWords, array $matchTypes = []): ?string
     {
         $unique = array_values(array_unique(array_filter(array_map('trim', $flagWords), fn ($w) => $w !== '')));
         if (empty($unique)) {
@@ -102,15 +115,10 @@ class FlagScanner
         // Sort longest-first so longer phrases take precedence over their substrings
         usort($unique, fn ($a, $b) => strlen($b) <=> strlen($a));
 
-        $parts = array_map(function ($w) {
-            $quoted = preg_quote($w, '/');
-            // Add a leading word boundary for single-word needles (stem/prefix matching)
-            if (self::isStemWord($w)) {
-                return '\b'.$quoted;
-            }
-
-            return $quoted;
-        }, $unique);
+        $parts = array_map(
+            fn ($w) => $this->patternPart($w, $matchTypes[$w] ?? null),
+            $unique
+        );
 
         return '/('.implode('|', $parts).')/ui';
     }
@@ -120,18 +128,19 @@ class FlagScanner
      *
      * @param  array<int, string>  $pages  Array of text per page (0-indexed)
      * @param  array<string>  $flagWords
+     * @param  array<string, string>  $matchTypes  Raw word => match type
      * @return array{
      *     total:int,
      *     pages:array<int,array{page:int,words:array<int,array{word:string,occurrences:int}>}>
      * }
      */
-    public function scanPerPage(array $pages, array $flagWords): array
+    public function scanPerPage(array $pages, array $flagWords, array $matchTypes = []): array
     {
         $total = 0;
         $pagesResult = [];
 
         foreach ($pages as $index => $pageText) {
-            $scan = $this->scan($pageText, $flagWords);
+            $scan = $this->scan($pageText, $flagWords, $matchTypes);
             if ($scan['total'] > 0) {
                 $total += $scan['total'];
                 $pagesResult[] = [
