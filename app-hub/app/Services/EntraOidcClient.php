@@ -130,6 +130,7 @@ class EntraOidcClient
                 ->acceptJson()
                 ->withOptions($this->httpOptions())
                 ->timeout(max(1, (int) config('entra.request_timeout_seconds', 10)))
+                ->retry(2, 500, null, false)
                 ->post(config('entra.token_url'), [
                     'grant_type' => 'authorization_code',
                     'client_id' => config('entra.client_id'),
@@ -195,6 +196,7 @@ class EntraOidcClient
                     $response = Http::acceptJson()
                         ->withOptions($this->httpOptions())
                         ->timeout(max(1, (int) config('entra.request_timeout_seconds', 10)))
+                        ->retry(2, 500, null, false)
                         ->get(config('entra.jwks_uri'));
                 } catch (ConnectionException $e) {
                     Log::warning('entra jwks fetch connection failure', ['error' => $e->getMessage()]);
