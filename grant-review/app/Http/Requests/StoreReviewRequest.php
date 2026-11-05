@@ -22,11 +22,11 @@ class StoreReviewRequest extends FormRequest
             'factor2_comments' => ['nullable', 'string', 'max:65000'],
             'factor3_sufficient' => ['required', 'boolean'],
             'factor3_comments' => ['nullable', 'string', 'max:65000', 'required_if:factor3_sufficient,0'],
-            'additional_human_subjects' => ['required', 'in:yes,no,na'],
+            'additional_human_subjects' => ['nullable', 'in:yes,no,na'],
             'additional_human_subjects_comments' => ['nullable', 'string', 'max:65000'],
-            'additional_vertebrate_animals' => ['required', 'in:yes,no,na'],
+            'additional_vertebrate_animals' => ['nullable', 'in:yes,no,na'],
             'additional_vertebrate_animals_comments' => ['nullable', 'string', 'max:65000'],
-            'additional_biohazards' => ['required', 'in:yes,no,na'],
+            'additional_biohazards' => ['nullable', 'in:yes,no,na'],
             'additional_biohazards_comments' => ['nullable', 'string', 'max:65000'],
         ];
     }

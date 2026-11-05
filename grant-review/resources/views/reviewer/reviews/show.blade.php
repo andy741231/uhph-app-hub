@@ -327,25 +327,26 @@
 
                     <div class="rounded-lg border border-uh-border bg-gray-50/50 p-4 space-y-5">
                     @foreach ($additionalCriteria as $field => $criterion)
-                        <fieldset class="space-y-3">
+                        <input type="hidden" name="{{ $field }}" value="{{ old($field, $review->$field) }}">
+                        <input type="hidden" name="{{ $field }}_comments"
+                            value="{{ old($field . '_comments', $review->{$field . '_comments'}) }}">
+                        <fieldset class="space-y-3" disabled>
                             <legend class="text-sm font-semibold text-uh-fg">
                                 <a href="{{ $criterion['href'] }}" target="_blank" rel="noopener"
                                    class="text-uh-red underline">{{ $criterion['label'] }}</a>
-                                <span class="req">*</span>
                             </legend>
-                            <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-3 opacity-60">
                                 @foreach (['yes' => 'Yes', 'no' => 'No', 'na' => 'N/A'] as $val => $label)
-                                    <label class="cursor-pointer">
+                                    <label class="cursor-not-allowed">
                                         <input type="radio" name="{{ $field }}" value="{{ $val }}" class="sr-only peer"
-                                            {{ old($field, $review->$field) === $val ? 'checked' : '' }} required>
-                                        <span class="inline-flex items-center px-3 py-1.5 rounded-lg border border-uh-border bg-white text-sm font-semibold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red peer-focus-visible:ring-2 peer-focus-visible:ring-uh-red peer-focus-visible:ring-offset-1 hover:border-uh-red">{{ $label }}</span>
+                                            {{ old($field, $review->$field) === $val ? 'checked' : '' }}>
+                                        <span class="inline-flex items-center px-3 py-1.5 rounded-lg border border-uh-border bg-white text-sm font-semibold text-uh-fg transition-all peer-checked:bg-uh-red peer-checked:text-white peer-checked:border-uh-red peer-focus-visible:ring-2 peer-focus-visible:ring-uh-red peer-focus-visible:ring-offset-1">{{ $label }}</span>
                                     </label>
                                 @endforeach
                             </div>
                             @error($field) <p class="text-sm text-uh-red">{{ $message }}</p> @enderror
-                            <textarea name="{{ $field }}_comments" rows="2"
-                                class="input text-sm leading-relaxed"
-                                placeholder="Comment (optional)...">{{ old($field . '_comments', $review->{$field . '_comments'}) }}</textarea>
+                            <textarea rows="2"
+                                class="input text-sm leading-relaxed bg-uh-muted text-gray-500 cursor-not-allowed">{{ old($field . '_comments', $review->{$field . '_comments'}) }}</textarea>
                         </fieldset>
                     @endforeach
                     </div>
