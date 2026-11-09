@@ -22,14 +22,21 @@ if (($_SERVER['UHPH_LOCAL_DEV'] ?? '') !== '1') {
 // app base) without a trailing slash, append one. This makes Symfony compute
 // the correct baseUrl and pathInfo. We must fix BOTH variables because
 // Symfony's prepareRequestUri() prefers UNENCODED_URL when IIS URL Rewrite
-// is active (IIS_WasUrlRewritten=1).
+// is active (IIS_WasUrlRewritten=1). The query string is split off before the
+// comparison and restored afterwards, so root URLs with a query string
+// (e.g. pagination links like /apps/doc-review?page=2) are fixed too.
 $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
 $appBase = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
 if ($appBase !== '' && $appBase !== '/') {
     foreach (['REQUEST_URI', 'UNENCODED_URL'] as $var) {
         $val = $_SERVER[$var] ?? '';
+        $query = '';
+        if (($pos = strpos($val, '?')) !== false) {
+            $query = substr($val, $pos);
+            $val = substr($val, 0, $pos);
+        }
         if ($val === $appBase) {
-            $_SERVER[$var] = $val.'/';
+            $_SERVER[$var] = $val.'/'.$query;
         }
     }
 }
